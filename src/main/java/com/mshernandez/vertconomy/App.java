@@ -18,11 +18,11 @@ public class App extends JavaPlugin
         Plugin vault = getServer().getPluginManager().getPlugin("Vault");
         if (vault == null)
         {
-            getLogger().info("ERROR: The Vault plugin cannot be found!");
+            getLogger().warning("ERROR: The Vault plugin cannot be found!");
             return;
         }
         getLogger().info("Vault found, attempting to register economy...");
-        getServer().getServicesManager().register(Economy.class, new Vertconomy(),
+        getServer().getServicesManager().register(Economy.class, new VertconomyVaultSupport(),
             vault, ServicePriority.Normal);
     }
 
