@@ -1,6 +1,6 @@
 package com.mshernandez.vertconomy.wallet_interface;
 
-public class BalanceResponse
+public class GeneralWalletResponse
 {
     String result;
     String error;
