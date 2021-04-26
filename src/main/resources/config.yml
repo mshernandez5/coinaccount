@@ -1,7 +1,21 @@
+###################################
+# Wallet API & Transactions
+###################################
+
 # RPC Wallet API Authentication, Please Change Defaults
 user: vtcuser
 pass: vtcpass
 uri: http://127.0.0.1:5888
+
+# Minimum Confirmations To Consider Transaction Valid
+min-confirmations: 10
+
+# Target Number Of Blocks To Confirm Withdrawals
+target-block-time: 2
+
+###################################
+# Coin Information & Representation
+###################################
 
 # Coin Symbol
 symbol: VTC
@@ -9,6 +23,10 @@ base-unit: sat
 
 # Supported: base, micro, milli, full
 scale: base
+
+###################################
+# General Plugin Behavior
+###################################
 
 # Automatically Configure Essentials Economy Commands If Found
 configure-essentials: false
