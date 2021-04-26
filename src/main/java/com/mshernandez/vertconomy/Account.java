@@ -16,6 +16,7 @@ public class Account
     @Id
     private UUID playerUUID;
     private String returnAddress;
+    private String depositAddress;
     private long balance;
 
     /**
@@ -53,6 +54,17 @@ public class Account
     public String getReturnAddress()
     {
         return returnAddress;
+    }
+
+    /**
+     * A wallet address designated for receiving
+     * deposits from this user.
+     * 
+     * @return A deposit address associated with this account.
+     */
+    public String getDepositAddress()
+    {
+        return depositAddress;
     }
 
     /**

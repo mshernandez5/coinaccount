@@ -3,3 +3,12 @@ name: Vertconomy
 version: 0.0.1
 api-version: 1.16
 depend: [Vault]
+loadbefore: [Essentials]
+
+commands:
+  balance:
+    description: Allows a player to check their vertconomy balance.
+    aliases: [bal]
+    usage: /balance
+    permission: vertconomy.balance
+  

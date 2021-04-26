@@ -9,23 +9,29 @@ import net.milkbowl.vault.economy.EconomyResponse;
 import net.milkbowl.vault.economy.EconomyResponse.ResponseType;
 
 /**
- * An economy implementation following the
+ * A vertconomy wrapper following the
  * Vault API interface.
  */
 public class VertconomyVaultSupport implements Economy
 {
+    // Vertconomy Instance
+    Vertconomy vertconomy;
+
+    public VertconomyVaultSupport(Vertconomy vertconomy)
+    {
+        this.vertconomy = vertconomy;
+    }
+
     // Plugin Information
     @Override
     public String getName()
     {
-        // TODO Auto-generated method stub
         return "vertconomy";
     }
 
     @Override
     public boolean isEnabled()
     {
-        // TODO Auto-generated method stub
         return true;
     }
 
@@ -33,29 +39,25 @@ public class VertconomyVaultSupport implements Economy
     @Override
     public String currencyNamePlural()
     {
-        // TODO Auto-generated method stub
-        return "sats";
+        return vertconomy.getSymbol();
     }
 
     @Override
     public String currencyNameSingular()
     {
-        // TODO Auto-generated method stub
-        return "sat";
+        return vertconomy.getSymbol();
     }
 
     @Override
     public int fractionalDigits()
     {
-        // TODO Auto-generated method stub
-        return 0;
+        return vertconomy.fractionalDigits();
     }
 
     @Override
     public String format(double amount)
     {
-        // TODO Auto-generated method stub
-        return null;
+        return vertconomy.format(amount);
     }
 
     // Player Economy Operations
@@ -91,6 +93,7 @@ public class VertconomyVaultSupport implements Economy
     public double getBalance(OfflinePlayer player)
     {
         // TODO Auto-generated method stub
+        // temporary return entire wallet balance for test
         return 3;
     }
 
@@ -98,7 +101,8 @@ public class VertconomyVaultSupport implements Economy
     public double getBalance(String playerName)
     {
         // TODO Auto-generated method stub
-        return 3;
+        // temporary return entire wallet balance for test
+        return 300000.555;
     }
 
     @Override

@@ -1,0 +1,14 @@
+# RPC Wallet API Authentication, Please Change Defaults
+user: vtcuser
+pass: vtcpass
+uri: http://127.0.0.1:5888
+
+# Coin Symbol
+symbol: VTC
+base-unit: sat
+
+# Supported: base, micro, milli, full
+scale: base
+
+# Automatically Configure Essentials Economy Commands If Found
+configure-essentials: false
