@@ -11,4 +11,8 @@ commands:
     aliases: [bal]
     usage: /balance
     permission: vertconomy.balance
+  deposit:
+    description: Allows a player to deposit crypto into their vertconomy account.
+    usage: /deposit
+    permission: vertconomy.deposit
   

@@ -1,4 +1,4 @@
-package com.mshernandez.vertconomy;
+package com.mshernandez.vertconomy.wallet_interface;
 
 /**
  * An exception thrown when players provide

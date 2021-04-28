@@ -1,28 +1,22 @@
 package com.mshernandez.vertconomy;
 
-import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.UUID;
 
+import com.mshernandez.vertconomy.database.Account;
+import com.mshernandez.vertconomy.database.HibernateUtil;
 import com.mshernandez.vertconomy.wallet_interface.RPCWalletConnection;
 import com.mshernandez.vertconomy.wallet_interface.WalletRequestException;
 
-import org.bukkit.Bukkit;
-import org.bukkit.event.EventHandler;
-import org.bukkit.event.Listener;
-import org.bukkit.event.server.PluginDisableEvent;
-import org.bukkit.event.server.PluginEnableEvent;
 import org.bukkit.plugin.Plugin;
+import org.hibernate.Session;
+import org.hibernate.Transaction;
 
-public class Vertconomy implements Listener
+public class Vertconomy
 {
-    private static final String DATABASE_PATH = "./plugins/Vertconomy/vertconomydb";
-
     // Plugin For Reference
     private Plugin plugin;
-    // Database For Persistence
-    private Connection db;
+    
     // RPC Wallet API
     private RPCWalletConnection wallet;
 
@@ -39,36 +33,6 @@ public class Vertconomy implements Listener
         this.symbol = symbol;
         this.baseUnit = baseUnit;
         this.scale = scale;
-        // Register Bukkit Events
-        Bukkit.getServer().getPluginManager().registerEvents(this, plugin);
-    }
-
-    @EventHandler
-    public void onPluginEnable(PluginEnableEvent event)
-    {
-        // Attempt To Connect To Database
-        try
-        {
-            Class.forName("org.h2.Driver");
-            db = DriverManager.getConnection("jdbc:h2:" + DATABASE_PATH, "sa", "");
-        }
-        catch (SQLException | ClassNotFoundException e)
-        {
-            plugin.getLogger().warning("ERROR Connecting To DB: " + e.getMessage());
-        }
-    }
-
-    @EventHandler
-    public void onPluginDisable(PluginDisableEvent event)
-    {
-        try
-        {
-            db.close();
-        }
-        catch (SQLException e)
-        {
-            plugin.getLogger().warning("ERROR Closing DB: " + e.getMessage());
-        }
     }
 
     /**
@@ -105,7 +69,40 @@ public class Vertconomy implements Listener
         return scale.NUM_VALID_FRACTION_DIGITS;
     }
 
-    public double getServerBalance()
+    /**
+     * Creates a new account identified by the
+     * given UUID if one does not already exist.
+     * 
+     * @param accountUUID The account UUID.
+     */
+    public Account getOrCreateAccount(UUID accountUUID)
+    {
+        Account account;
+        try (Session session = HibernateUtil.getSessionFactory().openSession())
+        {
+            account = session.get(Account.class, accountUUID);
+            // Return If Account Already Exists
+            if (account != null)
+            {
+                return account;
+            }
+            // Create New Wallet Deposit Address For Account
+            String depositAddress = wallet.getNewAddress(accountUUID.toString());
+            // Create & Save New Account
+            Transaction dbtx = session.beginTransaction();
+            account = new Account(accountUUID, depositAddress);
+            session.save(account);
+            dbtx.commit();
+        }
+        catch (Exception e)
+        {
+            plugin.getLogger().warning("Failed To Create New Account: " + e.getMessage());
+            return null;
+        }
+        return account;
+    }
+
+    public double getCombinedWalletBalance()
     {
         try
         {
@@ -120,6 +117,32 @@ public class Vertconomy implements Listener
 
     public double getBalance(UUID accountUUID)
     {
-        return 0.0;
+        Account account = getOrCreateAccount(accountUUID);
+        try (Session session = HibernateUtil.getSessionFactory().openSession())
+        {
+            // check for new transactions at address
+            // create, save, and add any new transactions to user
+            // save transaction in db
+            // update account in db
+        }
+        catch (Exception e)
+        {
+            plugin.getLogger().warning("Failed To Check For New Transactions: " + e.getMessage());
+        }
+        if (account == null)
+        {
+            return 0.0;
+        }
+        return account.calculateBalance();
+    }
+
+    public String getDepositAddress(UUID accountUUID)
+    {
+        Account account = getOrCreateAccount(accountUUID);
+        if (account == null)
+        {
+            return "ERROR RETRIEVING ACCOUNT";
+        }
+        return account.getDepositAddress();
     }
 }

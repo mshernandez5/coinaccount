@@ -47,7 +47,7 @@ public class CommandBalance implements CommandExecutor
             else
             {
                 message = ChatColor.RED + "Combined Server Balance: " + ChatColor.GREEN
-                    + vertconomy.format(vertconomy.getServerBalance());
+                    + vertconomy.format(vertconomy.getCombinedWalletBalance());
             }
         }
         else

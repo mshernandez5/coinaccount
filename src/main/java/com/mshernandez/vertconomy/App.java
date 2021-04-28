@@ -6,6 +6,8 @@ import java.net.URI;
 import java.net.URISyntaxException;
 
 import com.mshernandez.vertconomy.commands.CommandBalance;
+import com.mshernandez.vertconomy.commands.CommandDeposit;
+import com.mshernandez.vertconomy.database.HibernateUtil;
 import com.mshernandez.vertconomy.wallet_interface.RPCWalletConnection;
 
 import org.bukkit.configuration.file.FileConfiguration;
@@ -86,6 +88,9 @@ public class App extends JavaPlugin
             }
         }
 
+        // Load HibernateUtil Class To Force Static Configuration
+        HibernateUtil.getSessionFactory();
+
         // Create Vertconomy Instance With Loaded Values
         Vertconomy vertconomy = new Vertconomy(this, wallet, symbol, baseUnit, scale);
 
@@ -102,6 +107,7 @@ public class App extends JavaPlugin
 
         // Register Commands
         getCommand("balance").setExecutor(new CommandBalance(vertconomy));
+        getCommand("deposit").setExecutor(new CommandDeposit(vertconomy));
     }
 
     @Override

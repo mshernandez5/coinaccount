@@ -1,9 +1,12 @@
-package com.mshernandez.vertconomy;
+package com.mshernandez.vertconomy.database;
 
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 
 import javax.persistence.Entity;
 import javax.persistence.Id;
+import javax.persistence.ManyToMany;
 
 /**
  * A class to represent a player's account,
@@ -15,9 +18,11 @@ public class Account
 {
     @Id
     private UUID playerUUID;
-    private String returnAddress;
     private String depositAddress;
-    private long balance;
+    private String returnAddress;
+
+    @ManyToMany
+    private Set<BlockchainTransaction> transactions;
 
     /**
      * Creates a new account.
@@ -26,11 +31,12 @@ public class Account
      * @param playerUUID The player UUID to associate with the account.
      * @param returnAddress A wallet refund address, required.
      */
-    protected Account(UUID playerUUID, String returnAddress)
+    public Account(UUID playerUUID, String depositAddress)
     {
         this.playerUUID = playerUUID;
-        this.returnAddress = returnAddress;
-        balance = 0L;
+        this.depositAddress = depositAddress;
+        returnAddress = "";
+        transactions = new HashSet<>();
     }
 
     /**
@@ -42,6 +48,18 @@ public class Account
     public UUID getPlayerUUID()
     {
         return playerUUID;
+    }
+
+    /**
+     * Set a wallet address where the user's balance
+     * may be refunded to in the event of a server
+     * shutdown, user ban, or other situation.
+     * 
+     * @param returnAddress A wallet refund address to associate with this account.
+     */
+    public void setReturnAddress(String returnAddress)
+    {
+        this.returnAddress = returnAddress;
     }
 
     /**
@@ -68,11 +86,17 @@ public class Account
     }
 
     /**
-     * Get the account balance.
-     * @return
+     * Calculate the account balance.
+     * 
+     * @return The total balance of this account.
      */
-    public long getBalance()
+    public long calculateBalance()
     {
+        long balance = 0L;
+        for (BlockchainTransaction t : transactions)
+        {
+            balance += t.getDistribution(this);
+        }
         return balance;
     }
 }
