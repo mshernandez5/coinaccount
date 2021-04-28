@@ -2,6 +2,7 @@ package com.mshernandez.vertconomy.database;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 import javax.persistence.ElementCollection;
 import javax.persistence.Entity;
@@ -85,5 +86,21 @@ public class BlockchainTransaction
     public long getDistribution(Account account)
     {
         return distribution.getOrDefault(account, 0L);
+    }
+
+    @Override
+    public int hashCode()
+    {
+        return Objects.hash(TXID);
+    }
+
+    @Override
+    public boolean equals(Object other)
+    {
+        if (!(other instanceof BlockchainTransaction))
+        {
+            return false;
+        }
+        return TXID.equals(((BlockchainTransaction) other).TXID);
     }
 }
