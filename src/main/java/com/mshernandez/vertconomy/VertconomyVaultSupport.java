@@ -2,6 +2,7 @@ package com.mshernandez.vertconomy;
 
 import java.util.List;
 
+import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 
 import net.milkbowl.vault.economy.Economy;
@@ -64,175 +65,183 @@ public class VertconomyVaultSupport implements Economy
     @Override
     public boolean createPlayerAccount(OfflinePlayer player)
     {
-        // TODO Auto-generated method stub
-        return true;
+        return vertconomy.getOrCreateAccount(player.getUniqueId()) == null;
     }
 
     @Override
     public boolean createPlayerAccount(String playerName)
     {
-        // TODO Auto-generated method stub
-        return true;
+        return createPlayerAccount(Bukkit.getPlayer(playerName));
     }
 
     @Override
     public boolean createPlayerAccount(OfflinePlayer player, String world)
     {
-        // TODO Auto-generated method stub
-        return true;
+        // No World-Specific Accounts For Now
+        return createPlayerAccount(player);
     }
 
     @Override
     public boolean createPlayerAccount(String playerName, String world)
     {
-        // TODO Auto-generated method stub
-        return true;
+        // No World-Specific Accounts For Now
+        return createPlayerAccount(Bukkit.getPlayer(playerName), world);
     }
 
     @Override
     public double getBalance(OfflinePlayer player)
     {
-        // TODO Auto-generated method stub
-        // temporary return entire wallet balance for test
-        return 3;
+        return vertconomy.getBalance(player.getUniqueId());
     }
 
     @Override
     public double getBalance(String playerName)
     {
-        // TODO Auto-generated method stub
-        // temporary return entire wallet balance for test
-        return 300000.555;
+        return getBalance(Bukkit.getPlayer(playerName));
     }
 
     @Override
     public double getBalance(OfflinePlayer player, String world)
     {
-        // TODO Auto-generated method stub
-        return 4;
+        // No World-Specific Accounts For Now
+        return getBalance(player);
     }
 
     @Override
     public double getBalance(String playerName, String world)
     {
-        // TODO Auto-generated method stub
-        return 4;
+        // No World-Specific Accounts For Now
+        return getBalance(Bukkit.getPlayer(playerName), world);
     }
 
     @Override
     public boolean has(OfflinePlayer player, double amount)
     {
-        // TODO Auto-generated method stub
-        return true;
+        return vertconomy.getBalance(player.getUniqueId()) >= amount;
     }
 
     @Override
     public boolean has(String playerName, double amount)
     {
-        // TODO Auto-generated method stub
-        return true;
+        return has(Bukkit.getPlayer(playerName), amount);
     }
 
     @Override
     public boolean has(OfflinePlayer player, String world, double amount)
     {
-        // TODO Auto-generated method stub
-        return true;
+        // No World-Specific Accounts For Now
+        return has(player, amount);
     }
 
     @Override
     public boolean has(String playerName, String world, double amount)
     {
-        // TODO Auto-generated method stub
-        return true;
+        // No World-Specific Accounts For Now
+        return has(Bukkit.getPlayer(playerName), world, amount);
     }
 
     @Override
     public boolean hasAccount(OfflinePlayer player)
     {
-        // TODO Auto-generated method stub
+        // Accounts Are Created Automatically When Needed, Can Assume True
         return true;
     }
 
     @Override
     public boolean hasAccount(String playerName)
     {
-        // TODO Auto-generated method stub
+        // Accounts Are Created Automatically When Needed, Can Assume True
         return true;
     }
 
     @Override
     public boolean hasAccount(OfflinePlayer player, String world)
     {
-        // TODO Auto-generated method stub
+        // Accounts Are Created Automatically When Needed, Can Assume True
         return true;
     }
 
     @Override
     public boolean hasAccount(String playerName, String world)
     {
-        // TODO Auto-generated method stub
+        // Accounts Are Created Automatically When Needed, Can Assume True
         return true;
     }
 
     @Override
     public EconomyResponse withdrawPlayer(OfflinePlayer player, double amount)
     {
-        // TODO Auto-generated method stub
-        return null;
+        if (vertconomy.moveToTransferFund(player.getUniqueId(), amount))
+        {
+            return new EconomyResponse(amount,
+                vertconomy.getBalance(player.getUniqueId()),
+                EconomyResponse.ResponseType.SUCCESS,
+                null);
+        }
+        return new EconomyResponse(0.0,
+            vertconomy.getBalance(player.getUniqueId()),
+            EconomyResponse.ResponseType.FAILURE,
+            "Failed To Move " + vertconomy.format(amount));
     }
 
     @Override
     public EconomyResponse withdrawPlayer(String playerName, double amount)
     {
-        // TODO Auto-generated method stub
-        return null;
+        return withdrawPlayer(Bukkit.getPlayer(playerName), amount);
     }
 
     @Override
     public EconomyResponse withdrawPlayer(OfflinePlayer player, String world, double amount)
     {
-        // TODO Auto-generated method stub
-        return null;
+        // No World-Specific Accounts For Now
+        return withdrawPlayer(player, amount);
     }
 
     @Override
     public EconomyResponse withdrawPlayer(String playerName, String world, double amount)
     {
-        // TODO Auto-generated method stub
-        return null;
+        // No World-Specific Accounts For Now
+        return withdrawPlayer(Bukkit.getPlayer(playerName), world, amount);
     }
 
     @Override
     public EconomyResponse depositPlayer(OfflinePlayer player, double amount)
     {
-        // TODO Auto-generated method stub
-        return null;
+        if (vertconomy.takeFromTransferFund(player.getUniqueId(), amount))
+        {
+            return new EconomyResponse(amount,
+                vertconomy.getBalance(player.getUniqueId()),
+                EconomyResponse.ResponseType.SUCCESS,
+                null);
+        }
+        return new EconomyResponse(0.0,
+            vertconomy.getBalance(player.getUniqueId()),
+            EconomyResponse.ResponseType.FAILURE,
+            "Failed To Claim " + vertconomy.format(amount));
     }
 
     @Override
     public EconomyResponse depositPlayer(String playerName, double amount)
     {
-        // TODO Auto-generated method stub
-        return null;
+        return depositPlayer(Bukkit.getPlayer(playerName), amount);
     }
 
     @Override
     public EconomyResponse depositPlayer(OfflinePlayer player, String world, double amount)
     {
-        // TODO Auto-generated method stub
-        return null;
+        // No World-Specific Accounts For Now
+        return depositPlayer(player, amount);
     }
 
     @Override
     public EconomyResponse depositPlayer(String playerName, String world, double amount)
     {
-        // TODO Auto-generated method stub
-        return null;
+        // No World-Specific Accounts For Now
+        return depositPlayer(Bukkit.getPlayer(playerName), world, amount);
     }
 
     // Plugin Does Not Support Banks
-    private static final String NO_BANK_SUPPORT_MESSAGE = "vertconomy does not support banks.";
+    private static final String NO_BANK_SUPPORT_MESSAGE = "Vertconomy does not support banks.";
 
     @Override
     public boolean hasBankSupport()

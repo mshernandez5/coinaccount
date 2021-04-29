@@ -182,6 +182,7 @@ public class Vertconomy
         Account account = getOrCreateAccount(accountUUID);
         try (Session session = HibernateUtil.getSessionFactory().openSession())
         {
+            // TODO: Check For Deposits
             // check for new transactions at address
             // create, save, and add any new transactions to user
             // save transaction in db
@@ -206,5 +207,65 @@ public class Vertconomy
             return "ERROR RETRIEVING ACCOUNT";
         }
         return account.getDepositAddress();
+    }
+
+    /**
+     * Takes a part of a player's balance and moves it
+     * into a general transfer fund where it can be claimed
+     * by another account as part of a transfer.
+     * 
+     * As limitation of Vault API and existing plugins
+     * designed to create and destroy money out of thin
+     * air, transfers between players can get complicated.
+     * 
+     * The transfer fund captures magically withdrawn
+     * balances and saves them for limited time so that
+     * plugins trying to magically create money for
+     * the other end of the transfer can instead
+     * check and claim that balance on the transfer fund.
+     * 
+     * Balances remaining on the transfer fund for extended
+     * times are assumed to be payed to the server itself.
+     * 
+     * @param playerUUID The account UUID.
+     * @param amount The amount to send to the transfer fund.
+     * @return True if the transfer was successful.
+     */
+    public boolean moveToTransferFund(UUID playerUUID, double amount)
+    {
+        if (getBalance(playerUUID) < amount)
+        {
+            return false;
+        }
+        Account account = getOrCreateAccount(playerUUID);
+        // TODO: Send to transfer fund
+        return true;
+    }
+
+    /**
+     * Moves a certain amount from the general transfer
+     * fund into a certain player's account balance.
+     * 
+     * As limitation of Vault API and existing plugins
+     * designed to create and destroy money out of thin
+     * air, transfers between players can get complicated.
+     * 
+     * The transfer fund captures magically withdrawn
+     * balances and saves them for limited time so that
+     * plugins trying to magically create money for
+     * the other end of the transfer can instead
+     * check and claim that balance on the transfer fund.
+     * 
+     * Balances remaining on the transfer fund for extended
+     * times are assumed to be payed to the server itself.
+     * 
+     * @param playerUUID The account UUID.
+     * @param amount The amount to send to the transfer fund.
+     * @return True if the transfer was successful.
+     */
+    public boolean takeFromTransferFund(UUID playerUUID, double amount)
+    {
+        // TODO: Transfer fund
+        return false;
     }
 }
