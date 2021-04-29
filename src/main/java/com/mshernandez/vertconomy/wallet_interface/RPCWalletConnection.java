@@ -7,6 +7,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandlers;
 import java.util.Base64;
+import java.util.List;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
@@ -121,6 +122,44 @@ public class RPCWalletConnection
             .setParams(params);
         GeneralWalletResponse response = parser.fromJson(makeRequest(jsonRequest), GeneralWalletResponse.class);
         return Long.parseLong(response.result.replace(".", ""));
+    }
+
+    /**
+     * Return all transactions.
+     * 
+     * @param label The address label.
+     * @return A list of transaction information objects.
+     * @throws WalletRequestException If the wallet could not be reached or execute the command.
+     */
+    public List<ListTransactionResponse.Transaction> getTransactions() throws WalletRequestException
+    {
+        JsonArray params = new JsonArray();
+        WalletRequest jsonRequest = new WalletRequest()
+            .setId(DEFAULT_REQUEST_ID)
+            .setMethod("listtransactions")
+            .setParams(params);
+        ListTransactionResponse response = parser.fromJson(makeRequest(jsonRequest), ListTransactionResponse.class);
+        return response.result;
+    }
+
+    /**
+     * Return all transactions for addresses under the
+     * given label.
+     * 
+     * @param label The address label.
+     * @return A list of transaction information objects.
+     * @throws WalletRequestException If the wallet could not be reached or execute the command.
+     */
+    public List<ListTransactionResponse.Transaction> getTransactions(String label) throws WalletRequestException
+    {
+        JsonArray params = new JsonArray();
+        params.add(label);
+        WalletRequest jsonRequest = new WalletRequest()
+            .setId(DEFAULT_REQUEST_ID)
+            .setMethod("listtransactions")
+            .setParams(params);
+        ListTransactionResponse response = parser.fromJson(makeRequest(jsonRequest), ListTransactionResponse.class);
+        return response.result;
     }
 
     /**
