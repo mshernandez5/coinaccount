@@ -29,6 +29,7 @@ public class CommandVertconomy implements CommandExecutor
     {
         WalletInfoResponse.Result walletStatus = vertconomy.getWalletStatus();
         StringBuilder message = new StringBuilder();
+        message.append('\n');
         message.append(ChatColor.DARK_GREEN);
         message.append(ChatColor.UNDERLINE);
         message.append("Vertconomy Status");
@@ -64,6 +65,7 @@ public class CommandVertconomy implements CommandExecutor
         message.append('\n');
         message.append(ChatColor.BLUE);
         message.append("https://github.com/mshernandez5/vertconomy");
+        message.append('\n');
 
         sender.sendMessage(message.toString());
         return true;

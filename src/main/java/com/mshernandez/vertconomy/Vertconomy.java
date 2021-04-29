@@ -155,7 +155,6 @@ public class Vertconomy
             // Return If Account Already Exists
             if (account != null)
             {
-                Hibernate.initialize(account.getTransactions());
                 return account;
             }
             // Create New Wallet Deposit Address For Account
@@ -210,6 +209,8 @@ public class Vertconomy
         long unconfirmedBalance = 0L;
         try (Session session = HibernateUtil.getSessionFactory().openSession())
         {
+            account = (Account) session.merge(account);
+            Hibernate.initialize(account.getProcessedTransactionIDs());
             Set<String> oldTransactionIDs = account.getProcessedTransactionIDs();
             List<ListTransactionResponse.Transaction> walletTransactions = wallet.getTransactions(accountUUID.toString());
             for (ListTransactionResponse.Transaction t : walletTransactions)

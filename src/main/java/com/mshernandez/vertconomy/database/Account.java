@@ -7,6 +7,7 @@ import java.util.UUID;
 
 import javax.persistence.ElementCollection;
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
 import javax.persistence.Id;
 import javax.persistence.ManyToMany;
 
@@ -26,14 +27,20 @@ public class Account
     /**
      * The set of transactions actively contributing
      * to the account balance.
+     * 
+     * Transactions will always be used when fetching an
+     * account so they are automatically fetched when
+     * fetching an account.
      */
-    @ManyToMany
+    @ManyToMany(fetch = FetchType.EAGER)
     private Set<BlockchainTransaction> transactions;
 
     /**
      * Remembers transactions that have been applied to
      * the account, regardless of whether their balances
      * are still available or not.
+     * 
+     * Lazy fetching, only used to check for new deposits.
      */
     @ElementCollection
     private Set<String> processedTransactionIDs;
@@ -116,7 +123,7 @@ public class Account
      */
     public Set<String> getProcessedTransactionIDs()
     {
-        return new HashSet<>(processedTransactionIDs);
+        return processedTransactionIDs;
     }
 
     /**

@@ -6,6 +6,7 @@ import java.util.Objects;
 
 import javax.persistence.ElementCollection;
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
 import javax.persistence.Id;
 import javax.persistence.MapKeyJoinColumn;
 
@@ -26,7 +27,14 @@ public class BlockchainTransaction
     private String TXID;
     private long total;
 
-    @ElementCollection
+    /**
+     * Distributes the balance held by this transaction
+     * across multiple accounts.
+     * 
+     * Eagerly fetched since this will always be accessed
+     * when looking up a transaction.
+     */
+    @ElementCollection(fetch = FetchType.EAGER)
     @MapKeyJoinColumn(name = "ACCOUNT")
     private Map<Account, Long> distribution;
 
