@@ -16,7 +16,6 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.ServicePriority;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.h2.tools.Server;
 
 import net.milkbowl.vault.economy.Economy;
 
@@ -106,13 +105,12 @@ public class App extends JavaPlugin
             return;
         }
 
-        // Start H2 Web Console If Enabled; Option May Be Removed In Future
+        // Start H2 Web Console If Enabled; Option Will Likely Be Removed In Future
         if (configuration.getBoolean("enable-h2-console", false))
         {
             try
             {
-                Server webServer = Server.createWebServer("-webPort", "8082");
-                webServer.start();
+                HibernateUtil.startWebServer();
                 getLogger().warning("Security Risk: H2 Console Enabled, Be Careful");
             }
             catch (SQLException e)
