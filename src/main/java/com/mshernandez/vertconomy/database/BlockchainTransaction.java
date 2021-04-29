@@ -45,6 +45,15 @@ public class BlockchainTransaction
     }
 
     /**
+     * Needed for Hibernate to instantiate the class,
+     * not for manual use.
+     */
+    BlockchainTransaction()
+    {
+        // Required For Hibernate
+    }
+
+    /**
      * Get the unique ID for this transaction.
      * 
      * @return A blockchain transaction ID.

@@ -8,6 +8,7 @@ import java.util.UUID;
 import javax.persistence.Entity;
 import javax.persistence.Id;
 import javax.persistence.ManyToMany;
+import javax.persistence.OneToOne;
 
 /**
  * A class to represent a player's account,
@@ -24,6 +25,8 @@ public class Account
 
     @ManyToMany
     private Set<BlockchainTransaction> transactions;
+
+    @OneToOne
     private BlockchainTransaction lastDeposit;
 
     /**
@@ -40,6 +43,11 @@ public class Account
         returnAddress = "";
         transactions = new HashSet<>();
         lastDeposit = null;
+    }
+
+    public Account()
+    {
+        // Required For Hibernate
     }
 
     /**
@@ -152,6 +160,17 @@ public class Account
             balance += t.getDistribution(this);
         }
         return balance;
+    }
+
+    /**
+     * Returns a reference to the set of transactions
+     * this account is associated with.
+     * 
+     * @return The transactions this account is associated with.
+     */
+    public Set<BlockchainTransaction> getTransactions()
+    {
+        return transactions;
     }
 
     @Override

@@ -1,6 +1,5 @@
 package com.mshernandez.vertconomy.database;
 
-import org.h2.tools.Server;
 import org.hibernate.SessionFactory;
 import org.hibernate.cfg.Configuration;
 
@@ -12,19 +11,24 @@ import org.hibernate.cfg.Configuration;
  */
 public class HibernateUtil
 {
-    private static final SessionFactory sessionFactory;
+    private static SessionFactory sessionFactory = null;
 
-    static
+    /**
+     * Configures the static SessionFactory if it has not
+     * already been done before.
+     */
+    public static void configure()
     {
+        if (sessionFactory != null)
+        {
+            return;
+        }
         try
         {
             sessionFactory = new Configuration()
                 .addAnnotatedClass(Account.class)
                 .addAnnotatedClass(BlockchainTransaction.class)
                 .buildSessionFactory();
-            // Temporary, Only For Development Purposes (Security Risk)
-            Server webServer = Server.createWebServer("-web", "-webAllowOthers", "-webPort", "8082");
-            webServer.start();
         }
         catch (Exception e)
         {
@@ -33,7 +37,26 @@ public class HibernateUtil
     }
 
     /**
-     * Get a preconfigured SessionFactory.
+     * Close SessionFactory instance, reset reference
+     * to null to allow reconfiguration.
+     */
+    public static void reset()
+    {
+        try
+        {
+            sessionFactory.close();
+        }
+        catch (Exception e)
+        {
+            throw new RuntimeException("Failed To Close Session Factory: " + e.getMessage());
+        }
+        sessionFactory = null;
+    }
+
+    /**
+     * Get a preconfigured SessionFactory,
+     * or null if the configure() method
+     * has not been run yet.
      * 
      * @return A configured SessionFactory.
      */

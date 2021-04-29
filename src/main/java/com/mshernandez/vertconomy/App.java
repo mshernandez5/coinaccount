@@ -4,9 +4,11 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.sql.SQLException;
 
 import com.mshernandez.vertconomy.commands.CommandBalance;
 import com.mshernandez.vertconomy.commands.CommandDeposit;
+import com.mshernandez.vertconomy.commands.CommandVertconomy;
 import com.mshernandez.vertconomy.database.HibernateUtil;
 import com.mshernandez.vertconomy.wallet_interface.RPCWalletConnection;
 
@@ -14,6 +16,7 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.ServicePriority;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.h2.tools.Server;
 
 import net.milkbowl.vault.economy.Economy;
 
@@ -30,9 +33,9 @@ public class App extends JavaPlugin
         FileConfiguration configuration = getConfig();
 
         // Grab Wallet Connection Information
-        String walletUriString = configuration.getString("uri");
-        String user = configuration.getString("user");
-        String pass = configuration.getString("pass");
+        String walletUriString = configuration.getString("uri", "http://127.0.0.1:5888");
+        String user = configuration.getString("user", "vertuser");
+        String pass = configuration.getString("pass", "vertpass");
 
         // Form Wallet Connection
         URI walletUri;
@@ -47,11 +50,15 @@ public class App extends JavaPlugin
         }
         RPCWalletConnection wallet = new RPCWalletConnection(walletUri, user, pass);
 
+        // Grab Wallet Management Settings
+        int minConfirmations = configuration.getInt("min-confirmations", 10);
+        int targetBlockTime = configuration.getInt("target-block-time", 2);
+
         // Grab Currency Information
-        String symbol = configuration.getString("symbol");
-        String baseUnit = configuration.getString("base-unit");
+        String symbol = configuration.getString("symbol", "VTC");
+        String baseUnit = configuration.getString("base-unit", "sat");
         CoinScale scale;
-        switch (configuration.getString("scale"))
+        switch (configuration.getString("scale", "base"))
         {
             case "full":
                 scale = CoinScale.FULL;
@@ -88,11 +95,35 @@ public class App extends JavaPlugin
             }
         }
 
-        // Load HibernateUtil Class To Force Static Configuration
-        HibernateUtil.getSessionFactory();
+        // Configure HibernateUtil SessionFactory For Database
+        try
+        {
+            HibernateUtil.configure();
+        }
+        catch (RuntimeException e)
+        {
+            getLogger().warning(e.getMessage());
+            return;
+        }
+
+        // Start H2 Web Console If Enabled; Option May Be Removed In Future
+        if (configuration.getBoolean("enable-h2-console", false))
+        {
+            try
+            {
+                Server webServer = Server.createWebServer("-webPort", "8082");
+                webServer.start();
+                getLogger().warning("Security Risk: H2 Console Enabled, Be Careful");
+            }
+            catch (SQLException e)
+            {
+                getLogger().warning("Failed To Start H2 Console");
+            }
+        }
 
         // Create Vertconomy Instance With Loaded Values
-        Vertconomy vertconomy = new Vertconomy(this, wallet, symbol, baseUnit, scale);
+        Vertconomy vertconomy = new Vertconomy(this, wallet, minConfirmations,
+            targetBlockTime, symbol, baseUnit, scale);
 
         // Register Vertconomy Wrapper With Vault
         Plugin vault = getServer().getPluginManager().getPlugin("Vault");
@@ -108,11 +139,21 @@ public class App extends JavaPlugin
         // Register Commands
         getCommand("balance").setExecutor(new CommandBalance(vertconomy));
         getCommand("deposit").setExecutor(new CommandDeposit(vertconomy));
+        getCommand("vertconomy").setExecutor(new CommandVertconomy(vertconomy));
     }
 
     @Override
     public void onDisable()
     {
         getLogger().info("Stopping Vertconomy...");
+        // Configure HibernateUtil SessionFactory
+        try
+        {
+            HibernateUtil.reset();
+        }
+        catch (RuntimeException e)
+        {
+            getLogger().warning(e.getMessage());
+        }
     }
 }

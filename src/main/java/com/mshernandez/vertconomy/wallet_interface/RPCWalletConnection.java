@@ -85,6 +85,23 @@ public class RPCWalletConnection
     }
 
     /**
+     * Gets a WalletInfoResponse holding general information
+     * about the wallet and its status.
+     * 
+     * @return A WalletInfoResponse holding wallet status information.
+     */
+    public WalletInfoResponse.Result getWalletStatus() throws WalletRequestException
+    {
+        JsonArray params = new JsonArray();
+        WalletRequest jsonRequest = new WalletRequest()
+            .setId(DEFAULT_REQUEST_ID)
+            .setMethod("getwalletinfo")
+            .setParams(params);
+        WalletInfoResponse response = parser.fromJson(makeRequest(jsonRequest), WalletInfoResponse.class);
+        return response.result;
+    }
+
+    /**
      * Get the balance of the entire wallet,
      * only considering transactions with a minimum
      * number of confirmations.

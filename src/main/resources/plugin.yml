@@ -15,4 +15,8 @@ commands:
     description: Allows a player to deposit crypto into their vertconomy account.
     usage: /deposit
     permission: vertconomy.deposit
+  vertconomy:
+    description: Show the status of the plugin and wallet connection.
+    usage: /vertconomy
+    permission: vertconomy.status
   

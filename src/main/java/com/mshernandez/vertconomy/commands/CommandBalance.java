@@ -11,6 +11,13 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.command.ConsoleCommandSender;
 import org.bukkit.entity.Player;
 
+/**
+ * /balance
+ * 
+ * - Allows user to check their balance.
+ * - Allows console to check entire server wallet balance.
+ * - Allows console to check the balance of a specific player.
+ */
 public class CommandBalance implements CommandExecutor
 {
     private Vertconomy vertconomy;
