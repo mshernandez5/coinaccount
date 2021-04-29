@@ -82,7 +82,7 @@ public class BlockchainTransaction
      */
     public Map<Account, Long> getDistribution()
     {
-        return new HashMap<>(distribution);
+        return distribution;
     }
 
     /**

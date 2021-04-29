@@ -1,8 +1,10 @@
 package com.mshernandez.vertconomy;
 
+import java.util.Map;
 import java.util.UUID;
 
 import com.mshernandez.vertconomy.database.Account;
+import com.mshernandez.vertconomy.database.BlockchainTransaction;
 import com.mshernandez.vertconomy.database.HibernateUtil;
 import com.mshernandez.vertconomy.wallet_interface.RPCWalletConnection;
 import com.mshernandez.vertconomy.wallet_interface.WalletInfoResponse;
@@ -204,6 +206,13 @@ public class Vertconomy
         return account.calculateBalance();
     }
 
+    /**
+     * Get a wallet address for the specified
+     * player to deposit coins into.
+     * 
+     * @param accountUUID The account UUID.
+     * @return The corresponding deposit address.
+     */
     public String getDepositAddress(UUID accountUUID)
     {
         Account account = getOrCreateAccount(accountUUID);
@@ -212,6 +221,65 @@ public class Vertconomy
             return "ERROR RETRIEVING ACCOUNT";
         }
         return account.getDepositAddress();
+    }
+
+    /**
+     * Transfer an amount from one account to another,
+     * internally redistributing ownership of the
+     * underlying blockchain transactions.
+     * 
+     * @param sendingAccount The sending account UUID.
+     * @param receivingAccount The receiving account UUID.
+     * @param amount The amount to transfer, in sats.
+     * @return True if the transfer was successful.
+     */
+    public boolean transferFrom(UUID sendingAccount, UUID receivingAccount, long amount)
+    {
+        Account sender = getOrCreateAccount(sendingAccount);
+        if (sender.calculateBalance() < amount)
+        {
+            return false;
+        }
+        Account receiver = getOrCreateAccount(receivingAccount);
+        try (Session session = HibernateUtil.getSessionFactory().openSession())
+        {
+            long remaining = amount;
+            Transaction dbtx = session.beginTransaction();
+            for (BlockchainTransaction bt : sender.getTransactions())
+            {
+                if (remaining == 0L)
+                {
+                    break;
+                }
+                Map<Account, Long> distribution = bt.getDistribution();
+                long senderShare = distribution.getOrDefault(sender, 0L);
+                long takenAmount;
+                if (senderShare <= remaining)
+                {
+                    distribution.put(sender, 0L);
+                    distribution.put(receiver, senderShare);
+                    sender.detatchTransaction(bt);
+                    receiver.associateTransaction(bt, false);
+                    takenAmount = senderShare;
+                }
+                else
+                {
+                    distribution.put(sender, senderShare - remaining);
+                    distribution.put(receiver, remaining);
+                    receiver.associateTransaction(bt, false);
+                    takenAmount = remaining;
+                }
+                remaining -= takenAmount;
+            }
+            sender.getTransactions();
+            dbtx.commit();
+        }
+        catch (Exception e)
+        {
+            plugin.getLogger().warning("Failed To Make Transfer: " + e.getMessage());
+            return false;
+        }
+        return true;
     }
 
     /**
@@ -238,13 +306,8 @@ public class Vertconomy
      */
     public boolean moveToTransferFund(UUID playerUUID, double amount)
     {
-        if (getBalance(playerUUID) < amount)
-        {
-            return false;
-        }
-        Account account = getOrCreateAccount(playerUUID);
-        // TODO: Send to transfer fund
-        return true;
+        long satAmount = (long) (amount * scale.SAT_SCALE);
+        return transferFrom(playerUUID, TRANSFER_FUND_ACCOUNT_UUID, satAmount);
     }
 
     /**
@@ -270,7 +333,7 @@ public class Vertconomy
      */
     public boolean takeFromTransferFund(UUID playerUUID, double amount)
     {
-        // TODO: Transfer fund
-        return false;
+        long satAmount = (long) (amount * scale.SAT_SCALE);
+        return transferFrom(TRANSFER_FUND_ACCOUNT_UUID, playerUUID, satAmount);
     }
 }
