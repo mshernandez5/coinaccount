@@ -316,7 +316,7 @@ public class Vertconomy
                 else
                 {
                     distribution.put(sender, senderShare - remaining);
-                    distribution.put(receiver, remaining);
+                    distribution.put(receiver, distribution.getOrDefault(receiver, 0L) + remaining);
                     receiver.associateTransaction(bt);
                     takenAmount = remaining;
                 }
