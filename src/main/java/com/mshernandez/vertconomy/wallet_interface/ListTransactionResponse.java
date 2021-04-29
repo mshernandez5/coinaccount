@@ -20,12 +20,12 @@ public class ListTransactionResponse
          * involved in transaction.
          */
         @SerializedName("involvesWatchonly")
-        boolean involvesWatchOnly;
+        public boolean involvesWatchOnly;
 
         /**
          * The address of the transaction.
          */
-        String address;
+        public String address;
 
         /**
          * The transaction category.
@@ -36,14 +36,14 @@ public class ListTransactionResponse
          * - immature
          * - orphan
          */
-        String category;
+        public String category;
 
         /**
          * The amount in VTC. This is negative
          * for the 'send' category, and is positive
          * for all other categories.
          */
-        double amount;
+        public double amount;
 
         /**
          * A comment for the address/transaction, if any.
@@ -53,85 +53,85 @@ public class ListTransactionResponse
         /**
          * The vout value.
          */
-        int vout;
+        public int vout;
 
         /**
          * The amount of the fee in VTC.
          * This is negative and only available
          * for the 'send' category of transactions.
          */
-        double fee;
+        public double fee;
 
         /**
          * The number of confirmations for the transaction.
          * Negative confirmations means the transaction
          * conflicted that many blocks ago.
          */
-        int confirmations;
+        public int confirmations;
 
         /**
          * Only present if transaction only input
          * is a coinbase one.
          */
-        boolean generated;
+        public boolean generated;
 
         /**
          * Only present if we consider transaction
          * to be trusted and so safe to spend from.
          */
-        boolean trusted;
+        public boolean trusted;
 
         /**
          * The block hash containing the transaction.
          */
         @SerializedName("blockhash")
-        String blockHash;
+        public String blockHash;
 
         /**
          * The block height containing the transaction.
          */
         @SerializedName("blockheight")
-        int blockHeight;
+        public int blockHeight;
 
         /**
          * The index of the transaction in the block that includes it.
          */
         @SerializedName("blockindex")
-        int blockIndex;
+        public int blockIndex;
 
         /**
          * The block time expressed in UNIX epoch time.
          */
         @SerializedName("blocktime")
-        long blockTime;
+        public long blockTime;
 
         /**
          * The transaction id.
          */
-        String txid;
+        public String txid;
 
         /**
          * Conflicting transaction ids.
          */
         @SerializedName("walletconflicts")
-        List<String> walletConflicts;
+        public List<String> walletConflicts;
 
         /**
          * The transaction time expressed in UNIX epoch time.
          */
-        long time;
+        public long time;
 
         /**
          * The time received expressed in UNIX epoch time.
          */
         @SerializedName("timereceived")
-        long timeReceived;
+        public long timeReceived;
 
         /**
          * If a comment is associated with the transaction,
          * only present if not empty.
          */
-        String comment;
+        public String comment;
 
         /**
          * Whether this transaction could be replaced
@@ -140,7 +140,7 @@ public class ListTransactionResponse
          * transactions not in the mempool
          */
         @SerializedName("bip125-replaceable")
-        String bip125Replaceable;
+        public String bip125Replaceable;
 
         /**
          * 'true' if the transaction has been
@@ -148,6 +148,6 @@ public class ListTransactionResponse
          * Only available for the
          * 'send' category of transactions.
          */
-        boolean abandoned;
+        public boolean abandoned;
     }
 }

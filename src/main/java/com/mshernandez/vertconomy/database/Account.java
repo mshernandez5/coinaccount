@@ -5,10 +5,10 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 
+import javax.persistence.ElementCollection;
 import javax.persistence.Entity;
 import javax.persistence.Id;
 import javax.persistence.ManyToMany;
-import javax.persistence.OneToOne;
 
 /**
  * A class to represent a player's account,
@@ -23,11 +23,20 @@ public class Account
     private String depositAddress;
     private String returnAddress;
 
+    /**
+     * The set of transactions actively contributing
+     * to the account balance.
+     */
     @ManyToMany
     private Set<BlockchainTransaction> transactions;
 
-    @OneToOne
-    private BlockchainTransaction lastDeposit;
+    /**
+     * Remembers transactions that have been applied to
+     * the account, regardless of whether their balances
+     * are still available or not.
+     */
+    @ElementCollection
+    private Set<String> processedTransactionIDs;
 
     /**
      * Creates a new account.
@@ -42,7 +51,7 @@ public class Account
         this.depositAddress = depositAddress;
         returnAddress = "";
         transactions = new HashSet<>();
-        lastDeposit = null;
+        processedTransactionIDs = new HashSet<>();
     }
 
     public Account()
@@ -68,7 +77,7 @@ public class Account
      * @param transaction The transaction to associate.
      * @param isDeposit True if the transaction was a direct deposit by the player.
      */
-    public void associateTransaction(BlockchainTransaction transaction, boolean isDeposit)
+    public void associateTransaction(BlockchainTransaction transaction)
     {
         if (transaction.getDistribution(this) == 0L)
         {
@@ -78,10 +87,7 @@ public class Account
         {
             transactions.add(transaction);
         }
-        if (isDeposit)
-        {
-            lastDeposit = transaction;
-        }
+        processedTransactionIDs.add(transaction.getTXID());
     }
 
     /**
@@ -99,6 +105,18 @@ public class Account
     public void detatchTransaction(BlockchainTransaction transaction)
     {
         transactions.remove(transaction);
+    }
+
+    /**
+     * A set of transaction IDs that have been applied to
+     * the account, regardless of whether their balances
+     * are still available or not.
+     * 
+     * @return A set of transaction IDs that have been applied to the account.
+     */
+    public Set<String> getProcessedTransactionIDs()
+    {
+        return new HashSet<>(processedTransactionIDs);
     }
 
     /**
@@ -134,17 +152,6 @@ public class Account
     public String getDepositAddress()
     {
         return depositAddress;
-    }
-
-    /**
-     * Get the last deposit transaction,
-     * or null if none exists.
-     * 
-     * @return The last deposit transaction, or null.
-     */
-    public BlockchainTransaction getLastDeposit()
-    {
-        return lastDeposit;
     }
 
     /**

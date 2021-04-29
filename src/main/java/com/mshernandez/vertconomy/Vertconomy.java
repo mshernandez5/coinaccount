@@ -1,11 +1,15 @@
 package com.mshernandez.vertconomy;
 
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 import com.mshernandez.vertconomy.database.Account;
 import com.mshernandez.vertconomy.database.BlockchainTransaction;
 import com.mshernandez.vertconomy.database.HibernateUtil;
+import com.mshernandez.vertconomy.wallet_interface.ListTransactionResponse;
 import com.mshernandez.vertconomy.wallet_interface.RPCWalletConnection;
 import com.mshernandez.vertconomy.wallet_interface.WalletInfoResponse;
 import com.mshernandez.vertconomy.wallet_interface.WalletRequestException;
@@ -59,10 +63,22 @@ public class Vertconomy
     }
 
     /**
+     * Format a sat amount into a readable String according
+     * to the current currency settings.
+     * 
+     * @param amount The unformatted amount, in sats.
+     * @return A formatted string representing the amount.
+     */
+    public String format(long amount)
+    {
+        return format((double) amount / scale.SAT_SCALE);
+    }
+
+    /**
      * Format a double into a readable amount according
      * to the current currency settings.
      * 
-     * @param amount The unformatted amount.
+     * @param amount The unformatted amount, using the current scale.
      * @return A formatted string representing the amount.
      */
     public String format(double amount)
@@ -182,28 +198,62 @@ public class Vertconomy
      * belonging to the given player UUID.
      * 
      * @param accountUUID The account UUID.
-     * @return The total balance owned by the account.
+     * @return A pair where the key is confirmed balances, the value is unconfirmed balances.
      */
-    public double getBalance(UUID accountUUID)
+    public Pair<Long, Long> getBalances(UUID accountUUID)
     {
         Account account = getOrCreateAccount(accountUUID);
+        if (account == null)
+        {
+            return new Pair<Long, Long>(0L, 0L);
+        }
+        long unconfirmedBalance = 0L;
         try (Session session = HibernateUtil.getSessionFactory().openSession())
         {
-            // TODO: Check For Deposits
-            // check for new transactions at address
-            // create, save, and add any new transactions to user
-            // save transaction in db
-            // update account in db
+            Set<String> oldTransactionIDs = account.getProcessedTransactionIDs();
+            List<ListTransactionResponse.Transaction> walletTransactions = wallet.getTransactions(accountUUID.toString());
+            for (ListTransactionResponse.Transaction t : walletTransactions)
+            {
+                if (t.trusted && t.confirmations >= minConfirmations)
+                {
+                    if (!oldTransactionIDs.contains(t.txid))
+                    {
+                        Transaction dbtx = session.beginTransaction();
+                        // TODO: will clean up with custom deserializer
+                        long depositAmount = (long) (t.amount * CoinScale.BASE.SAT_SCALE);
+                        // Account Initially Owns 100% Of TX Amount
+                        Map<Account, Long> distribution = new HashMap<>();
+                        distribution.put(account, depositAmount);
+                        // Add Deposit To Account
+                        BlockchainTransaction bt = new BlockchainTransaction(t.txid, depositAmount, distribution);
+                        account.associateTransaction(bt);
+                        dbtx.commit();
+                    }
+                }
+                else
+                {
+                    // TODO: will clean up with custom deserializer
+                    unconfirmedBalance += (long) (t.amount * CoinScale.BASE.SAT_SCALE);
+                }
+            }
         }
         catch (Exception e)
         {
             plugin.getLogger().warning("Failed To Check For New Transactions: " + e.getMessage());
         }
-        if (account == null)
-        {
-            return 0.0;
-        }
-        return account.calculateBalance();
+        return new Pair<Long, Long>(account.calculateBalance(), unconfirmedBalance);
+    }
+
+    /**
+     * Get the total confirmed balances owned
+     * by an account belonging to the given player UUID.
+     * 
+     * @param accountUUID The account UUID.
+     * @return The total balance owned by the account.
+     */
+    public long getBalance(UUID accountUUID)
+    {
+        return getBalances(accountUUID).getKey();
     }
 
     /**
@@ -256,17 +306,17 @@ public class Vertconomy
                 long takenAmount;
                 if (senderShare <= remaining)
                 {
-                    distribution.put(sender, 0L);
+                    distribution.remove(sender);
                     distribution.put(receiver, senderShare);
                     sender.detatchTransaction(bt);
-                    receiver.associateTransaction(bt, false);
+                    receiver.associateTransaction(bt);
                     takenAmount = senderShare;
                 }
                 else
                 {
                     distribution.put(sender, senderShare - remaining);
                     distribution.put(receiver, remaining);
-                    receiver.associateTransaction(bt, false);
+                    receiver.associateTransaction(bt);
                     takenAmount = remaining;
                 }
                 remaining -= takenAmount;

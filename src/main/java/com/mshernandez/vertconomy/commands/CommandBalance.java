@@ -1,5 +1,6 @@
 package com.mshernandez.vertconomy.commands;
 
+import com.mshernandez.vertconomy.Pair;
 import com.mshernandez.vertconomy.Vertconomy;
 
 import org.bukkit.Bukkit;
@@ -30,11 +31,21 @@ public class CommandBalance implements CommandExecutor
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args)
     {
-        String message;
+        StringBuilder message = new StringBuilder();
         if (sender instanceof Player)
         {
-            message = ChatColor.RED + "Balance: " + ChatColor.GREEN
-                + vertconomy.format(vertconomy.getBalance(((Player) sender).getUniqueId()));
+            Pair<Long, Long> balances = vertconomy.getBalances(((Player) sender).getUniqueId());
+            message.append(ChatColor.RED);
+            message.append("Balance: ");
+            message.append(ChatColor.GREEN);
+            message.append(vertconomy.format(balances.getKey()));
+            if (balances.getVal() != 0L)
+            {
+                message.append(ChatColor.GRAY);
+                message.append(" ( Pending: ");
+                message.append(vertconomy.format(balances.getVal()));
+                message.append(" )");
+            }
         }
         else if (sender instanceof ConsoleCommandSender)
         {
@@ -43,25 +54,41 @@ public class CommandBalance implements CommandExecutor
                 OfflinePlayer player = Bukkit.getOfflinePlayer(args[0]);
                 if (player.hasPlayedBefore())
                 {
-                    message = ChatColor.RED + "Balance: " + ChatColor.GREEN
-                        + vertconomy.format(vertconomy.getBalance((player).getUniqueId()));
+                    Pair<Long, Long> balances = vertconomy.getBalances((player.getUniqueId()));
+                    message.append(ChatColor.RED);
+                    message.append("Balance: ");
+                    message.append(ChatColor.GREEN);
+                    message.append(vertconomy.format(balances.getKey()));
+                    if (balances.getVal() != 0L)
+                    {
+                        message.append(ChatColor.GRAY);
+                        message.append(" ( Pending: ");
+                        message.append(vertconomy.format(balances.getVal()));
+                        message.append(" )");
+                    }
                 }
                 else
                 {
-                    message = ChatColor.RED + "Unknown Player: " + ChatColor.DARK_RED + args[0];
+                    message.append(ChatColor.RED);
+                    message.append("Unknown Player: ");
+                    message.append(ChatColor.DARK_RED);
+                    message.append(args[0]);
                 }
             }
             else
             {
-                message = ChatColor.RED + "Combined Server Balance: " + ChatColor.GREEN
-                    + vertconomy.format(vertconomy.getCombinedWalletBalance());
+                message.append(ChatColor.RED);
+                message.append("Combined Server Balance: ");
+                message.append(ChatColor.GREEN);
+                message.append(vertconomy.format(vertconomy.getCombinedWalletBalance()));
             }
         }
         else
         {
-            message = ChatColor.DARK_RED + "Unsupported";
+            message.append(ChatColor.DARK_RED);
+            message.append("UNSUPPORTED");
         }
-        sender.sendMessage(message);
+        sender.sendMessage(message.toString());
         return true;
     }
 }
