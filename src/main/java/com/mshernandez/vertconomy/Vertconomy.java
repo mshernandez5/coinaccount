@@ -28,6 +28,11 @@ public class Vertconomy
     private String baseUnit;
     private CoinScale scale;
 
+    // Internally Used Accounts
+    private static final UUID SERVER_ACCOUNT_UUID = UUID.fromString("a8a73687-8f8b-4199-8078-36e676f32d8f");
+    private static final UUID TRANSFER_FUND_ACCOUNT_UUID = UUID.fromString("ced87bc1-4730-41e1-955b-c4c45b4e9ccf");
+    private static final UUID CHANGE_ACCOUNT_UUID = UUID.fromString("884b2231-6c7a-4db5-b022-1cc5aeb949a8");
+
     public Vertconomy(Plugin plugin, RPCWalletConnection wallet, int minConfirmations,
         int targetBlockTime, String symbol, String baseUnit, CoinScale scale)
     {
