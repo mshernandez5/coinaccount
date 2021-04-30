@@ -209,17 +209,17 @@ public class Vertconomy
         long unconfirmedBalance = 0L;
         try (Session session = HibernateUtil.getSessionFactory().openSession())
         {
+            Transaction dbtx = session.beginTransaction();
             account = (Account) session.merge(account);
             Hibernate.initialize(account.getProcessedTransactionIDs());
             Set<String> oldTransactionIDs = account.getProcessedTransactionIDs();
             List<ListTransactionResponse.Transaction> walletTransactions = wallet.getTransactions(accountUUID.toString());
             for (ListTransactionResponse.Transaction t : walletTransactions)
             {
-                if (t.trusted && t.confirmations >= minConfirmations)
+                if (t.confirmations >= minConfirmations)
                 {
                     if (!oldTransactionIDs.contains(t.txid))
                     {
-                        Transaction dbtx = session.beginTransaction();
                         // TODO: will clean up with custom deserializer
                         long depositAmount = (long) (t.amount * CoinScale.FULL.SAT_SCALE);
                         // Account Initially Owns 100% Of TX Amount
@@ -227,8 +227,8 @@ public class Vertconomy
                         distribution.put(account, depositAmount);
                         // Add Deposit To Account
                         BlockchainTransaction bt = new BlockchainTransaction(t.txid, depositAmount, distribution);
+                        session.save(bt);
                         account.associateTransaction(bt);
-                        dbtx.commit();
                     }
                 }
                 else
@@ -237,6 +237,7 @@ public class Vertconomy
                     unconfirmedBalance += (long) (t.amount * CoinScale.FULL.SAT_SCALE);
                 }
             }
+            dbtx.commit();
         }
         catch (Exception e)
         {
@@ -289,47 +290,52 @@ public class Vertconomy
         Account sender = getOrCreateAccount(sendingAccount);
         if (sender.calculateBalance() < amount)
         {
+            plugin.getLogger().info(sendingAccount.toString() + " has " + sender.calculateBalance() + " and "
+                + " can't send " + amount + " to " + receivingAccount.toString());
             return false;
         }
         Account receiver = getOrCreateAccount(receivingAccount);
         try (Session session = HibernateUtil.getSessionFactory().openSession())
         {
-            long remaining = amount;
             Transaction dbtx = session.beginTransaction();
+            sender = (Account) session.merge(sender);
+            receiver = (Account) session.merge(receiver);
+            long remainingOwed = amount;
             for (BlockchainTransaction bt : sender.getTransactions())
             {
-                if (remaining == 0L)
+                if (remainingOwed == 0L)
                 {
                     break;
                 }
                 Map<Account, Long> distribution = bt.getDistribution();
-                long senderShare = distribution.getOrDefault(sender, 0L);
+                long senderShare = distribution.get(sender);
                 long takenAmount;
-                if (senderShare <= remaining)
+                if (senderShare <= remainingOwed)
                 {
                     distribution.remove(sender);
-                    distribution.put(receiver, senderShare);
+                    distribution.put(receiver, distribution.getOrDefault(receiver, 0L) + senderShare);
                     sender.detatchTransaction(bt);
                     receiver.associateTransaction(bt);
                     takenAmount = senderShare;
                 }
                 else
                 {
-                    distribution.put(sender, senderShare - remaining);
-                    distribution.put(receiver, distribution.getOrDefault(receiver, 0L) + remaining);
+                    distribution.put(sender, senderShare - remainingOwed);
+                    distribution.put(receiver, distribution.getOrDefault(receiver, 0L) + remainingOwed);
                     receiver.associateTransaction(bt);
-                    takenAmount = remaining;
+                    takenAmount = remainingOwed;
                 }
-                remaining -= takenAmount;
+                remainingOwed -= takenAmount;
             }
-            sender.getTransactions();
             dbtx.commit();
         }
         catch (Exception e)
         {
-            plugin.getLogger().warning("Failed To Make Transfer: " + e.getMessage());
+            plugin.getLogger().warning("Failed To Make Transfer: (" + e.getClass().getName() + ") " + e.getMessage());
             return false;
         }
+        plugin.getLogger().info(sendingAccount.toString() + " with " + sender.calculateBalance() + " successfully "
+                + " paid " + amount + " to " + receivingAccount.toString());
         return true;
     }
 

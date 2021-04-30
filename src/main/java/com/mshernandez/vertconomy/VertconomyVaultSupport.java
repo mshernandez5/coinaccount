@@ -171,6 +171,7 @@ public class VertconomyVaultSupport implements Economy
     @Override
     public EconomyResponse withdrawPlayer(OfflinePlayer player, double amount)
     {
+        Bukkit.getLogger().info("Attempting To Withdraw: " + amount);
         if (vertconomy.moveToTransferFund(player.getUniqueId(), amount))
         {
             return new EconomyResponse(amount,
@@ -207,6 +208,7 @@ public class VertconomyVaultSupport implements Economy
     @Override
     public EconomyResponse depositPlayer(OfflinePlayer player, double amount)
     {
+        Bukkit.getLogger().info("Attempting To Deposit: " + amount);
         if (vertconomy.takeFromTransferFund(player.getUniqueId(), amount))
         {
             return new EconomyResponse(amount,
