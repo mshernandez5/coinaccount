@@ -42,9 +42,9 @@ public class CommandBalance implements CommandExecutor
             if (balances.getVal() != 0L)
             {
                 message.append(ChatColor.GRAY);
-                message.append(" ( Pending: ");
+                message.append(" (Pending: ");
                 message.append(vertconomy.format(balances.getVal()));
-                message.append(" )");
+                message.append(")");
             }
         }
         else if (sender instanceof ConsoleCommandSender)

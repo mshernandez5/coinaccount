@@ -221,7 +221,7 @@ public class Vertconomy
                     {
                         Transaction dbtx = session.beginTransaction();
                         // TODO: will clean up with custom deserializer
-                        long depositAmount = (long) (t.amount * CoinScale.BASE.SAT_SCALE);
+                        long depositAmount = (long) (t.amount * CoinScale.FULL.SAT_SCALE);
                         // Account Initially Owns 100% Of TX Amount
                         Map<Account, Long> distribution = new HashMap<>();
                         distribution.put(account, depositAmount);
@@ -234,7 +234,7 @@ public class Vertconomy
                 else
                 {
                     // TODO: will clean up with custom deserializer
-                    unconfirmedBalance += (long) (t.amount * CoinScale.BASE.SAT_SCALE);
+                    unconfirmedBalance += (long) (t.amount * CoinScale.FULL.SAT_SCALE);
                 }
             }
         }
