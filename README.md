@@ -11,6 +11,9 @@ All player balances are held as part of the same wallet with an embedded databas
 
 Minecraft [Vault API](https://github.com/MilkBowl/VaultAPI) integration enables Vertcoin support across a wide variety of existing plugins.
 
+## Does it work with existing plugins?
+Vertconomy aims to provide at least limited compatibility with existing plugins designed to work with the Vault API. Unfortunately, Minecraft plugins are built on the (fair) assumption that in-game currency can be created out of thin air and sent back into the void at will. Vertconomy works around these assumptions by transforming the money void into a server-owned account and rejecting the creation of currency beyond that available as excess funds within the account. This general idea ensures that the existing currency owned by players must be bound to real wallet funds. Of course, a few more tricks go into the implementation as some external plugins internally interact with player balances in complicated ways.
+
 ## How can I use this plugin?
 You will need a dedicated Vertcoin wallet configured to listen for RPC connections. Do not use an existing Vertcoin wallet. The configuration file for Vertcoin wallet can be found at one of the following locations if the wallet configuration directory was not manually changed:
 
@@ -32,7 +35,7 @@ rpcport=5888
 
 Please change the username and password to non-default values. After saving the new configuration, the changes will take effect after starting `vertcoind` (recommended, headless) or `vertcoin-qt` (graphical interface).
 
-The plugin will need to know how to connect to the wallet, so you will also need a plugin configuration to match in `plugins/Vertconomy/config.yml` relative to the server directory.
+The plugin will need to know how to connect to the wallet, so you will also need a plugin configuration to match in `plugins/Vertconomy/config.yml` relative to the Minecraft server directory.
 
 The default configuration is as follows:
 
@@ -69,6 +72,13 @@ scale: base
 
 # Automatically Configure Essentials Economy Commands If Found
 configure-essentials: false
+
+###################################
+# Development Settings: CAREFUL
+###################################
+
+# SECURITY RISK: Enable H2 Web Console For DB Insight
+enable-h2-console: false
 ```
 
 The authentication parameters should be changed to match the wallet configuration.
@@ -85,3 +95,10 @@ Plugin written by [@mshernandez5](https://github.com/mshernandez5/) with special
 * The Vertcoin, Bitcoin, and Litecoin Projects
 * Bukkit/Spigot, Vault API
 * Libraries... H2, Hibernate, Gson, Junit
+
+## Donations
+This plugin took time and effort, consider donating if you like the results!
+
+Coin | Donation Address
+-----|-----------------
+VTC | vtc1qmzj8s3ss8f2uvjd0rdejju5t0n7wke4f5m8wrl
