@@ -8,7 +8,6 @@ import javax.persistence.ElementCollection;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.Id;
-import javax.persistence.MapKeyJoinColumn;
 
 /**
  * Saves details of a deposit transaction
@@ -35,7 +34,6 @@ public class BlockchainTransaction
      * when looking up a transaction.
      */
     @ElementCollection(fetch = FetchType.EAGER)
-    @MapKeyJoinColumn(name = "ACCOUNT")
     private Map<Account, Long> distribution;
 
     /**

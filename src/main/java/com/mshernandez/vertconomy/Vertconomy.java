@@ -6,12 +6,12 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
+import javax.persistence.EntityManager;
+
 import com.mshernandez.vertconomy.database.Account;
-import com.mshernandez.vertconomy.database.AccountRepository;
-import com.mshernandez.vertconomy.database.AccountRepositoryJPAImpl;
 import com.mshernandez.vertconomy.database.BlockchainTransaction;
+import com.mshernandez.vertconomy.database.JPAUtil;
 import com.mshernandez.vertconomy.database.UserAccount;
-import com.mshernandez.vertconomy.database.UserAccountRepositoryJPAImpl;
 import com.mshernandez.vertconomy.wallet_interface.ListTransactionResponse;
 import com.mshernandez.vertconomy.wallet_interface.RPCWalletConnection;
 import com.mshernandez.vertconomy.wallet_interface.WalletInfoResponse;
@@ -51,9 +51,8 @@ public class Vertconomy
     private String baseUnit;
     private CoinScale scale;
 
-    // Repositories
-    AccountRepository<Account> accountRepository;
-    AccountRepository<UserAccount> userAccountRepository;
+    // Entity Manager For Persistence
+    EntityManager entityManager;
 
     // Periodically Check For New Deposits
     BukkitTask depositCheckTask;
@@ -69,9 +68,8 @@ public class Vertconomy
         this.symbol = symbol;
         this.baseUnit = baseUnit;
         this.scale = scale;
-        // Repository Initialization
-        accountRepository = new AccountRepositoryJPAImpl();
-        userAccountRepository = new UserAccountRepositoryJPAImpl();
+        // Get Entity Manager
+        entityManager = JPAUtil.getEntityManager();
         // Register Deposit Checking Task
         depositCheckTask = Bukkit.getScheduler()
             .runTaskTimer(plugin, new DepositCheckTask(), DEPOSIT_CHECK_INTERVAL, DEPOSIT_CHECK_INTERVAL);
@@ -218,17 +216,19 @@ public class Vertconomy
      */
     private UserAccount getOrCreateUserAccount(UUID accountUUID)
     {
-        UserAccount account = userAccountRepository.getAccount(accountUUID);
+        UserAccount account = entityManager.find(UserAccount.class, accountUUID);
         if (account != null)
         {
             return account;
         }
         try
         {
+            entityManager.getTransaction().begin();
             plugin.getLogger().info("Creating New Account For User: " + accountUUID);
             String depositAddress = wallet.getNewAddress(accountUUID.toString());
             account = new UserAccount(accountUUID, depositAddress);
-            account = userAccountRepository.save(account);
+            entityManager.persist(account);
+            entityManager.getTransaction().commit();
         }
         catch (WalletRequestException e)
         {
@@ -246,14 +246,14 @@ public class Vertconomy
      */
     private Account getOrCreateHoldingAccount(UUID accountUUID)
     {
-        Account account = accountRepository.getAccount(accountUUID);
+        Account account = entityManager.find(Account.class, accountUUID);
         if (account != null)
         {
             return account;
         }
         plugin.getLogger().info("Initializing Holding Account: " + accountUUID);
         account = new Account(accountUUID);
-        account = accountRepository.save(account);
+        entityManager.persist(account);
         return account;
     }
 
@@ -267,10 +267,15 @@ public class Vertconomy
     {
         try
         {
+            // Get Wallet Transactions For Addresses Associated With Account
             List<ListTransactionResponse.Transaction> walletTransactions = wallet.getTransactions(account.getAccountUUID().toString());
+            // Remember Which Transactions Have Already Been Accounted For
             Set<String> oldTransactionIDs = account.getProcessedDepositIDs();
+            // Keep Track Of New Balances & Pending Unconfirmed Balances
             long addedBalance = 0L;
             long unconfirmedBalance = 0L;
+            // Associate New Deposits To Account
+            entityManager.getTransaction().begin();
             for (ListTransactionResponse.Transaction t : walletTransactions)
             {
                 if (t.confirmations >= minConfirmations)
@@ -279,11 +284,12 @@ public class Vertconomy
                     {
                         // TODO: will clean up with custom deserializer
                         long depositAmount = (long) (t.amount * CoinScale.FULL.SAT_SCALE);
-                        // Account Initially Owns 100% Of TX Amount
+                        // New Deposit Transaction Initially 100% Owned By Depositing Account
                         Map<Account, Long> distribution = new HashMap<>();
                         distribution.put(account, depositAmount);
-                        // Add Deposit To Account
                         BlockchainTransaction bt = new BlockchainTransaction(t.txid, depositAmount, distribution);
+                        entityManager.persist(bt);
+                        // Associate With Account
                         account.getTransactions().add(bt);
                         account.getProcessedDepositIDs().add(t.txid);
                         addedBalance += depositAmount;
@@ -296,7 +302,8 @@ public class Vertconomy
                 }
             }
             account.setPendingBalance(unconfirmedBalance);
-            userAccountRepository.save(account);
+            entityManager.merge(account);
+            entityManager.getTransaction().commit();
             return new Pair<Long, Long>(addedBalance, unconfirmedBalance);
         }
         catch (WalletRequestException e)
@@ -324,6 +331,7 @@ public class Vertconomy
             return false;
         }
         long remainingOwed = amount;
+        entityManager.getTransaction().begin();
         for (BlockchainTransaction bt : sender.getTransactions())
         {
             if (remainingOwed == 0L)
@@ -337,6 +345,7 @@ public class Vertconomy
             {
                 distribution.remove(sender);
                 distribution.put(receiver, distribution.getOrDefault(receiver, 0L) + senderShare);
+                bt = entityManager.merge(bt);
                 sender.getTransactions().remove(bt);
                 receiver.getTransactions().add(bt);
                 takenAmount = senderShare;
@@ -345,11 +354,15 @@ public class Vertconomy
             {
                 distribution.put(sender, senderShare - remainingOwed);
                 distribution.put(receiver, distribution.getOrDefault(receiver, 0L) + remainingOwed);
+                bt = entityManager.merge(bt);
                 receiver.getTransactions().add(bt);
                 takenAmount = remainingOwed;
             }
             remainingOwed -= takenAmount;
         }
+        entityManager.merge(sender);
+        entityManager.merge(receiver);
+        entityManager.getTransaction().commit();
         plugin.getLogger().info(sender + " successfully sent " + amount + " to " + receiver);
         return true;
     }
@@ -424,21 +437,20 @@ public class Vertconomy
      */
     public boolean moveToTransferFund(OfflinePlayer player, double amount)
     {
-        plugin.getLogger().info(player.getName() + " moving " + amount + " to transfer fund.");
-        if (amount < 0)
+        if (!Bukkit.isPrimaryThread())
+        {
+            plugin.getLogger().warning("Cannot Support Asynchronous Vault API Requests");
+            return false;
+        }
+        UserAccount sender = getOrCreateUserAccount(player.getUniqueId());
+        Account receiver = getOrCreateHoldingAccount(TRANSFER_ACCOUNT_UUID);
+        // Can't Have Fractions Of Satoshi, Celing Function To Next Satoshi
+        long satAmount = (long) (Math.ceil(amount * scale.SAT_SCALE));
+        if (satAmount < 0L)
         {
             return false;
         }
-        long satAmount = (long) (amount * scale.SAT_SCALE);
-        UserAccount sender = getOrCreateUserAccount(player.getUniqueId());
-        Account receiver = getOrCreateHoldingAccount(TRANSFER_ACCOUNT_UUID);
-        if (transferBalance(sender, receiver, satAmount))
-        {
-            userAccountRepository.save(sender);
-            accountRepository.save(receiver);
-            return true;
-        }
-        return false;
+        return transferBalance(sender, receiver, satAmount);
     }
 
     /**
@@ -453,21 +465,20 @@ public class Vertconomy
      */
     public boolean takeFromTransferFund(OfflinePlayer player, double amount)
     {
-        plugin.getLogger().info(player.getName() + " taking " + amount + " from transfer fund.");
-        if (amount < 0)
+        if (!Bukkit.isPrimaryThread())
+        {
+            plugin.getLogger().warning("Cannot Support Asynchronous Vault API Requests");
+            return false;
+        }
+        UserAccount receiver = getOrCreateUserAccount(player.getUniqueId());
+        Account sender = getOrCreateHoldingAccount(TRANSFER_ACCOUNT_UUID);
+        // Can't Have Fractions Of Satoshi, Celing Function To Next Satoshi
+        long satAmount = (long) (Math.ceil(amount * scale.SAT_SCALE));
+        if (satAmount < 0L)
         {
             return false;
         }
-        long satAmount = (long) (amount * scale.SAT_SCALE);
-        UserAccount receiver = getOrCreateUserAccount(player.getUniqueId());
-        Account sender = getOrCreateHoldingAccount(TRANSFER_ACCOUNT_UUID);
         satAmount = Math.min(satAmount, sender.calculateBalance()); // TODO: temporary
-        if (transferBalance(sender, receiver, satAmount))
-        {
-            userAccountRepository.save(receiver);
-            accountRepository.save(sender);
-            return true;
-        }
-        return false;
+        return transferBalance(sender, receiver, satAmount);
     }
 }

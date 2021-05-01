@@ -5,7 +5,6 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 
-import javax.persistence.CascadeType;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.Id;
@@ -32,7 +31,7 @@ public class Account
      * Transactions will always be used when fetching an
      * account so they are automatically fetched.
      */
-    @ManyToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL)
+    @ManyToMany(fetch = FetchType.EAGER)
     private Set<BlockchainTransaction> transactions;
 
     /**
