@@ -9,13 +9,14 @@ import java.sql.SQLException;
 import com.mshernandez.vertconomy.commands.CommandBalance;
 import com.mshernandez.vertconomy.commands.CommandDeposit;
 import com.mshernandez.vertconomy.commands.CommandVertconomy;
-import com.mshernandez.vertconomy.database.HibernateUtil;
+import com.mshernandez.vertconomy.database.JPAUtil;
 import com.mshernandez.vertconomy.wallet_interface.RPCWalletConnection;
 
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.ServicePriority;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.h2.tools.Server;
 
 import net.milkbowl.vault.economy.Economy;
 
@@ -24,6 +25,8 @@ import net.milkbowl.vault.economy.Economy;
  */
 public class App extends JavaPlugin
 {
+    private static Server webServer = null;
+
     @Override
     public void onEnable()
     {
@@ -94,23 +97,17 @@ public class App extends JavaPlugin
             }
         }
 
-        // Configure HibernateUtil SessionFactory For Database
-        try
-        {
-            HibernateUtil.configure();
-        }
-        catch (RuntimeException e)
-        {
-            getLogger().warning(e.getMessage());
-            return;
-        }
+        // Configure Database Connection
+        Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
+        JPAUtil.configure();
 
         // Start H2 Web Console If Enabled; Option Will Likely Be Removed In Future
         if (configuration.getBoolean("enable-h2-console", false))
         {
             try
             {
-                HibernateUtil.startWebServer();
+                webServer = Server.createWebServer("-webPort", "8082");
+                webServer.start();
                 getLogger().warning("Security Risk: H2 Console Enabled, Be Careful");
             }
             catch (SQLException e)
@@ -131,7 +128,7 @@ public class App extends JavaPlugin
             return;
         }
         getLogger().info("Vault found, attempting to register economy...");
-        getServer().getServicesManager().register(Economy.class, new VertconomyVaultSupport(vertconomy),
+        getServer().getServicesManager().register(Economy.class, new VaultAdapter(vertconomy),
             vault, ServicePriority.Normal);
 
         // Register Commands
@@ -144,14 +141,17 @@ public class App extends JavaPlugin
     public void onDisable()
     {
         getLogger().info("Stopping Vertconomy...");
-        // Configure HibernateUtil SessionFactory
+        // Close H2 Web Console
         try
         {
-            HibernateUtil.reset();
+            webServer.stop();
+            webServer = null;
         }
         catch (RuntimeException e)
         {
             getLogger().warning(e.getMessage());
         }
+        // Close Database Connection
+        JPAUtil.reset();
     }
 }

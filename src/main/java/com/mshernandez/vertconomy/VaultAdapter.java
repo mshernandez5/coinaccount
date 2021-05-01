@@ -13,17 +13,18 @@ import net.milkbowl.vault.economy.EconomyResponse.ResponseType;
  * A vertconomy wrapper following the
  * Vault API interface.
  */
-public class VertconomyVaultSupport implements Economy
+public class VaultAdapter implements Economy
 {
     // Vertconomy Instance
     Vertconomy vertconomy;
 
-    public VertconomyVaultSupport(Vertconomy vertconomy)
+    public VaultAdapter(Vertconomy vertconomy)
     {
         this.vertconomy = vertconomy;
     }
 
     // Plugin Information
+
     @Override
     public String getName()
     {
@@ -37,6 +38,7 @@ public class VertconomyVaultSupport implements Economy
     }
 
     // Currency Information
+    
     @Override
     public String currencyNamePlural()
     {
@@ -62,36 +64,11 @@ public class VertconomyVaultSupport implements Economy
     }
 
     // Player Economy Operations
-    @Override
-    public boolean createPlayerAccount(OfflinePlayer player)
-    {
-        return vertconomy.getOrCreateAccount(player.getUniqueId()) == null;
-    }
-
-    @Override
-    public boolean createPlayerAccount(String playerName)
-    {
-        return createPlayerAccount(Bukkit.getPlayer(playerName));
-    }
-
-    @Override
-    public boolean createPlayerAccount(OfflinePlayer player, String world)
-    {
-        // No World-Specific Accounts For Now
-        return createPlayerAccount(player);
-    }
-
-    @Override
-    public boolean createPlayerAccount(String playerName, String world)
-    {
-        // No World-Specific Accounts For Now
-        return createPlayerAccount(Bukkit.getPlayer(playerName), world);
-    }
 
     @Override
     public double getBalance(OfflinePlayer player)
     {
-        return vertconomy.getBalance(player.getUniqueId());
+        return vertconomy.getPlayerBalance(player);
     }
 
     @Override
@@ -117,7 +94,7 @@ public class VertconomyVaultSupport implements Economy
     @Override
     public boolean has(OfflinePlayer player, double amount)
     {
-        return vertconomy.getBalance(player.getUniqueId()) >= amount;
+        return vertconomy.getPlayerBalance(player) >= amount;
     }
 
     @Override
@@ -171,16 +148,15 @@ public class VertconomyVaultSupport implements Economy
     @Override
     public EconomyResponse withdrawPlayer(OfflinePlayer player, double amount)
     {
-        Bukkit.getLogger().info("Attempting To Withdraw: " + amount);
-        if (vertconomy.moveToTransferFund(player.getUniqueId(), amount))
+        if (vertconomy.moveToTransferFund(player, amount))
         {
             return new EconomyResponse(amount,
-                vertconomy.getBalance(player.getUniqueId()),
+                vertconomy.getPlayerBalance(player),
                 EconomyResponse.ResponseType.SUCCESS,
                 null);
         }
         return new EconomyResponse(0.0,
-            vertconomy.getBalance(player.getUniqueId()),
+            vertconomy.getPlayerBalance(player),
             EconomyResponse.ResponseType.FAILURE,
             "Failed To Move " + vertconomy.format(amount));
     }
@@ -208,16 +184,15 @@ public class VertconomyVaultSupport implements Economy
     @Override
     public EconomyResponse depositPlayer(OfflinePlayer player, double amount)
     {
-        Bukkit.getLogger().info("Attempting To Deposit: " + amount);
-        if (vertconomy.takeFromTransferFund(player.getUniqueId(), amount))
+        if (vertconomy.takeFromTransferFund(player, amount))
         {
             return new EconomyResponse(amount,
-                vertconomy.getBalance(player.getUniqueId()),
+                vertconomy.getPlayerBalance(player),
                 EconomyResponse.ResponseType.SUCCESS,
                 null);
         }
         return new EconomyResponse(0.0,
-            vertconomy.getBalance(player.getUniqueId()),
+            vertconomy.getPlayerBalance(player),
             EconomyResponse.ResponseType.FAILURE,
             "Failed To Claim " + vertconomy.format(amount));
     }
@@ -240,6 +215,32 @@ public class VertconomyVaultSupport implements Economy
     {
         // No World-Specific Accounts For Now
         return depositPlayer(Bukkit.getPlayer(playerName), world, amount);
+    }
+
+    // Not Supported
+
+    @Override
+    public boolean createPlayerAccount(OfflinePlayer player)
+    {
+        return false;
+    }
+
+    @Override
+    public boolean createPlayerAccount(String playerName)
+    {
+        return false;
+    }
+
+    @Override
+    public boolean createPlayerAccount(OfflinePlayer player, String world)
+    {
+        return false;
+    }
+
+    @Override
+    public boolean createPlayerAccount(String playerName, String world)
+    {
+        return false;
     }
 
     // Plugin Does Not Support Banks

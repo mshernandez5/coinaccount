@@ -34,7 +34,7 @@ public class CommandBalance implements CommandExecutor
         StringBuilder message = new StringBuilder();
         if (sender instanceof Player)
         {
-            Pair<Long, Long> balances = vertconomy.getBalances(((Player) sender).getUniqueId());
+            Pair<Long, Long> balances = vertconomy.getPlayerBalances(((Player) sender));
             message.append(ChatColor.RED);
             message.append("Balance: ");
             message.append(ChatColor.GREEN);
@@ -54,7 +54,7 @@ public class CommandBalance implements CommandExecutor
                 OfflinePlayer player = Bukkit.getOfflinePlayer(args[0]);
                 if (player.hasPlayedBefore())
                 {
-                    Pair<Long, Long> balances = vertconomy.getBalances((player.getUniqueId()));
+                    Pair<Long, Long> balances = vertconomy.getPlayerBalances(player);
                     message.append(ChatColor.RED);
                     message.append("Balance: ");
                     message.append(ChatColor.GREEN);

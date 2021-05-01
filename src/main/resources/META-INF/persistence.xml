@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<persistence version="2.0"
+    xmlns="http://java.sun.com/xml/ns/persistence"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://java.sun.com/xml/ns/persistence http://java.sun.com/xml/ns/persistence/persistence_2_0.xsd">
+ 
+    <!-- Configure Persistence With Hibernate -->
+    <persistence-unit name="vertconomy" transaction-type="RESOURCE_LOCAL">
+        
+        <description>
+            Persistence configuration for objects used by Vertconomy.
+        </description>
+
+        <!-- Use Hibernate JPA Provider -->
+        <provider>org.hibernate.jpa.HibernatePersistenceProvider</provider>
+
+        <!-- Classes To Persist -->
+        <class>com.mshernandez.vertconomy.database.Account</class>
+        <class>com.mshernandez.vertconomy.database.UserAccount</class>
+        <class>com.mshernandez.vertconomy.database.BlockchainTransaction</class>
+        
+        <!-- Hibernate Configuration -->
+        <properties>
+            <!-- Configure Hibernate To Work With H2 -->
+            <property name="hibernate.dialect" value="org.hibernate.dialect.H2Dialect"/>
+            <property name="hibernate.connection.driver_class" value="org.h2.Driver"/>
+            
+            <!-- Database Connection Details -->
+            <property name="hibernate.connection.url" value="jdbc:h2:./plugins/Vertconomy/vertconomydb"/>
+            <property name="hibernate.connection.username" value="vertconomy"/>
+            <property name="hibernate.connection.password" value=""/>
+            
+            <!-- Database Settings -->
+            <property name="hibernate.hbm2ddl.auto" value="update"/>
+        </properties>
+
+    </persistence-unit>
+
+</persistence>

@@ -120,4 +120,10 @@ public class BlockchainTransaction
         }
         return TXID.equals(((BlockchainTransaction) other).TXID);
     }
+
+    @Override
+    public String toString()
+    {
+        return String.format("Transaction: %s, Total: %d", TXID, total);
+    }
 }

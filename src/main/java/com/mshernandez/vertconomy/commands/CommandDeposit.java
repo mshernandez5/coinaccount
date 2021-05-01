@@ -9,16 +9,14 @@ import org.bukkit.entity.Player;
 
 import net.md_5.bungee.api.ChatColor;
 import net.md_5.bungee.api.chat.ClickEvent;
-import net.md_5.bungee.api.chat.HoverEvent;
 import net.md_5.bungee.api.chat.TextComponent;
-import net.md_5.bungee.api.chat.hover.content.Content;
 
 /**
  * /deposit
  * 
  * - Informs players how to deposit VTC to their accounts.
  * - Does not actually have to start any processes, the server
- *   will always check for new deposits when looking up player balances.
+ *   periodically checks for new deposits automatically.
  */
 public class CommandDeposit implements CommandExecutor
 {
@@ -49,7 +47,7 @@ public class CommandDeposit implements CommandExecutor
             message.append(ChatColor.GREEN);
             messageComponent.addExtra(message.toString());
             // Copyable Address
-            String address = vertconomy.getDepositAddress(((Player) sender).getUniqueId());
+            String address = vertconomy.getPlayerDepositAddress(((Player) sender));
             TextComponent addressMsg = new TextComponent(address);
             addressMsg.setClickEvent(new ClickEvent(ClickEvent.Action.COPY_TO_CLIPBOARD, address));
             addressMsg.setColor(ChatColor.GREEN);

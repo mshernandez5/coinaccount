@@ -7,20 +7,37 @@ import java.util.Set;
 import java.util.UUID;
 
 import com.mshernandez.vertconomy.database.Account;
+import com.mshernandez.vertconomy.database.AccountRepository;
+import com.mshernandez.vertconomy.database.AccountRepositoryJPAImpl;
 import com.mshernandez.vertconomy.database.BlockchainTransaction;
-import com.mshernandez.vertconomy.database.HibernateUtil;
+import com.mshernandez.vertconomy.database.UserAccount;
+import com.mshernandez.vertconomy.database.UserAccountRepositoryJPAImpl;
 import com.mshernandez.vertconomy.wallet_interface.ListTransactionResponse;
 import com.mshernandez.vertconomy.wallet_interface.RPCWalletConnection;
 import com.mshernandez.vertconomy.wallet_interface.WalletInfoResponse;
 import com.mshernandez.vertconomy.wallet_interface.WalletRequestException;
 
+import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
+import org.bukkit.OfflinePlayer;
+import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
-import org.hibernate.Hibernate;
-import org.hibernate.Session;
-import org.hibernate.Transaction;
+import org.bukkit.scheduler.BukkitTask;
 
 public class Vertconomy
 {
+    // Account For Balances Owned By The Server Operators
+    private static final UUID SERVER_ACCOUNT_UUID = UUID.fromString("a8a73687-8f8b-4199-8078-36e676f32d8f");
+
+    // Account Allowing Intermediate Transfers For Vault Compatibility
+    private static final UUID TRANSFER_ACCOUNT_UUID = UUID.fromString("ced87bc1-4730-41e1-955b-c4c45b4e9ccf");
+
+    // Account To Receive Withdrawal Change Transactions
+    private static final UUID CHANGE_ACCOUNT_UUID = UUID.fromString("884b2231-6c7a-4db5-b022-1cc5aeb949a8");
+
+    // How Often To Check For New Deposits, In Ticks
+    private static final long DEPOSIT_CHECK_INTERVAL = 200L; // Approximately 10 Seconds
+
     // Plugin For Reference
     private Plugin plugin;
     
@@ -34,10 +51,12 @@ public class Vertconomy
     private String baseUnit;
     private CoinScale scale;
 
-    // Internally Used Accounts
-    private static final UUID SERVER_ACCOUNT_UUID = UUID.fromString("a8a73687-8f8b-4199-8078-36e676f32d8f");
-    private static final UUID TRANSFER_FUND_ACCOUNT_UUID = UUID.fromString("ced87bc1-4730-41e1-955b-c4c45b4e9ccf");
-    private static final UUID CHANGE_ACCOUNT_UUID = UUID.fromString("884b2231-6c7a-4db5-b022-1cc5aeb949a8");
+    // Repositories
+    AccountRepository<Account> accountRepository;
+    AccountRepository<UserAccount> userAccountRepository;
+
+    // Periodically Check For New Deposits
+    BukkitTask depositCheckTask;
 
     public Vertconomy(Plugin plugin, RPCWalletConnection wallet, int minConfirmations,
         int targetBlockTime, String symbol, String baseUnit, CoinScale scale)
@@ -50,6 +69,39 @@ public class Vertconomy
         this.symbol = symbol;
         this.baseUnit = baseUnit;
         this.scale = scale;
+        // Repository Initialization
+        accountRepository = new AccountRepositoryJPAImpl();
+        userAccountRepository = new UserAccountRepositoryJPAImpl();
+        // Register Deposit Checking Task
+        depositCheckTask = Bukkit.getScheduler()
+            .runTaskTimer(plugin, new DepositCheckTask(), DEPOSIT_CHECK_INTERVAL, DEPOSIT_CHECK_INTERVAL);
+    }
+
+    /**
+     * A task run periodically to check for new player
+     * deposits.
+     */
+    private class DepositCheckTask implements Runnable
+    {
+        @Override
+        public void run()
+        {
+            // Only Check Deposits For Online Players
+            for (Player p : Bukkit.getOnlinePlayers())
+            {
+                UserAccount account = getOrCreateUserAccount(p.getUniqueId());
+                Pair<Long, Long> changes = registerNewDeposits(account);
+                if (changes.getKey() != 0L)
+                {
+                    StringBuilder message = new StringBuilder();
+                    message.append(ChatColor.BLUE);
+                    message.append("[Vertconomy] Processed Deposits: ");
+                    message.append(ChatColor.GREEN);
+                    message.append(format(changes.getKey()));
+                    p.sendMessage(message.toString());
+                }
+            }
+        }
     }
 
     /**
@@ -139,41 +191,6 @@ public class Vertconomy
     }
 
     /**
-     * Gets an Account AND initializes its fields.
-     * Creates a new account identified by the
-     * given UUID if one does not already exist.
-     * 
-     * @param accountUUID The account UUID.
-     * @return An initialized Account object or null if account creation failed.
-     */
-    public Account getOrCreateAccount(UUID accountUUID)
-    {
-        Account account;
-        try (Session session = HibernateUtil.getSessionFactory().openSession())
-        {
-            account = session.get(Account.class, accountUUID);
-            // Return If Account Already Exists
-            if (account != null)
-            {
-                return account;
-            }
-            // Create New Wallet Deposit Address For Account
-            String depositAddress = wallet.getNewAddress(accountUUID.toString());
-            // Create & Save New Account
-            Transaction dbtx = session.beginTransaction();
-            account = new Account(accountUUID, depositAddress);
-            session.save(account);
-            dbtx.commit();
-        }
-        catch (Exception e)
-        {
-            plugin.getLogger().warning("Failed To Create New Account: " + e.getMessage());
-            return null;
-        }
-        return account;
-    }
-
-    /**
      * Get the balance of the entire server wallet,
      * including all player balances combined.
      * 
@@ -193,27 +210,67 @@ public class Vertconomy
     }
 
     /**
-     * Get the total balances owned by an account
-     * belonging to the given player UUID.
+     * Gets a player account or creates a new one
+     * if one does not already exist.
      * 
      * @param accountUUID The account UUID.
-     * @return A pair where the key is confirmed balances, the value is unconfirmed balances.
+     * @return A user account reference.
      */
-    public Pair<Long, Long> getBalances(UUID accountUUID)
+    private UserAccount getOrCreateUserAccount(UUID accountUUID)
     {
-        Account account = getOrCreateAccount(accountUUID);
-        if (account == null)
+        UserAccount account = userAccountRepository.getAccount(accountUUID);
+        if (account != null)
         {
-            return new Pair<Long, Long>(0L, 0L);
+            return account;
         }
-        long unconfirmedBalance = 0L;
-        try (Session session = HibernateUtil.getSessionFactory().openSession())
+        try
         {
-            Transaction dbtx = session.beginTransaction();
-            account = (Account) session.merge(account);
-            Hibernate.initialize(account.getProcessedTransactionIDs());
-            Set<String> oldTransactionIDs = account.getProcessedTransactionIDs();
-            List<ListTransactionResponse.Transaction> walletTransactions = wallet.getTransactions(accountUUID.toString());
+            plugin.getLogger().info("Creating New Account For User: " + accountUUID);
+            String depositAddress = wallet.getNewAddress(accountUUID.toString());
+            account = new UserAccount(accountUUID, depositAddress);
+            account = userAccountRepository.save(account);
+        }
+        catch (WalletRequestException e)
+        {
+            plugin.getLogger().warning("Failed To Create New Account: " + e.getMessage());
+        }
+        return account;
+    }
+
+    /**
+     * Gets a holding account or creates a new one
+     * if one does not already exist.
+     * 
+     * @param accountUUID The account UUID.
+     * @return A holding account reference.
+     */
+    private Account getOrCreateHoldingAccount(UUID accountUUID)
+    {
+        Account account = accountRepository.getAccount(accountUUID);
+        if (account != null)
+        {
+            return account;
+        }
+        plugin.getLogger().info("Initializing Holding Account: " + accountUUID);
+        account = new Account(accountUUID);
+        account = accountRepository.save(account);
+        return account;
+    }
+
+    /**
+     * Register new deposits for the given user account.
+     * 
+     * @param account The account to check for new deposits.
+     * @return Balance gained from newly registered deposits, and unconfirmed deposit balances.
+     */
+    private Pair<Long, Long> registerNewDeposits(UserAccount account)
+    {
+        try
+        {
+            List<ListTransactionResponse.Transaction> walletTransactions = wallet.getTransactions(account.getAccountUUID().toString());
+            Set<String> oldTransactionIDs = account.getProcessedDepositIDs();
+            long addedBalance = 0L;
+            long unconfirmedBalance = 0L;
             for (ListTransactionResponse.Transaction t : walletTransactions)
             {
                 if (t.confirmations >= minConfirmations)
@@ -227,8 +284,9 @@ public class Vertconomy
                         distribution.put(account, depositAmount);
                         // Add Deposit To Account
                         BlockchainTransaction bt = new BlockchainTransaction(t.txid, depositAmount, distribution);
-                        session.save(bt);
-                        account.associateTransaction(bt);
+                        account.getTransactions().add(bt);
+                        account.getProcessedDepositIDs().add(t.txid);
+                        addedBalance += depositAmount;
                     }
                 }
                 else
@@ -237,42 +295,15 @@ public class Vertconomy
                     unconfirmedBalance += (long) (t.amount * CoinScale.FULL.SAT_SCALE);
                 }
             }
-            dbtx.commit();
+            account.setPendingBalance(unconfirmedBalance);
+            userAccountRepository.save(account);
+            return new Pair<Long, Long>(addedBalance, unconfirmedBalance);
         }
-        catch (Exception e)
+        catch (WalletRequestException e)
         {
-            plugin.getLogger().warning("Failed To Check For New Transactions: " + e.getMessage());
+            plugin.getLogger().warning("Failed To Get Transactions: " + e.getMessage());
+            return new Pair<Long, Long>(0L, 0L);
         }
-        return new Pair<Long, Long>(account.calculateBalance(), unconfirmedBalance);
-    }
-
-    /**
-     * Get the total confirmed balances owned
-     * by an account belonging to the given player UUID.
-     * 
-     * @param accountUUID The account UUID.
-     * @return The total balance owned by the account.
-     */
-    public long getBalance(UUID accountUUID)
-    {
-        return getBalances(accountUUID).getKey();
-    }
-
-    /**
-     * Get a wallet address for the specified
-     * player to deposit coins into.
-     * 
-     * @param accountUUID The account UUID.
-     * @return The corresponding deposit address.
-     */
-    public String getDepositAddress(UUID accountUUID)
-    {
-        Account account = getOrCreateAccount(accountUUID);
-        if (account == null)
-        {
-            return "ERROR RETRIEVING ACCOUNT";
-        }
-        return account.getDepositAddress();
     }
 
     /**
@@ -285,112 +316,158 @@ public class Vertconomy
      * @param amount The amount to transfer, in sats.
      * @return True if the transfer was successful.
      */
-    public boolean transferFrom(UUID sendingAccount, UUID receivingAccount, long amount)
+    private boolean transferBalance(Account sender, Account receiver, long amount)
     {
-        Account sender = getOrCreateAccount(sendingAccount);
         if (sender.calculateBalance() < amount)
         {
-            plugin.getLogger().info(sendingAccount.toString() + " has " + sender.calculateBalance() + " and "
-                + " can't send " + amount + " to " + receivingAccount.toString());
+            plugin.getLogger().info(sender + " can't send " + amount + " to " + receiver);
             return false;
         }
-        Account receiver = getOrCreateAccount(receivingAccount);
-        try (Session session = HibernateUtil.getSessionFactory().openSession())
+        long remainingOwed = amount;
+        for (BlockchainTransaction bt : sender.getTransactions())
         {
-            Transaction dbtx = session.beginTransaction();
-            sender = (Account) session.merge(sender);
-            receiver = (Account) session.merge(receiver);
-            long remainingOwed = amount;
-            for (BlockchainTransaction bt : sender.getTransactions())
+            if (remainingOwed == 0L)
             {
-                if (remainingOwed == 0L)
-                {
-                    break;
-                }
-                Map<Account, Long> distribution = bt.getDistribution();
-                long senderShare = distribution.get(sender);
-                long takenAmount;
-                if (senderShare <= remainingOwed)
-                {
-                    distribution.remove(sender);
-                    distribution.put(receiver, distribution.getOrDefault(receiver, 0L) + senderShare);
-                    sender.detatchTransaction(bt);
-                    receiver.associateTransaction(bt);
-                    takenAmount = senderShare;
-                }
-                else
-                {
-                    distribution.put(sender, senderShare - remainingOwed);
-                    distribution.put(receiver, distribution.getOrDefault(receiver, 0L) + remainingOwed);
-                    receiver.associateTransaction(bt);
-                    takenAmount = remainingOwed;
-                }
-                remainingOwed -= takenAmount;
+                break;
             }
-            dbtx.commit();
+            Map<Account, Long> distribution = bt.getDistribution();
+            long senderShare = distribution.get(sender);
+            long takenAmount;
+            if (senderShare <= remainingOwed)
+            {
+                distribution.remove(sender);
+                distribution.put(receiver, distribution.getOrDefault(receiver, 0L) + senderShare);
+                sender.getTransactions().remove(bt);
+                receiver.getTransactions().add(bt);
+                takenAmount = senderShare;
+            }
+            else
+            {
+                distribution.put(sender, senderShare - remainingOwed);
+                distribution.put(receiver, distribution.getOrDefault(receiver, 0L) + remainingOwed);
+                receiver.getTransactions().add(bt);
+                takenAmount = remainingOwed;
+            }
+            remainingOwed -= takenAmount;
         }
-        catch (Exception e)
-        {
-            plugin.getLogger().warning("Failed To Make Transfer: (" + e.getClass().getName() + ") " + e.getMessage());
-            return false;
-        }
-        plugin.getLogger().info(sendingAccount.toString() + " with " + sender.calculateBalance() + " successfully "
-                + " paid " + amount + " to " + receivingAccount.toString());
+        plugin.getLogger().info(sender + " successfully sent " + amount + " to " + receiver);
         return true;
     }
 
     /**
-     * Takes a part of a player's balance and moves it
-     * into a general transfer fund where it can be claimed
-     * by another account as part of a transfer.
+     * Return the useable balance held by the player's
+     * account.
      * 
-     * As limitation of Vault API and existing plugins
-     * designed to create and destroy money out of thin
-     * air, transfers between players can get complicated.
-     * 
-     * The transfer fund captures magically withdrawn
-     * balances and saves them for limited time so that
-     * plugins trying to magically create money for
-     * the other end of the transfer can instead
-     * check and claim that balance on the transfer fund.
-     * 
-     * Balances remaining on the transfer fund for extended
-     * times are assumed to be payed to the server itself.
-     * 
-     * @param playerUUID The account UUID.
-     * @param amount The amount to send to the transfer fund.
-     * @return True if the transfer was successful.
+     * @param player The player associated with the account.
+     * @return The balance associated with the account.
      */
-    public boolean moveToTransferFund(UUID playerUUID, double amount)
+    public long getPlayerBalance(OfflinePlayer player)
     {
-        long satAmount = (long) (amount * scale.SAT_SCALE);
-        return transferFrom(playerUUID, TRANSFER_FUND_ACCOUNT_UUID, satAmount);
+        UserAccount playerAccount = getOrCreateUserAccount(player.getUniqueId());
+        return playerAccount.calculateBalance();
     }
 
     /**
-     * Moves a certain amount from the general transfer
-     * fund into a certain player's account balance.
+     * Return the total unconfirmed balances associated
+     * with the player's account.
      * 
-     * As limitation of Vault API and existing plugins
-     * designed to create and destroy money out of thin
-     * air, transfers between players can get complicated.
+     * @param player The player associated with the account.
+     * @return Unconfirmed deposit balances for the account.
+     */
+    public long getPlayerUnconfirmedBalance(OfflinePlayer player)
+    {
+        UserAccount playerAccount = getOrCreateUserAccount(player.getUniqueId());
+        return playerAccount.getPendingBalance();
+    }
+
+    /**
+     * Return both the usable and unconfirmed balances
+     * associated with a player's account.
      * 
-     * The transfer fund captures magically withdrawn
-     * balances and saves them for limited time so that
-     * plugins trying to magically create money for
-     * the other end of the transfer can instead
-     * check and claim that balance on the transfer fund.
+     * @param player The player associated with the account.
+     * @return The usable and unconfirmed balances.
+     */
+    public Pair<Long, Long> getPlayerBalances(OfflinePlayer player)
+    {
+        UserAccount playerAccount = getOrCreateUserAccount(player.getUniqueId());
+        return new Pair<Long, Long>(playerAccount.calculateBalance(), playerAccount.getPendingBalance());
+    }
+
+    /**
+     * Get the public wallet address allowing the player to
+     * deposit funds into their account.
      * 
-     * Balances remaining on the transfer fund for extended
-     * times are assumed to be payed to the server itself.
+     * @param player The player associated with the account.
+     * @return The deposit address associated with the account.
+     */
+    public String getPlayerDepositAddress(OfflinePlayer player)
+    {
+        UserAccount playerAccount = getOrCreateUserAccount(player.getUniqueId());
+        return playerAccount.getDepositAddress();
+    }
+
+    /**
+     * Vault API Compatibility Use ONLY
+     * <p>
+     * Moves portions of a player's balance into
+     * a temporary transfer fund where it will be
+     * pending a move into the server account fund.
+     * <p>
+     * The temporary transfer fund gives time for
+     * the funds to be reclaimed, which is required
+     * for plugins which intend to conduct transfers
+     * by burning and minting currency.
      * 
      * @param playerUUID The account UUID.
      * @param amount The amount to send to the transfer fund.
      * @return True if the transfer was successful.
      */
-    public boolean takeFromTransferFund(UUID playerUUID, double amount)
+    public boolean moveToTransferFund(OfflinePlayer player, double amount)
     {
+        plugin.getLogger().info(player.getName() + " moving " + amount + " to transfer fund.");
+        if (amount < 0)
+        {
+            return false;
+        }
         long satAmount = (long) (amount * scale.SAT_SCALE);
-        return transferFrom(TRANSFER_FUND_ACCOUNT_UUID, playerUUID, satAmount);
+        UserAccount sender = getOrCreateUserAccount(player.getUniqueId());
+        Account receiver = getOrCreateHoldingAccount(TRANSFER_ACCOUNT_UUID);
+        if (transferBalance(sender, receiver, satAmount))
+        {
+            userAccountRepository.save(sender);
+            accountRepository.save(receiver);
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Vault API Compatibility Use ONLY
+     * <p>
+     * Reclaim a balance from the temporary transfer
+     * fund.
+     * 
+     * @param playerUUID The account UUID.
+     * @param amount The amount to take from the transfer fund.
+     * @return True if the transfer was successful.
+     */
+    public boolean takeFromTransferFund(OfflinePlayer player, double amount)
+    {
+        plugin.getLogger().info(player.getName() + " taking " + amount + " from transfer fund.");
+        if (amount < 0)
+        {
+            return false;
+        }
+        long satAmount = (long) (amount * scale.SAT_SCALE);
+        UserAccount receiver = getOrCreateUserAccount(player.getUniqueId());
+        Account sender = getOrCreateHoldingAccount(TRANSFER_ACCOUNT_UUID);
+        satAmount = Math.min(satAmount, sender.calculateBalance()); // TODO: temporary
+        if (transferBalance(sender, receiver, satAmount))
+        {
+            userAccountRepository.save(receiver);
+            accountRepository.save(sender);
+            return true;
+        }
+        return false;
     }
 }
