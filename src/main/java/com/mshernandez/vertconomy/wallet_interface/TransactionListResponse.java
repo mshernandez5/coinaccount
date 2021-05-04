@@ -7,12 +7,8 @@ import com.google.gson.annotations.SerializedName;
 /**
  * Used to get general wallet status information.
  */
-public class ListTransactionResponse
-{
-    List<Transaction> result;
-    String error;
-    String id;
-    
+public class TransactionListResponse extends WalletResponse<List<TransactionListResponse.Transaction>>
+{  
     public class Transaction
     {
         /**
@@ -43,7 +39,7 @@ public class ListTransactionResponse
          * for the 'send' category, and is positive
          * for all other categories.
          */
-        public double amount;
+        public SatAmount amount;
 
         /**
          * A comment for the address/transaction, if any.
@@ -60,7 +56,7 @@ public class ListTransactionResponse
          * This is negative and only available
          * for the 'send' category of transactions.
          */
-        public double fee;
+        public SatAmount fee;
 
         /**
          * The number of confirmations for the transaction.

@@ -5,12 +5,8 @@ import com.google.gson.annotations.SerializedName;
 /**
  * Used to get general wallet status information.
  */
-public class WalletInfoResponse
+public class WalletInfoResponse extends WalletResponse<WalletInfoResponse.Result>
 {
-    Result result;
-    String error;
-    String id;
-    
     public class Result
     {
         /**

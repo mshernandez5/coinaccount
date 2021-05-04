@@ -9,7 +9,9 @@ import java.net.http.HttpResponse.BodyHandlers;
 import java.util.Base64;
 import java.util.List;
 
+import com.google.common.reflect.TypeToken;
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
 
 /**
@@ -24,7 +26,7 @@ public class RPCWalletConnection
     private URI uri;
     private String user;
     private String basicAuth;
-    private Gson parser;
+    private Gson gson;
 
     /**
      * Create a new wallet connection.
@@ -40,8 +42,10 @@ public class RPCWalletConnection
         // Encode Credentials For Use In HTTP Header
         String credentials =  user + ":" + pass;
         basicAuth = Base64.getEncoder().encodeToString(credentials.getBytes());
-        // Initialize JSON Parser
-        parser = new Gson();
+        // Initialize Gson Instance
+        gson = new GsonBuilder()
+            .registerTypeAdapter(SatAmount.class, new SatAmountDeserializer())
+            .create();
     }
 
     /**
@@ -53,7 +57,7 @@ public class RPCWalletConnection
      */
     private String makeRequest(WalletRequest jsonRequest) throws WalletRequestException
     {
-        String json = parser.toJson(jsonRequest);
+        String json = gson.toJson(jsonRequest);
         HttpRequest request = HttpRequest.newBuilder(uri)
             .POST(HttpRequest.BodyPublishers.ofString(json))
             .header("Authorization", "Basic " + basicAuth)
@@ -91,15 +95,15 @@ public class RPCWalletConnection
      * 
      * @return A WalletInfoResponse holding wallet status information.
      */
-    public WalletInfoResponse.Result getWalletStatus() throws WalletRequestException
+    public ResponseError getWalletError() throws WalletRequestException
     {
         JsonArray params = new JsonArray();
         WalletRequest jsonRequest = new WalletRequest()
             .setId(DEFAULT_REQUEST_ID)
             .setMethod("getwalletinfo")
             .setParams(params);
-        WalletInfoResponse response = parser.fromJson(makeRequest(jsonRequest), WalletInfoResponse.class);
-        return response.result;
+        WalletInfoResponse response = gson.fromJson(makeRequest(jsonRequest), WalletInfoResponse.class);
+        return response.error;
     }
 
     /**
@@ -120,8 +124,8 @@ public class RPCWalletConnection
             .setId(DEFAULT_REQUEST_ID)
             .setMethod("getbalance")
             .setParams(params);
-        GeneralWalletResponse response = parser.fromJson(makeRequest(jsonRequest), GeneralWalletResponse.class);
-        return Long.parseLong(response.result.replace(".", ""));
+            SatResponse response = gson.fromJson(makeRequest(jsonRequest), SatResponse.class);
+        return response.result.satAmount;
     }
 
     /**
@@ -131,14 +135,14 @@ public class RPCWalletConnection
      * @return A list of transaction information objects.
      * @throws WalletRequestException If the wallet could not be reached or execute the command.
      */
-    public List<ListTransactionResponse.Transaction> getTransactions() throws WalletRequestException
+    public List<TransactionListResponse.Transaction> getTransactions() throws WalletRequestException
     {
         JsonArray params = new JsonArray();
         WalletRequest jsonRequest = new WalletRequest()
             .setId(DEFAULT_REQUEST_ID)
             .setMethod("listtransactions")
             .setParams(params);
-        ListTransactionResponse response = parser.fromJson(makeRequest(jsonRequest), ListTransactionResponse.class);
+        TransactionListResponse response = gson.fromJson(makeRequest(jsonRequest), TransactionListResponse.class);
         return response.result;
     }
 
@@ -150,7 +154,7 @@ public class RPCWalletConnection
      * @return A list of transaction information objects.
      * @throws WalletRequestException If the wallet could not be reached or execute the command.
      */
-    public List<ListTransactionResponse.Transaction> getTransactions(String label) throws WalletRequestException
+    public List<TransactionListResponse.Transaction> getTransactions(String label) throws WalletRequestException
     {
         JsonArray params = new JsonArray();
         params.add(label);
@@ -158,7 +162,7 @@ public class RPCWalletConnection
             .setId(DEFAULT_REQUEST_ID)
             .setMethod("listtransactions")
             .setParams(params);
-        ListTransactionResponse response = parser.fromJson(makeRequest(jsonRequest), ListTransactionResponse.class);
+        TransactionListResponse response = gson.fromJson(makeRequest(jsonRequest), TransactionListResponse.class);
         return response.result;
     }
 
@@ -181,8 +185,8 @@ public class RPCWalletConnection
             .setId(DEFAULT_REQUEST_ID)
             .setMethod("getreceivedbyaddress")
             .setParams(params);
-        GeneralWalletResponse response = parser.fromJson(makeRequest(jsonRequest), GeneralWalletResponse.class);
-        return Long.parseLong(response.result.replace(".", ""));
+            SatResponse response = gson.fromJson(makeRequest(jsonRequest), SatResponse.class);
+        return response.result.satAmount;
     }
 
     /**
@@ -198,7 +202,7 @@ public class RPCWalletConnection
             .setId(DEFAULT_REQUEST_ID)
             .setMethod("getnewaddress")
             .setParams(params);
-        GeneralWalletResponse response = parser.fromJson(makeRequest(jsonRequest), GeneralWalletResponse.class);
+        WalletResponse<String> response = gson.fromJson(makeRequest(jsonRequest), new TypeToken<WalletResponse<String>>() {}.getType());
         return response.result;
     }
 
@@ -216,7 +220,7 @@ public class RPCWalletConnection
             .setId(DEFAULT_REQUEST_ID)
             .setMethod("getnewaddress")
             .setParams(params);
-        GeneralWalletResponse response = parser.fromJson(makeRequest(jsonRequest), GeneralWalletResponse.class);
+            WalletResponse<String> response = gson.fromJson(makeRequest(jsonRequest), new TypeToken<WalletResponse<String>>() {}.getType());
         return response.result;
     }
 
@@ -237,7 +241,7 @@ public class RPCWalletConnection
             .setId(DEFAULT_REQUEST_ID)
             .setMethod("estimatesmartfee")
             .setParams(params);
-        SmartFeeResponse response = parser.fromJson(makeRequest(jsonRequest), SmartFeeResponse.class);
-        return Long.parseLong((response.result.feeRate).replace(".", ""));
+        SmartFeeResponse response = gson.fromJson(makeRequest(jsonRequest), SmartFeeResponse.class);
+        return response.result.feeRate.satAmount;
     }
 }

@@ -12,9 +12,9 @@ import com.mshernandez.vertconomy.database.Account;
 import com.mshernandez.vertconomy.database.BlockchainTransaction;
 import com.mshernandez.vertconomy.database.JPAUtil;
 import com.mshernandez.vertconomy.database.UserAccount;
-import com.mshernandez.vertconomy.wallet_interface.ListTransactionResponse;
+import com.mshernandez.vertconomy.wallet_interface.TransactionListResponse;
 import com.mshernandez.vertconomy.wallet_interface.RPCWalletConnection;
-import com.mshernandez.vertconomy.wallet_interface.WalletInfoResponse;
+import com.mshernandez.vertconomy.wallet_interface.ResponseError;
 import com.mshernandez.vertconomy.wallet_interface.WalletRequestException;
 
 import org.bukkit.Bukkit;
@@ -84,6 +84,13 @@ public class Vertconomy
         @Override
         public void run()
         {
+            // Don't Attempt To Check For Deposits If Wallet Unreachable
+            ResponseError error = getWalletError();
+            if (error != null)
+            {
+                plugin.getLogger().warning("Wallet Request Error, Can't Check For Deposits: " + error.message);
+                return;
+            }
             // Only Check Deposits For Online Players
             for (Player p : Bukkit.getOnlinePlayers())
             {
@@ -171,20 +178,23 @@ public class Vertconomy
     }
 
     /**
-     * Returns wallet status information or null
-     * if the wallet cannot be reached.
+     * Returns any wallet error, or null
+     * if there is no error.
      * 
-     * @return Wallet status information, or null if the wallet is unreachable.
+     * @return Any wallet error, or null if none.
      */
-    public WalletInfoResponse.Result getWalletStatus()
+    public ResponseError getWalletError()
     {
         try
         {
-            return wallet.getWalletStatus();
+            return wallet.getWalletError();
         }
         catch (WalletRequestException e)
         {
-            return null;
+            ResponseError error = new ResponseError();
+            error.code = 0;
+            error.message = e.getMessage();
+            return error;
         }
     }
 
@@ -268,7 +278,7 @@ public class Vertconomy
         try
         {
             // Get Wallet Transactions For Addresses Associated With Account
-            List<ListTransactionResponse.Transaction> walletTransactions = wallet.getTransactions(account.getAccountUUID().toString());
+            List<TransactionListResponse.Transaction> walletTransactions = wallet.getTransactions(account.getAccountUUID().toString());
             // Remember Which Transactions Have Already Been Accounted For
             Set<String> oldTransactionIDs = account.getProcessedDepositIDs();
             // Keep Track Of New Balances & Pending Unconfirmed Balances
@@ -276,14 +286,13 @@ public class Vertconomy
             long unconfirmedBalance = 0L;
             // Associate New Deposits To Account
             entityManager.getTransaction().begin();
-            for (ListTransactionResponse.Transaction t : walletTransactions)
+            for (TransactionListResponse.Transaction t : walletTransactions)
             {
                 if (t.confirmations >= minConfirmations)
                 {
                     if (!oldTransactionIDs.contains(t.txid))
                     {
-                        // TODO: will clean up with custom deserializer
-                        long depositAmount = (long) (t.amount * CoinScale.FULL.SAT_SCALE);
+                        long depositAmount = t.amount.satAmount;
                         // New Deposit Transaction Initially 100% Owned By Depositing Account
                         Map<Account, Long> distribution = new HashMap<>();
                         distribution.put(account, depositAmount);
@@ -297,8 +306,7 @@ public class Vertconomy
                 }
                 else
                 {
-                    // TODO: will clean up with custom deserializer
-                    unconfirmedBalance += (long) (t.amount * CoinScale.FULL.SAT_SCALE);
+                    unconfirmedBalance += t.amount.satAmount;
                 }
             }
             account.setPendingBalance(unconfirmedBalance);

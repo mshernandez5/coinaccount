@@ -1,7 +1,7 @@
 package com.mshernandez.vertconomy.commands;
 
 import com.mshernandez.vertconomy.Vertconomy;
-import com.mshernandez.vertconomy.wallet_interface.WalletInfoResponse;
+import com.mshernandez.vertconomy.wallet_interface.ResponseError;
 
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
@@ -27,7 +27,7 @@ public class CommandVertconomy implements CommandExecutor
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args)
     {
-        WalletInfoResponse.Result walletStatus = vertconomy.getWalletStatus();
+        ResponseError walletError = vertconomy.getWalletError();
         StringBuilder message = new StringBuilder();
         message.append('\n');
         message.append(ChatColor.DARK_GREEN);
@@ -37,10 +37,18 @@ public class CommandVertconomy implements CommandExecutor
         message.append('\n');
         message.append(ChatColor.GOLD);
         message.append("Wallet Connection: ");
-        if (walletStatus == null)
+        if (walletError != null)
         {
-            message.append(ChatColor.DARK_RED);
-            message.append("CANNOT BE REACHED");
+            if (walletError.code == 0)
+            {
+                message.append(ChatColor.DARK_RED);
+                message.append("WALLET CANNOT BE REACHED");
+            }
+            else
+            {
+                message.append(ChatColor.YELLOW);
+                message.append("Wallet Not Ready");
+            }
         }
         else
         {

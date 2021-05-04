@@ -6,16 +6,12 @@ import com.google.gson.annotations.SerializedName;
  * Used to deserialize estimatesmartfee
  * responses.
  */
-public class SmartFeeResponse
+public class SmartFeeResponse extends WalletResponse<SmartFeeResponse.Result>
 {
-    Result result;
-    String error;
-    String id;
-    
     public class Result
     {
         @SerializedName("feerate")
-        String feeRate;
+        SatAmount feeRate;
 
         int blocks;
     }
