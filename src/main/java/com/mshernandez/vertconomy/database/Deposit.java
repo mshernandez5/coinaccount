@@ -8,6 +8,7 @@ import javax.persistence.ElementCollection;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.Id;
+import javax.persistence.IdClass;
 
 /**
  * Saves details of a deposit transaction
@@ -20,10 +21,14 @@ import javax.persistence.Id;
  * 750 sats to player #1 and 250 sats to player #2. 
  */
 @Entity
-public class BlockchainTransaction
+@IdClass(DepositKey.class)
+public class Deposit
 {
     @Id
     private String TXID;
+    @Id
+    private int vectorOutIndex;
+    
     private long total;
 
     /**
@@ -43,9 +48,10 @@ public class BlockchainTransaction
      * @param total The total number of sats received in the transaction.
      * @param ownership How the received sats should be distributed across accounts.
      */
-    public BlockchainTransaction(String TXID, long total, Map<Account, Long> ownership)
+    public Deposit(String TXID, int vectorOutIndex,long total, Map<Account, Long> ownership)
     {
         this.TXID = TXID;
+        this.vectorOutIndex = vectorOutIndex;
         this.total = total;
         this.distribution = new HashMap<>(ownership);
     }
@@ -54,7 +60,7 @@ public class BlockchainTransaction
      * Needed for Hibernate to instantiate the class,
      * not for manual use.
      */
-    BlockchainTransaction()
+    Deposit()
     {
         // Required For Hibernate
     }
@@ -67,6 +73,16 @@ public class BlockchainTransaction
     public String getTXID()
     {
         return TXID;
+    }
+
+    /**
+     * Get the vout corresponding to this deposit.
+     * 
+     * @return A vout index.
+     */
+    public int getVectorOutIndex()
+    {
+        return vectorOutIndex;
     }
 
     /**
@@ -86,7 +102,7 @@ public class BlockchainTransaction
      * 
      * @return How many sats each player owns.
      */
-    public Map<Account, Long> getDistribution()
+    public Map<Account, Long> getOwnershipDistribution()
     {
         return distribution;
     }
@@ -106,22 +122,27 @@ public class BlockchainTransaction
     @Override
     public int hashCode()
     {
-        return Objects.hash(TXID);
+        return Objects.hash(TXID, vectorOutIndex);
     }
 
     @Override
-    public boolean equals(Object other)
+    public boolean equals(Object obj)
     {
-        if (!(other instanceof BlockchainTransaction))
+        if (obj == this)
+        {
+            return true;
+        }
+        if (!(obj instanceof Deposit))
         {
             return false;
         }
-        return TXID.equals(((BlockchainTransaction) other).TXID);
+        Deposit other = (Deposit) obj;
+        return TXID.equals(other.TXID) && vectorOutIndex == other.vectorOutIndex;
     }
 
     @Override
     public String toString()
     {
-        return String.format("Transaction: %s, Total: %d", TXID, total);
+        return String.format("ID: %s, vout: %d, Total: %d", TXID, vectorOutIndex, total);
     }
 }

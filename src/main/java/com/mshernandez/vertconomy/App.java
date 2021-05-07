@@ -9,6 +9,9 @@ import java.sql.SQLException;
 import com.mshernandez.vertconomy.commands.CommandBalance;
 import com.mshernandez.vertconomy.commands.CommandDeposit;
 import com.mshernandez.vertconomy.commands.CommandVertconomy;
+import com.mshernandez.vertconomy.core.CoinScale;
+import com.mshernandez.vertconomy.core.VaultAdapter;
+import com.mshernandez.vertconomy.core.Vertconomy;
 import com.mshernandez.vertconomy.database.JPAUtil;
 import com.mshernandez.vertconomy.wallet_interface.RPCWalletConnection;
 

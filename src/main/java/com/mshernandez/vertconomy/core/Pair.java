@@ -1,4 +1,4 @@
-package com.mshernandez.vertconomy;
+package com.mshernandez.vertconomy.core;
 
 public class Pair<K, V>
 {

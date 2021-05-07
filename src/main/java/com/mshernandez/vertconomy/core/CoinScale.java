@@ -1,6 +1,6 @@
-package com.mshernandez.vertconomy;
+package com.mshernandez.vertconomy.core;
 
-enum CoinScale
+public enum CoinScale
 {
     BASE(1L, 0, "", 's'),
     MICRO(100L, 2, "µ", 'µ'),

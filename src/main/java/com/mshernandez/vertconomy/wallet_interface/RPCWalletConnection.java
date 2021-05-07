@@ -167,6 +167,55 @@ public class RPCWalletConnection
     }
 
     /**
+     * Return all unspent outputs with a minimum
+     * number of confirmations for the given address.
+     * 
+     * @param label The address that received the transactions.
+     * @param minConfirmations The minimum number of confirmations a transaction must have.
+     * @return A list of unspent output information objects.
+     * @throws WalletRequestException If the wallet could not be reached or execute the command.
+     */
+    public List<UnspentOutputResponse.UnspentOutput> getUnspentOutputs(String address) throws WalletRequestException
+    {
+        JsonArray params = new JsonArray();
+        params.add(0);
+        params.add(9999999);
+        JsonArray addresses = new JsonArray();
+        addresses.add(address);
+        params.add(addresses);
+        WalletRequest jsonRequest = new WalletRequest()
+            .setId(DEFAULT_REQUEST_ID)
+            .setMethod("listunspent")
+            .setParams(params);
+        UnspentOutputResponse response = gson.fromJson(makeRequest(jsonRequest), UnspentOutputResponse.class);
+        return response.result;
+    }
+
+    /**
+     * Return all unspent outputs for the
+     * given address including unconfirmed transactions.
+     * 
+     * @param label The address label.
+     * @return A list of transaction information objects.
+     * @throws WalletRequestException If the wallet could not be reached or execute the command.
+     */
+    public List<UnspentOutputResponse.UnspentOutput> getUnspentOutputs(String address, int minConfirmations) throws WalletRequestException
+    {
+        JsonArray params = new JsonArray();
+        params.add(minConfirmations);
+        params.add(9999999);
+        JsonArray addresses = new JsonArray();
+        addresses.add(address);
+        params.add(addresses);
+        WalletRequest jsonRequest = new WalletRequest()
+            .setId(DEFAULT_REQUEST_ID)
+            .setMethod("listunspent")
+            .setParams(params);
+        UnspentOutputResponse response = gson.fromJson(makeRequest(jsonRequest), UnspentOutputResponse.class);
+        return response.result;
+    }
+
+    /**
      * Get the balance of a specific address,
      * only considering transactions with a minimum
      * number of confirmations.

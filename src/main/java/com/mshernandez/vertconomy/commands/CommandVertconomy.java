@@ -1,6 +1,6 @@
 package com.mshernandez.vertconomy.commands;
 
-import com.mshernandez.vertconomy.Vertconomy;
+import com.mshernandez.vertconomy.core.Vertconomy;
 import com.mshernandez.vertconomy.wallet_interface.ResponseError;
 
 import org.bukkit.ChatColor;
@@ -9,10 +9,11 @@ import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 
 /**
- * /vertconomy
- * 
+ *   /vertconomy
+ * <p>
  * - Shows whether the plugin is able to make a connection
  *   with the wallet over RPC.
+ * <p>
  * - Gives general plugin information.
  */
 public class CommandVertconomy implements CommandExecutor
@@ -27,7 +28,7 @@ public class CommandVertconomy implements CommandExecutor
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args)
     {
-        ResponseError walletError = vertconomy.getWalletError();
+        ResponseError walletError = vertconomy.checkWalletConnection();
         StringBuilder message = new StringBuilder();
         message.append('\n');
         message.append(ChatColor.DARK_GREEN);
@@ -73,6 +74,7 @@ public class CommandVertconomy implements CommandExecutor
         message.append('\n');
         message.append(ChatColor.BLUE);
         message.append("https://github.com/mshernandez5/vertconomy");
+        message.append(ChatColor.RESET);
         message.append('\n');
 
         sender.sendMessage(message.toString());

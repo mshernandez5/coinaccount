@@ -13,7 +13,7 @@ import javax.persistence.Entity;
  * to in-game funds.
  */
 @Entity
-public class UserAccount extends Account
+public class DepositAccount extends Account
 {
     private String depositAddress;
     private String returnAddress;
@@ -35,7 +35,7 @@ public class UserAccount extends Account
      * @param accountUUID The player UUID to associate with the account.
      * @param returnAddress A wallet refund address, required.
      */
-    public UserAccount(UUID accountUUID, String depositAddress)
+    public DepositAccount(UUID accountUUID, String depositAddress)
     {
         super(accountUUID);
         this.depositAddress = depositAddress;
@@ -47,7 +47,7 @@ public class UserAccount extends Account
      * Required for Hibernate to instantiate
      * class instances.
      */
-    UserAccount()
+    DepositAccount()
     {
         super();
     }

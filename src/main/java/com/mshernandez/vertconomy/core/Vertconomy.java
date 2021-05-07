@@ -1,6 +1,8 @@
-package com.mshernandez.vertconomy;
+package com.mshernandez.vertconomy.core;
 
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -9,21 +11,24 @@ import java.util.UUID;
 import javax.persistence.EntityManager;
 
 import com.mshernandez.vertconomy.database.Account;
-import com.mshernandez.vertconomy.database.BlockchainTransaction;
+import com.mshernandez.vertconomy.database.Deposit;
 import com.mshernandez.vertconomy.database.JPAUtil;
-import com.mshernandez.vertconomy.database.UserAccount;
-import com.mshernandez.vertconomy.wallet_interface.TransactionListResponse;
+import com.mshernandez.vertconomy.database.DepositAccount;
+import com.mshernandez.vertconomy.wallet_interface.UnspentOutputResponse;
 import com.mshernandez.vertconomy.wallet_interface.RPCWalletConnection;
 import com.mshernandez.vertconomy.wallet_interface.ResponseError;
 import com.mshernandez.vertconomy.wallet_interface.WalletRequestException;
+import com.mshernandez.vertconomy.wallet_interface.UnspentOutputResponse.UnspentOutput;
 
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.OfflinePlayer;
-import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.scheduler.BukkitTask;
 
+/**
+ * The core of the plugin, the duct tape
+ * bonding Minecraft and Vertcoin together.
+ */
 public class Vertconomy
 {
     // Account For Balances Owned By The Server Operators
@@ -51,8 +56,8 @@ public class Vertconomy
     private String baseUnit;
     private CoinScale scale;
 
-    // Entity Manager For Persistence
-    EntityManager entityManager;
+    // Database Persistence
+    EntityManager entityManager = JPAUtil.getEntityManager();
 
     // Periodically Check For New Deposits
     BukkitTask depositCheckTask;
@@ -68,45 +73,19 @@ public class Vertconomy
         this.symbol = symbol;
         this.baseUnit = baseUnit;
         this.scale = scale;
-        // Get Entity Manager
-        entityManager = JPAUtil.getEntityManager();
         // Register Deposit Checking Task
         depositCheckTask = Bukkit.getScheduler()
-            .runTaskTimer(plugin, new DepositCheckTask(), DEPOSIT_CHECK_INTERVAL, DEPOSIT_CHECK_INTERVAL);
+            .runTaskTimer(plugin, new CheckDepositTask(this), DEPOSIT_CHECK_INTERVAL, DEPOSIT_CHECK_INTERVAL);
     }
 
     /**
-     * A task run periodically to check for new player
-     * deposits.
+     * Get the plugin associated with this instance.
+     * 
+     * @return A plugin reference.
      */
-    private class DepositCheckTask implements Runnable
+    public Plugin getPlugin()
     {
-        @Override
-        public void run()
-        {
-            // Don't Attempt To Check For Deposits If Wallet Unreachable
-            ResponseError error = getWalletError();
-            if (error != null)
-            {
-                plugin.getLogger().warning("Wallet Request Error, Can't Check For Deposits: " + error.message);
-                return;
-            }
-            // Only Check Deposits For Online Players
-            for (Player p : Bukkit.getOnlinePlayers())
-            {
-                UserAccount account = getOrCreateUserAccount(p.getUniqueId());
-                Pair<Long, Long> changes = registerNewDeposits(account);
-                if (changes.getKey() != 0L)
-                {
-                    StringBuilder message = new StringBuilder();
-                    message.append(ChatColor.BLUE);
-                    message.append("[Vertconomy] Processed Deposits: ");
-                    message.append(ChatColor.GREEN);
-                    message.append(format(changes.getKey()));
-                    p.sendMessage(message.toString());
-                }
-            }
-        }
+        return plugin;
     }
 
     /**
@@ -183,7 +162,7 @@ public class Vertconomy
      * 
      * @return Any wallet error, or null if none.
      */
-    public ResponseError getWalletError()
+    public ResponseError checkWalletConnection()
     {
         try
         {
@@ -199,50 +178,32 @@ public class Vertconomy
     }
 
     /**
-     * Get the balance of the entire server wallet,
-     * including all player balances combined.
-     * 
-     * @return The total balance of the server wallet.
-     */
-    public double getCombinedWalletBalance()
-    {
-        try
-        {
-            return wallet.getBalance(minConfirmations);
-        }
-        catch (WalletRequestException e)
-        {
-            plugin.getLogger().warning("Failed To Get Server Balance: " + e.getMessage());
-        }
-        return 0.0;
-    }
-
-    /**
      * Gets a player account or creates a new one
      * if one does not already exist.
      * 
      * @param accountUUID The account UUID.
      * @return A user account reference.
      */
-    private UserAccount getOrCreateUserAccount(UUID accountUUID)
+    DepositAccount getOrCreateUserAccount(UUID accountUUID)
     {
-        UserAccount account = entityManager.find(UserAccount.class, accountUUID);
-        if (account != null)
-        {
-            return account;
-        }
+        DepositAccount account = null;
         try
         {
             entityManager.getTransaction().begin();
-            plugin.getLogger().info("Creating New Account For User: " + accountUUID);
-            String depositAddress = wallet.getNewAddress(accountUUID.toString());
-            account = new UserAccount(accountUUID, depositAddress);
-            entityManager.persist(account);
+            account = entityManager.find(DepositAccount.class, accountUUID);
+            if (account == null)
+            {
+                plugin.getLogger().info("Creating New Account For User: " + accountUUID);
+                String depositAddress = wallet.getNewAddress(accountUUID.toString());
+                account = new DepositAccount(accountUUID, depositAddress);
+                entityManager.persist(account);
+            }
             entityManager.getTransaction().commit();
         }
-        catch (WalletRequestException e)
+        catch (Exception e)
         {
-            plugin.getLogger().warning("Failed To Create New Account: " + e.getMessage());
+            plugin.getLogger().warning("Failed To Get/Create Account: " + e.getMessage());
+            entityManager.getTransaction().rollback();
         }
         return account;
     }
@@ -254,16 +215,26 @@ public class Vertconomy
      * @param accountUUID The account UUID.
      * @return A holding account reference.
      */
-    private Account getOrCreateHoldingAccount(UUID accountUUID)
+    Account getOrCreateHoldingAccount(UUID accountUUID)
     {
-        Account account = entityManager.find(Account.class, accountUUID);
-        if (account != null)
+        Account account = null;
+        try
         {
-            return account;
+            entityManager.getTransaction().begin();
+            account = entityManager.find(Account.class, accountUUID);
+            if (account == null)
+            {
+                plugin.getLogger().info("Initializing Holding Account: " + accountUUID);
+                account = new Account(accountUUID);
+                entityManager.persist(account);
+            }
+            entityManager.getTransaction().commit();
         }
-        plugin.getLogger().info("Initializing Holding Account: " + accountUUID);
-        account = new Account(accountUUID);
-        entityManager.persist(account);
+        catch (Exception e)
+        {
+            plugin.getLogger().warning("Failed To Get/Create Account: " + e.getMessage());
+            entityManager.getTransaction().rollback();
+        }
         return account;
     }
 
@@ -273,52 +244,56 @@ public class Vertconomy
      * @param account The account to check for new deposits.
      * @return Balance gained from newly registered deposits, and unconfirmed deposit balances.
      */
-    private Pair<Long, Long> registerNewDeposits(UserAccount account)
+    Pair<Long, Long> registerNewDeposits(DepositAccount account)
     {
+        // Keep Track Of New Balances & Pending Unconfirmed Balances
+        long addedBalance = 0L;
+        long unconfirmedBalance = 0L;
         try
         {
-            // Get Wallet Transactions For Addresses Associated With Account
-            List<TransactionListResponse.Transaction> walletTransactions = wallet.getTransactions(account.getAccountUUID().toString());
-            // Remember Which Transactions Have Already Been Accounted For
-            Set<String> oldTransactionIDs = account.getProcessedDepositIDs();
-            // Keep Track Of New Balances & Pending Unconfirmed Balances
-            long addedBalance = 0L;
-            long unconfirmedBalance = 0L;
-            // Associate New Deposits To Account
             entityManager.getTransaction().begin();
-            for (TransactionListResponse.Transaction t : walletTransactions)
+            // Get Wallet Transactions For Addresses Associated With Account
+            List<UnspentOutputResponse.UnspentOutput> unspentOutputs = wallet.getUnspentOutputs(account.getDepositAddress());
+            // Remember Which Transactions Have Already Been Accounted For
+            Set<String> oldTXIDs = account.getProcessedDepositIDs();
+            Set<String> newlyProcessedTXIDs = new HashSet<>();
+            // Check For New Unspent Outputs Deposited To Account
+            for (UnspentOutput output : unspentOutputs)
             {
-                if (t.confirmations >= minConfirmations)
+                if (output.confirmations >= minConfirmations
+                    && output.spendable && output.safe && output.solvable)
                 {
-                    if (!oldTransactionIDs.contains(t.txid))
+                    if (!oldTXIDs.contains(output.txid))
                     {
-                        long depositAmount = t.amount.satAmount;
+                        long depositAmount = output.amount.satAmount;
                         // New Deposit Transaction Initially 100% Owned By Depositing Account
                         Map<Account, Long> distribution = new HashMap<>();
                         distribution.put(account, depositAmount);
-                        BlockchainTransaction bt = new BlockchainTransaction(t.txid, depositAmount, distribution);
+                        Deposit bt = new Deposit(output.txid, output.vout ,depositAmount, distribution);
                         entityManager.persist(bt);
                         // Associate With Account
                         account.getTransactions().add(bt);
-                        account.getProcessedDepositIDs().add(t.txid);
+                        newlyProcessedTXIDs.add(output.txid);
                         addedBalance += depositAmount;
                     }
                 }
                 else
                 {
-                    unconfirmedBalance += t.amount.satAmount;
+                    unconfirmedBalance += output.amount.satAmount;
                 }
             }
+            account.getProcessedDepositIDs().addAll(newlyProcessedTXIDs);
             account.setPendingBalance(unconfirmedBalance);
             entityManager.merge(account);
             entityManager.getTransaction().commit();
-            return new Pair<Long, Long>(addedBalance, unconfirmedBalance);
         }
-        catch (WalletRequestException e)
+        catch (Exception e)
         {
             plugin.getLogger().warning("Failed To Get Transactions: " + e.getMessage());
+            entityManager.getTransaction().rollback();
             return new Pair<Long, Long>(0L, 0L);
         }
+        return new Pair<Long, Long>(addedBalance, unconfirmedBalance);
     }
 
     /**
@@ -331,47 +306,52 @@ public class Vertconomy
      * @param amount The amount to transfer, in sats.
      * @return True if the transfer was successful.
      */
-    private boolean transferBalance(Account sender, Account receiver, long amount)
+    boolean transferBalance(Account sender, Account receiver, long amount)
     {
         if (sender.calculateBalance() < amount)
         {
             plugin.getLogger().info(sender + " can't send " + amount + " to " + receiver);
             return false;
         }
-        long remainingOwed = amount;
-        entityManager.getTransaction().begin();
-        for (BlockchainTransaction bt : sender.getTransactions())
+        try
         {
-            if (remainingOwed == 0L)
+            entityManager.getTransaction().begin();
+            long remainingOwed = amount;
+            Iterator<Deposit> it = sender.getTransactions().iterator();
+            while (it.hasNext() && remainingOwed > 0L)
             {
-                break;
+                Deposit deposit = it.next();
+                Map<Account, Long> distribution = deposit.getOwnershipDistribution();
+                long senderShare = distribution.get(sender);
+                long takenAmount;
+                if (senderShare <= remainingOwed)
+                {
+                    distribution.remove(sender);
+                    distribution.put(receiver, distribution.getOrDefault(receiver, 0L) + senderShare);
+                    deposit = entityManager.merge(deposit);
+                    it.remove();
+                    receiver.getTransactions().add(deposit);
+                    takenAmount = senderShare;
+                }
+                else
+                {
+                    distribution.put(sender, senderShare - remainingOwed);
+                    distribution.put(receiver, distribution.getOrDefault(receiver, 0L) + remainingOwed);
+                    deposit = entityManager.merge(deposit);
+                    receiver.getTransactions().add(deposit);
+                    takenAmount = remainingOwed;
+                }
+                remainingOwed -= takenAmount;
             }
-            Map<Account, Long> distribution = bt.getDistribution();
-            long senderShare = distribution.get(sender);
-            long takenAmount;
-            if (senderShare <= remainingOwed)
-            {
-                distribution.remove(sender);
-                distribution.put(receiver, distribution.getOrDefault(receiver, 0L) + senderShare);
-                bt = entityManager.merge(bt);
-                sender.getTransactions().remove(bt);
-                receiver.getTransactions().add(bt);
-                takenAmount = senderShare;
-            }
-            else
-            {
-                distribution.put(sender, senderShare - remainingOwed);
-                distribution.put(receiver, distribution.getOrDefault(receiver, 0L) + remainingOwed);
-                bt = entityManager.merge(bt);
-                receiver.getTransactions().add(bt);
-                takenAmount = remainingOwed;
-            }
-            remainingOwed -= takenAmount;
+            entityManager.getTransaction().commit();
+            plugin.getLogger().info(sender + " successfully sent " + amount + " to " + receiver);
         }
-        entityManager.merge(sender);
-        entityManager.merge(receiver);
-        entityManager.getTransaction().commit();
-        plugin.getLogger().info(sender + " successfully sent " + amount + " to " + receiver);
+        catch (Exception e)
+        {
+            e.printStackTrace();
+            plugin.getLogger().info(sender + " failed to send " + amount + " to " + receiver);
+            entityManager.getTransaction().rollback();
+        }
         return true;
     }
 
@@ -384,8 +364,8 @@ public class Vertconomy
      */
     public long getPlayerBalance(OfflinePlayer player)
     {
-        UserAccount playerAccount = getOrCreateUserAccount(player.getUniqueId());
-        return playerAccount.calculateBalance();
+        DepositAccount playerAccount = getOrCreateUserAccount(player.getUniqueId());
+        return playerAccount == null ? 0L : playerAccount.calculateBalance();
     }
 
     /**
@@ -397,8 +377,8 @@ public class Vertconomy
      */
     public long getPlayerUnconfirmedBalance(OfflinePlayer player)
     {
-        UserAccount playerAccount = getOrCreateUserAccount(player.getUniqueId());
-        return playerAccount.getPendingBalance();
+        DepositAccount playerAccount = getOrCreateUserAccount(player.getUniqueId());
+        return playerAccount == null ? 0L : playerAccount.getPendingBalance();
     }
 
     /**
@@ -410,8 +390,9 @@ public class Vertconomy
      */
     public Pair<Long, Long> getPlayerBalances(OfflinePlayer player)
     {
-        UserAccount playerAccount = getOrCreateUserAccount(player.getUniqueId());
-        return new Pair<Long, Long>(playerAccount.calculateBalance(), playerAccount.getPendingBalance());
+        DepositAccount playerAccount = getOrCreateUserAccount(player.getUniqueId());
+        return playerAccount == null ? new Pair<Long,Long>(0L, 0L)
+            : new Pair<Long, Long>(playerAccount.calculateBalance(), playerAccount.getPendingBalance());
     }
 
     /**
@@ -423,8 +404,8 @@ public class Vertconomy
      */
     public String getPlayerDepositAddress(OfflinePlayer player)
     {
-        UserAccount playerAccount = getOrCreateUserAccount(player.getUniqueId());
-        return playerAccount.getDepositAddress();
+        DepositAccount playerAccount = getOrCreateUserAccount(player.getUniqueId());
+        return playerAccount == null ? "ERROR" : playerAccount.getDepositAddress();
     }
 
     /**
@@ -432,12 +413,14 @@ public class Vertconomy
      * <p>
      * Moves portions of a player's balance into
      * a temporary transfer fund where it will be
-     * pending a move into the server account fund.
+     * pending a move to another player's account
+     * or into the server account fund if unclaimed.
      * <p>
-     * The temporary transfer fund gives time for
-     * the funds to be reclaimed, which is required
-     * for plugins which intend to conduct transfers
-     * by burning and minting currency.
+     * The temporary transfer fund gives a set amount
+     * of time for the funds to be reclaimed, which is
+     * required for plugins which intend to conduct transfers
+     * by burning sender balances and minting new currency
+     * for the receiver.
      * 
      * @param playerUUID The account UUID.
      * @param amount The amount to send to the transfer fund.
@@ -450,7 +433,7 @@ public class Vertconomy
             plugin.getLogger().warning("Cannot Support Asynchronous Vault API Requests");
             return false;
         }
-        UserAccount sender = getOrCreateUserAccount(player.getUniqueId());
+        DepositAccount sender = getOrCreateUserAccount(player.getUniqueId());
         Account receiver = getOrCreateHoldingAccount(TRANSFER_ACCOUNT_UUID);
         // Can't Have Fractions Of Satoshi, Celing Function To Next Satoshi
         long satAmount = (long) (Math.ceil(amount * scale.SAT_SCALE));
@@ -478,7 +461,7 @@ public class Vertconomy
             plugin.getLogger().warning("Cannot Support Asynchronous Vault API Requests");
             return false;
         }
-        UserAccount receiver = getOrCreateUserAccount(player.getUniqueId());
+        DepositAccount receiver = getOrCreateUserAccount(player.getUniqueId());
         Account sender = getOrCreateHoldingAccount(TRANSFER_ACCOUNT_UUID);
         // Can't Have Fractions Of Satoshi, Celing Function To Next Satoshi
         long satAmount = (long) (Math.ceil(amount * scale.SAT_SCALE));

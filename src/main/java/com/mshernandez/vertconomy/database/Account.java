@@ -25,14 +25,14 @@ public class Account
     private UUID accountUUID;
 
     /**
-     * The set of transactions actively contributing
+     * The set of deposits actively contributing
      * to the account balance.
      * 
-     * Transactions will always be used when fetching an
+     * These will always be used when fetching an
      * account so they are automatically fetched.
      */
     @ManyToMany(fetch = FetchType.EAGER)
-    private Set<BlockchainTransaction> transactions;
+    private Set<Deposit> balances;
 
     /**
      * Creates a new account capable of holding
@@ -45,7 +45,7 @@ public class Account
     public Account(UUID accountUUID)
     {
         this.accountUUID = accountUUID;
-        transactions = new HashSet<>();
+        balances = new HashSet<>();
     }
 
     /**
@@ -73,9 +73,9 @@ public class Account
      * 
      * @return The transactions this account is associated with.
      */
-    public Set<BlockchainTransaction> getTransactions()
+    public Set<Deposit> getTransactions()
     {
-        return transactions;
+        return balances;
     }
 
     /**
@@ -86,7 +86,7 @@ public class Account
     public long calculateBalance()
     {
         long balance = 0L;
-        for (BlockchainTransaction t : transactions)
+        for (Deposit t : balances)
         {
             balance += t.getDistribution(this);
         }

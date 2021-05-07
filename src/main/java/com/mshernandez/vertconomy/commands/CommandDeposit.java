@@ -1,6 +1,6 @@
 package com.mshernandez.vertconomy.commands;
 
-import com.mshernandez.vertconomy.Vertconomy;
+import com.mshernandez.vertconomy.core.Vertconomy;
 
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -12,9 +12,10 @@ import net.md_5.bungee.api.chat.ClickEvent;
 import net.md_5.bungee.api.chat.TextComponent;
 
 /**
- * /deposit
- * 
+ *   /deposit
+ * <p>
  * - Informs players how to deposit VTC to their accounts.
+ * <p>
  * - Does not actually have to start any processes, the server
  *   periodically checks for new deposits automatically.
  */

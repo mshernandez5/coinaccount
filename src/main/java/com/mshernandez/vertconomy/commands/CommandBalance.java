@@ -1,7 +1,7 @@
 package com.mshernandez.vertconomy.commands;
 
-import com.mshernandez.vertconomy.Pair;
-import com.mshernandez.vertconomy.Vertconomy;
+import com.mshernandez.vertconomy.core.Pair;
+import com.mshernandez.vertconomy.core.Vertconomy;
 
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -13,10 +13,12 @@ import org.bukkit.command.ConsoleCommandSender;
 import org.bukkit.entity.Player;
 
 /**
- * /balance
- * 
+ *   /balance
+ * <p>
  * - Allows user to check their balance.
- * - Allows console to check entire server wallet balance.
+ * <p>
+ * - Allows console to check server-owned wallet balance.
+ * <p>
  * - Allows console to check the balance of a specific player.
  */
 public class CommandBalance implements CommandExecutor
@@ -78,9 +80,9 @@ public class CommandBalance implements CommandExecutor
             else
             {
                 message.append(ChatColor.RED);
-                message.append("Combined Server Balance: ");
+                message.append("Server-Owned Balance: ");
                 message.append(ChatColor.GREEN);
-                message.append(vertconomy.format(vertconomy.getCombinedWalletBalance()));
+                // TODO: message.append(vertconomy.format(vertconomy.getServerAccountBalance()));
             }
         }
         else

@@ -1,4 +1,4 @@
-package com.mshernandez.vertconomy;
+package com.mshernandez.vertconomy.core;
 
 import java.util.List;
 
@@ -10,8 +10,9 @@ import net.milkbowl.vault.economy.EconomyResponse;
 import net.milkbowl.vault.economy.EconomyResponse.ResponseType;
 
 /**
- * A vertconomy wrapper following the
- * Vault API interface.
+ * A wrapper following the Vault API interface
+ * translating calls into Vertconomy-compatible
+ * requests.
  */
 public class VaultAdapter implements Economy
 {
