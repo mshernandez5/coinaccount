@@ -12,12 +12,14 @@ import net.md_5.bungee.api.chat.ClickEvent;
 import net.md_5.bungee.api.chat.TextComponent;
 
 /**
- *   /deposit
- * <p>
- * - Informs players how to deposit VTC to their accounts.
- * <p>
- * - Does not actually have to start any processes, the server
- *   periodically checks for new deposits automatically.
+ * /deposit
+ * <ul>
+ *     <li>Informs players how to deposit VTC to their accounts.</li>
+ *     <li>
+ *         Does not actually have to start any processes, the server
+ *         periodically checks for new deposits automatically.
+ *     </li>
+ * </ul>
  */
 public class CommandDeposit implements CommandExecutor
 {

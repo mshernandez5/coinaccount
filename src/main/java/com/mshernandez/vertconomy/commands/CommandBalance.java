@@ -13,13 +13,12 @@ import org.bukkit.command.ConsoleCommandSender;
 import org.bukkit.entity.Player;
 
 /**
- *   /balance
- * <p>
- * - Allows user to check their balance.
- * <p>
- * - Allows console to check server-owned wallet balance.
- * <p>
- * - Allows console to check the balance of a specific player.
+ * /balance
+ * <ul>
+ *     <li>Allows user to check their balance.</li>
+ *     <li>Allows console to check server-owned wallet balance.</li>
+ *     <li>Allows console to check the balance of a specific player.</li>
+ * </ul>
  */
 public class CommandBalance implements CommandExecutor
 {
