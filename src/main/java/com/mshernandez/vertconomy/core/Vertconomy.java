@@ -178,11 +178,11 @@ public class Vertconomy
     }
 
     /**
-     * Gets a player account or creates a new one
+     * Gets a deposit account or creates a new one
      * if one does not already exist.
      * 
      * @param accountUUID The account UUID.
-     * @return A user account reference.
+     * @return A deposit account reference.
      */
     DepositAccount getOrCreateUserAccount(UUID accountUUID)
     {
@@ -240,6 +240,9 @@ public class Vertconomy
 
     /**
      * Register new deposits for the given user account.
+     * <p>
+     * Returns newly confirmed balances as well as pending
+     * deposits.
      * 
      * @param account The account to check for new deposits.
      * @return Balance gained from newly registered deposits, and unconfirmed deposit balances.
@@ -301,8 +304,8 @@ public class Vertconomy
      * internally redistributing ownership of the
      * underlying blockchain transactions.
      * 
-     * @param sendingAccount The sending account UUID.
-     * @param receivingAccount The receiving account UUID.
+     * @param sender The sending account.
+     * @param receiver The receiving account.
      * @param amount The amount to transfer, in sats.
      * @return True if the transfer was successful.
      */
@@ -422,7 +425,7 @@ public class Vertconomy
      * by burning sender balances and minting new currency
      * for the receiver.
      * 
-     * @param playerUUID The account UUID.
+     * @param player The player to take funds from.
      * @param amount The amount to send to the transfer fund.
      * @return True if the transfer was successful.
      */
@@ -450,7 +453,7 @@ public class Vertconomy
      * Reclaim a balance from the temporary transfer
      * fund.
      * 
-     * @param playerUUID The account UUID.
+     * @param player The player to give the taken funds to.
      * @param amount The amount to take from the transfer fund.
      * @return True if the transfer was successful.
      */

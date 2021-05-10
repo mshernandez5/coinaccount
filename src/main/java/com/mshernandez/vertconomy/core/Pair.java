@@ -1,5 +1,9 @@
 package com.mshernandez.vertconomy.core;
 
+/**
+ * A simple Pair that can hold two
+ * objects of any kind.
+ */
 public class Pair<K, V>
 {
     private K key;
