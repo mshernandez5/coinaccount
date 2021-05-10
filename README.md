@@ -27,7 +27,7 @@ Linux: | `~/.vertcoin/vertcoin.conf`
 If the configuration file does not exist - which is likely if you never needed to edit it before - create it.
 Here is an example configuration that will allow the wallet to accept RPC connections at `http://127.0.0.1:5888` using the specified username and password:
 
-```
+```properties
 server=1
 rpcuser=vtcuser
 rpcpassword=vtcpass
