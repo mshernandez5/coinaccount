@@ -1,8 +1,9 @@
 # Vertconomy
-A plugin integrating Vertcoin into the Minecraft economy through the Vault API.
-
+Vertconomy brings Vertcoin into your server's economy with support for in-game deposits, withdrawals, and transfers.\
+Experimental Vault API integration enables limited support with existing economy plugins.\
+Vertconomy is configured to work with Vertcoin by default but should be compatible with most coins supporting standard bitcoind RPC calls.
 ## Why Vertcoin?
-[Vertcoin](https://vertcoin.org/) is committed to maintaining an ASIC-resistant algorithm, hard forking whenever necessary to continue doing so. Keeping dedicated mining hardware off the table makes it possible to mine with consumer-grade GPUs in normal gaming computers. With the [Vertcoin One Click Miner](https://github.com/vertcoin-project/one-click-miner-vnext/releases), people can easily get involved and start mining cryptocurrency without having to purchase any directly. You can even mine Vertcoin while playing Minecraft! Though this plugin is not exclusively compatible with Vertcoin, most other coins would require players to purchase coins to participate in the server economy.
+[Vertcoin](https://vertcoin.org/) is committed to maintaining an ASIC-resistant algorithm, hard forking whenever necessary to continue doing so. Keeping dedicated mining hardware off the table makes it possible to mine with consumer-grade GPUs in normal gaming computers. With the [Vertcoin One Click Miner](https://github.com/vertcoin-project/one-click-miner-vnext/releases), people can easily get involved and start mining cryptocurrency without having to purchase any directly. You can even mine Vertcoin while playing Minecraft! Though this plugin is not exclusively compatible with Vertcoin, choosing most other coins would be asking players to purchase from an exchange to participate in the server economy.
 
 ## How does it work?
 Vertconomy interfaces with a user-provided wallet via standard [bitcoind RPC methods](https://developer.bitcoin.org/reference/rpc/), allowing a player to deposit and withdraw Vertcoin through the Minecraft plugin.
@@ -94,7 +95,7 @@ This project is experimental and does not make any guarantees to the safety of t
 Plugin written by [@mshernandez5](https://github.com/mshernandez5/) with special thanks to the projects making this one possible:
 * The Vertcoin, Bitcoin, and Litecoin Projects
 * Bukkit/Spigot, Vault API
-* Libraries... H2, Hibernate, Gson, Junit
+* Dependencies... H2, Hibernate, Gson, Junit
 
 ## Donations
 This plugin took time and effort, consider donating if you like the results!
