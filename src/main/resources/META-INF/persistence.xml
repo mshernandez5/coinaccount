@@ -16,8 +16,8 @@
 
         <!-- Classes To Persist -->
         <class>com.mshernandez.vertconomy.database.Account</class>
-        <class>com.mshernandez.vertconomy.database.UserAccount</class>
-        <class>com.mshernandez.vertconomy.database.BlockchainTransaction</class>
+        <class>com.mshernandez.vertconomy.database.DepositAccount</class>
+        <class>com.mshernandez.vertconomy.database.Deposit</class>
         
         <!-- Hibernate Configuration -->
         <properties>
