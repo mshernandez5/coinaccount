@@ -7,12 +7,23 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandlers;
 import java.util.Base64;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import com.google.common.reflect.TypeToken;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
+import com.mshernandez.vertconomy.wallet_interface.requests.FundRawTransactionOptions;
+import com.mshernandez.vertconomy.wallet_interface.requests.RawTransactionInput;
+import com.mshernandez.vertconomy.wallet_interface.responses.DecodeTransactionResponse;
+import com.mshernandez.vertconomy.wallet_interface.responses.SatResponse;
+import com.mshernandez.vertconomy.wallet_interface.responses.SignRawTransactionResponse;
+import com.mshernandez.vertconomy.wallet_interface.responses.SmartFeeResponse;
+import com.mshernandez.vertconomy.wallet_interface.responses.TransactionListResponse;
+import com.mshernandez.vertconomy.wallet_interface.responses.UnspentOutputResponse;
+import com.mshernandez.vertconomy.wallet_interface.responses.WalletInfoResponse;
 
 /**
  * A class to interface with vertcoind,
@@ -90,12 +101,113 @@ public class RPCWalletConnection
     }
 
     /**
+     * Creates a new raw transaction using the
+     * provided inputs and output addresses/amounts.
+     * 
+     * @return A hex-encoded raw transaction.
+     * @throws WalletRequestException If the wallet could not be reached or execute the command.
+     */
+    public String createRawTransaction(List<RawTransactionInput> inputs, Map<String, Long> outputs) throws WalletRequestException
+    {
+        JsonArray params = new JsonArray();
+        params.add(gson.toJson(inputs));
+        Map<String, SatAmount> boxedAmounts = new HashMap<>();
+        for (String address : outputs.keySet())
+        {
+            boxedAmounts.put(address, new SatAmount(outputs.get(address)));
+        }
+        params.add(gson.toJson(boxedAmounts));
+        WalletRequest jsonRequest = new WalletRequest()
+            .setId(DEFAULT_REQUEST_ID)
+            .setMethod("createrawtransaction")
+            .setParams(params);
+        WalletResponse<String> response = gson.fromJson(makeRequest(jsonRequest), new TypeToken<WalletResponse<String>>() {}.getType());
+        return response.result;
+    }
+
+    /**
+     * Decodes raw transaction information.
+     * 
+     * @return A hex-encoded raw transaction.
+     * @throws WalletRequestException If the wallet could not be reached or execute the command.
+     */
+    public DecodeTransactionResponse.Result decodeRawTransaction(String rawTransactionHex) throws WalletRequestException
+    {
+        JsonArray params = new JsonArray();
+        params.add(rawTransactionHex);
+        WalletRequest jsonRequest = new WalletRequest()
+            .setId(DEFAULT_REQUEST_ID)
+            .setMethod("decoderawtransaction")
+            .setParams(params);
+        DecodeTransactionResponse response = gson.fromJson(makeRequest(jsonRequest), DecodeTransactionResponse.class);
+        return response.result;
+    }
+
+    /**
+     * Funds a raw transaction.
+     * 
+     * @return A hex-encoded raw transaction.
+     * @throws WalletRequestException If the wallet could not be reached or execute the command.
+     */
+    public String fundRawTransaction(String rawTransactionHex, FundRawTransactionOptions options) throws WalletRequestException
+    {
+        JsonArray params = new JsonArray();
+        params.add(rawTransactionHex);
+        params.add(gson.toJson(options));
+        WalletRequest jsonRequest = new WalletRequest()
+            .setId(DEFAULT_REQUEST_ID)
+            .setMethod("fundrawtransaction")
+            .setParams(params);
+        WalletResponse<String> response = gson.fromJson(makeRequest(jsonRequest), new TypeToken<WalletResponse<String>>() {}.getType());
+        return response.result;
+    }
+
+    /**
+     * Signs a raw transaction with the server wallet.
+     * 
+     * @param rawTransactionHex The hex string representing the raw transaction.
+     * @return A response object holding the signed transaction hex string.
+     * @throws WalletRequestException If the wallet could not be reached or execute the command.
+     */
+    public SignRawTransactionResponse.Result signRawTransactionWithWallet(String rawTransactionHex) throws WalletRequestException
+    {
+        JsonArray params = new JsonArray();
+        params.add(rawTransactionHex);
+        WalletRequest jsonRequest = new WalletRequest()
+            .setId(DEFAULT_REQUEST_ID)
+            .setMethod("signrawtransactionwithwallet")
+            .setParams(params);
+        SignRawTransactionResponse response = gson.fromJson(makeRequest(jsonRequest), SignRawTransactionResponse.class);
+        return response.result;
+    }
+
+    /**
+     * Submit a raw transaction to the network.
+     * 
+     * @param rawTransactionHex The hex string representing the raw transaction.
+     * @return The transaction hash (TXID) in hex.
+     * @throws WalletRequestException If the wallet could not be reached or execute the command.
+     */
+    public String sendRawTransaction(String rawTransactionHex) throws WalletRequestException
+    {
+        JsonArray params = new JsonArray();
+        params.add(rawTransactionHex);
+        WalletRequest jsonRequest = new WalletRequest()
+            .setId(DEFAULT_REQUEST_ID)
+            .setMethod("sendrawtransaction")
+            .setParams(params);
+        WalletResponse<String> response = gson.fromJson(makeRequest(jsonRequest), new TypeToken<WalletResponse<String>>() {}.getType());
+        return response.result;
+    }
+
+    /**
      * Gets a WalletInfoResponse holding general information
      * about the wallet and its status.
      * 
      * @return A WalletInfoResponse holding wallet status information.
+     * @throws WalletRequestException If the wallet could not be reached or execute the command.
      */
-    public ResponseError getWalletError() throws WalletRequestException
+    public ResponseError getWalletInfo() throws WalletRequestException
     {
         JsonArray params = new JsonArray();
         WalletRequest jsonRequest = new WalletRequest()
@@ -274,15 +386,14 @@ public class RPCWalletConnection
     }
 
     /**
-     * Estimates the approximate reqiored fee per kilobyte
-     * in base units (ex. satoshis).
+     * Estimates the approximate fee in sats/vbyte.
      * This is not a fee per transaction.
      * 
-     * @param confirmationTarget
-     * @return The approximate TX fee per KB, in base units (ex. satoshis).
+     * @param confirmationTarget The target number of block for confirmation.
+     * @return The approximate TX fee in sats per vbyte.
      * @throws WalletRequestException If the wallet could not be reached or execute the command.
      */
-    public long estimateSmartFee(int confirmationTarget) throws WalletRequestException
+    public double estimateSmartFee(int confirmationTarget) throws WalletRequestException
     {
         JsonArray params = new JsonArray();
         params.add(confirmationTarget);
@@ -291,6 +402,7 @@ public class RPCWalletConnection
             .setMethod("estimatesmartfee")
             .setParams(params);
         SmartFeeResponse response = gson.fromJson(makeRequest(jsonRequest), SmartFeeResponse.class);
-        return response.result.feeRate.satAmount;
+        // Fee Initially In sat/KB, Want sat/vbyte
+        return response.result.feeRate.satAmount / 1000.0;
     }
 }

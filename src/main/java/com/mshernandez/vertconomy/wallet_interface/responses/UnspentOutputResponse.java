@@ -1,6 +1,9 @@
-package com.mshernandez.vertconomy.wallet_interface;
+package com.mshernandez.vertconomy.wallet_interface.responses;
 
 import java.util.List;
+
+import com.mshernandez.vertconomy.wallet_interface.SatAmount;
+import com.mshernandez.vertconomy.wallet_interface.WalletResponse;
 
 /**
  * Used to get general wallet status information.

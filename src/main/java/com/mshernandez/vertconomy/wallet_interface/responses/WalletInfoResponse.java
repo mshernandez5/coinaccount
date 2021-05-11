@@ -1,6 +1,7 @@
-package com.mshernandez.vertconomy.wallet_interface;
+package com.mshernandez.vertconomy.wallet_interface.responses;
 
 import com.google.gson.annotations.SerializedName;
+import com.mshernandez.vertconomy.wallet_interface.WalletResponse;
 
 /**
  * Used to get general wallet status information.

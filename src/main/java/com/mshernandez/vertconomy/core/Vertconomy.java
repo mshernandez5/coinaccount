@@ -14,11 +14,11 @@ import com.mshernandez.vertconomy.database.Account;
 import com.mshernandez.vertconomy.database.Deposit;
 import com.mshernandez.vertconomy.database.JPAUtil;
 import com.mshernandez.vertconomy.database.DepositAccount;
-import com.mshernandez.vertconomy.wallet_interface.UnspentOutputResponse;
 import com.mshernandez.vertconomy.wallet_interface.RPCWalletConnection;
 import com.mshernandez.vertconomy.wallet_interface.ResponseError;
 import com.mshernandez.vertconomy.wallet_interface.WalletRequestException;
-import com.mshernandez.vertconomy.wallet_interface.UnspentOutputResponse.UnspentOutput;
+import com.mshernandez.vertconomy.wallet_interface.responses.UnspentOutputResponse;
+import com.mshernandez.vertconomy.wallet_interface.responses.UnspentOutputResponse.UnspentOutput;
 
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
@@ -166,7 +166,7 @@ public class Vertconomy
     {
         try
         {
-            return wallet.getWalletError();
+            return wallet.getWalletInfo();
         }
         catch (WalletRequestException e)
         {

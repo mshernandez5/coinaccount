@@ -9,14 +9,14 @@ import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 
 /**
- * /vertconomy
- * <ul>
- *     <li>
- *         Shows whether the plugin is able to make a connection
- *         with the wallet over RPC.
- *     </li>
- *     <li>Gives general plugin information.</li>
- * </ul>
+ *  /vertconomy
+ *  <ul>
+ *      <li>
+ *          Shows whether the plugin is able to make a connection
+ *          with the wallet over RPC.
+ *      </li>
+ *      <li>Gives general plugin information.</li>
+ *  </ul>
  */
 public class CommandVertconomy implements CommandExecutor
 {

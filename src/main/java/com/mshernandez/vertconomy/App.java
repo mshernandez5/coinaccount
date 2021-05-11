@@ -55,7 +55,7 @@ public class App extends JavaPlugin
         }
         RPCWalletConnection wallet = new RPCWalletConnection(walletUri, user, pass);
 
-        // Grab Wallet Management Settings
+        // Grab Transaction Settings
         int minConfirmations = configuration.getInt("min-confirmations", 10);
         int targetBlockTime = configuration.getInt("target-block-time", 2);
 

@@ -6,5 +6,18 @@ package com.mshernandez.vertconomy.wallet_interface;
  */
 public class SatAmount
 {
+    public SatAmount(long satAmount)
+    {
+        this.satAmount = satAmount;
+    }
+
+    public SatAmount()
+    {
+        // For Better GSON Compatibility
+    }
+
+    /**
+     * An amount, in sats.
+     */
     public long satAmount;
 }
