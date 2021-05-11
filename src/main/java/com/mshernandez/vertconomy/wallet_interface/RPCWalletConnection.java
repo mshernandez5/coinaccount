@@ -55,6 +55,7 @@ public class RPCWalletConnection
         basicAuth = Base64.getEncoder().encodeToString(credentials.getBytes());
         // Initialize Gson Instance
         gson = new GsonBuilder()
+            .registerTypeAdapter(SatAmount.class, new SatAmountSerializer())
             .registerTypeAdapter(SatAmount.class, new SatAmountDeserializer())
             .create();
     }

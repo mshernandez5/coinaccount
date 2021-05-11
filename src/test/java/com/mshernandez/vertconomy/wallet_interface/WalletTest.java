@@ -14,6 +14,8 @@ import org.junit.jupiter.api.BeforeEach;
  * Ignored during build, requires active and
  * properly configured wallet running to succeed.
  * 
+ * Used only for development purposes.
+ * 
  * Do not run these tests on a wallet that you are
  * not willing to lose.
  */
