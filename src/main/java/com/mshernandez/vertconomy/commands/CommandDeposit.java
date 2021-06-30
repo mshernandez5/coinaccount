@@ -63,7 +63,7 @@ public class CommandDeposit implements CommandExecutor
             message.append(ChatColor.YELLOW);
             message.append("Wait For Your Transaction To Reach ");
             message.append(ChatColor.LIGHT_PURPLE);
-            message.append("" + vertconomy.getMinimumConfirmations());
+            message.append("" + vertconomy.getMinDepositConfirmations());
             message.append(ChatColor.YELLOW);
             message.append(" Confirmations");
             message.append(ChatColor.RESET);

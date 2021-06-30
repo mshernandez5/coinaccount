@@ -6,12 +6,12 @@ import java.util.Objects;
 class DepositKey implements Serializable
 {
     private String TXID;
-    private int vectorOutIndex;
+    private int vout;
 
     DepositKey(String TXID, int vout)
     {
         this.TXID = TXID;
-        this.vectorOutIndex = vout;
+        this.vout = vout;
     }
 
     DepositKey()
@@ -26,13 +26,13 @@ class DepositKey implements Serializable
 
     public int getVectorOutIndex()
     {
-        return vectorOutIndex;
+        return vout;
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash(TXID, vectorOutIndex);
+        return Objects.hash(TXID, vout);
     }
 
     @Override
@@ -47,6 +47,6 @@ class DepositKey implements Serializable
             return false;
         }
         DepositKey other = (DepositKey) obj;
-        return TXID.equals(other.TXID) && vectorOutIndex == other.vectorOutIndex;
+        return TXID.equals(other.TXID) && vout == other.vout;
     }
 }

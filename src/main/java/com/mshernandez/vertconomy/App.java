@@ -9,9 +9,11 @@ import java.sql.SQLException;
 import com.mshernandez.vertconomy.commands.CommandBalance;
 import com.mshernandez.vertconomy.commands.CommandDeposit;
 import com.mshernandez.vertconomy.commands.CommandVertconomy;
+import com.mshernandez.vertconomy.commands.CommandWithdraw;
 import com.mshernandez.vertconomy.core.CoinScale;
 import com.mshernandez.vertconomy.core.VaultAdapter;
 import com.mshernandez.vertconomy.core.Vertconomy;
+import com.mshernandez.vertconomy.core.VertconomyBuilder;
 import com.mshernandez.vertconomy.database.JPAUtil;
 import com.mshernandez.vertconomy.wallet_interface.RPCWalletConnection;
 
@@ -56,7 +58,8 @@ public class App extends JavaPlugin
         RPCWalletConnection wallet = new RPCWalletConnection(walletUri, user, pass);
 
         // Grab Transaction Settings
-        int minConfirmations = configuration.getInt("min-confirmations", 10);
+        int minDepositConfirmations = configuration.getInt("min-deposit-confirmations", 6);
+        int minChangeConfirmations = configuration.getInt("min-change-confirmations", 1);
         int targetBlockTime = configuration.getInt("target-block-time", 2);
 
         // Grab Currency Information
@@ -120,8 +123,16 @@ public class App extends JavaPlugin
         }
 
         // Create Vertconomy Instance With Loaded Values
-        Vertconomy vertconomy = new Vertconomy(this, wallet, minConfirmations,
-            targetBlockTime, symbol, baseUnit, scale);
+        VertconomyBuilder vertconomyBuilder = new VertconomyBuilder();
+        Vertconomy vertconomy = vertconomyBuilder.setPlugin(this)
+            .setWallet(wallet)
+            .setMinDepositConfirmations(minDepositConfirmations)
+            .setMinChangeConfirmations(minChangeConfirmations)
+            .setTargetBlockTime(targetBlockTime)
+            .setSymbol(symbol)
+            .setBaseUnit(baseUnit)
+            .setScale(scale)
+            .build();
 
         // Register Vertconomy Wrapper With Vault
         Plugin vault = getServer().getPluginManager().getPlugin("Vault");
@@ -137,6 +148,7 @@ public class App extends JavaPlugin
         // Register Commands
         getCommand("balance").setExecutor(new CommandBalance(vertconomy));
         getCommand("deposit").setExecutor(new CommandDeposit(vertconomy));
+        getCommand("withdraw").setExecutor(new CommandWithdraw(vertconomy));
         getCommand("vertconomy").setExecutor(new CommandVertconomy(vertconomy));
     }
 

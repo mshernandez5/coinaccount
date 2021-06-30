@@ -7,8 +7,11 @@ user: vtcuser
 pass: vtcpass
 uri: http://127.0.0.1:5888
 
-# Minimum Confirmations To Consider Transaction Valid
-min-confirmations: 10
+# Minimum Confirmations To Consider Deposits Valid
+min-deposit-confirmations: 6
+
+# Minimum Confirmations To Use Change Outputs
+min-change-confirmations: 1
 
 # Target Number Of Blocks To Confirm Withdrawals
 target-block-time: 2

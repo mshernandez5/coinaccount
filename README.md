@@ -89,7 +89,7 @@ With these configurations in place, the server should be ready to start with the
 By default, Vertcoin balances will be represented in satoshi units; this can be changed in the plugin configuration. I would not recommend using full VTC units as this encourages larger in-game transactions and may make the game less enjoyable for those without large amounts of Vertcoin to experiment with.
 
 ## Warning
-This project is experimental and does not make any guarantees to the safety of the funds or wallets it interacts with. As the project does not rely on any centralized server, please understand that any coins deposited though the plugin are inherently in the hands of the Minecraft server owners. If you would not trust the server owners to hold your coins directly, you should not trust them to hold your coins through this plugin.
+This project is experimental and does not make any guarantees to the safety of the funds or wallets it interacts with. As the project does not rely on any centralized server, please understand that any coins deposited through the plugin are inherently in the hands of the Minecraft server owners. If you would not trust the server owners to hold your coins directly, you should not trust them to hold your coins through this plugin.
 
 ## Contributions
 Plugin written by [@mshernandez5](https://github.com/mshernandez5/) with special thanks to the projects making this one possible:

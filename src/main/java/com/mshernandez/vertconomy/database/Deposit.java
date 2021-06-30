@@ -14,11 +14,14 @@ import javax.persistence.IdClass;
  * Saves details of a deposit transaction
  * and distributes ownership of the received
  * coins among server players.
- * 
+ * <p>
+ * Basically represents a UTXO that can be split
+ * up among many players.
+ * <p>
  * For example, if player #1 deposits 1000 sats
  * and gives 250 to player #2 in game, then the
- * transaction holding the 1000 sats will allocate
- * 750 sats to player #1 and 250 sats to player #2. 
+ * deposit holding the 1000 sats will allocate
+ * 750 sats to player #1 and 250 sats to player #2.
  */
 @Entity
 @IdClass(DepositKey.class)
@@ -27,7 +30,7 @@ public class Deposit
     @Id
     private String TXID;
     @Id
-    private int vectorOutIndex;
+    private int vout;
     
     private long total;
 
@@ -48,10 +51,10 @@ public class Deposit
      * @param total The total number of sats received in the transaction.
      * @param ownership How the received sats should be distributed across accounts.
      */
-    public Deposit(String TXID, int vectorOutIndex,long total, Map<Account, Long> ownership)
+    public Deposit(String TXID, int vectorOutIndex, long total, boolean spendable, Map<Account, Long> ownership)
     {
         this.TXID = TXID;
-        this.vectorOutIndex = vectorOutIndex;
+        this.vout = vectorOutIndex;
         this.total = total;
         this.distribution = new HashMap<>(ownership);
     }
@@ -82,14 +85,14 @@ public class Deposit
      */
     public int getVectorOutIndex()
     {
-        return vectorOutIndex;
+        return vout;
     }
 
     /**
      * Get the total sats that the server received
-     * as part of this transaction.
+     * as part of this deposit, regardless of ownership.
      * 
-     * @return
+     * @return The total number of sats in this deposit.
      */
     public long getTotal()
     {
@@ -122,7 +125,7 @@ public class Deposit
     @Override
     public int hashCode()
     {
-        return Objects.hash(TXID, vectorOutIndex);
+        return Objects.hash(TXID, vout);
     }
 
     @Override
@@ -137,12 +140,12 @@ public class Deposit
             return false;
         }
         Deposit other = (Deposit) obj;
-        return TXID.equals(other.TXID) && vectorOutIndex == other.vectorOutIndex;
+        return TXID.equals(other.TXID) && vout == other.vout;
     }
 
     @Override
     public String toString()
     {
-        return String.format("ID: %s, vout: %d, Total: %d", TXID, vectorOutIndex, total);
+        return String.format("TXID: %s, vout: %d, Total Sats: %d", TXID, vout, total);
     }
 }

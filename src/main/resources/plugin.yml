@@ -1,20 +1,31 @@
-main: com.mshernandez.vertconomy.App
+# Metadata
 name: Vertconomy
 version: 0.0.1
+description: Vertcoin support for your server including in-game deposits, transfers, and withdrawals.
+author: https://github.com/mshernandez5
+website: https://github.com/mshernandez5/vertconomy
+
+# Loading
+main: com.mshernandez.vertconomy.App
 api-version: 1.16
 depend: [Vault]
 loadbefore: [Essentials]
 
+# Commands
 commands:
   balance:
     description: Allows a player to check their vertconomy balance.
     aliases: [bal]
-    usage: /balance
+    usage: /balance [player]
     permission: vertconomy.balance
   deposit:
     description: Allows a player to deposit crypto into their vertconomy account.
     usage: /deposit
     permission: vertconomy.deposit
+  withdraw:
+    description: Allows players to withdraw crypto from their vertconomy account.
+    usage: /withdraw (<amount> | all | confirm | cancel)
+    permission: vertconomy.withdraw
   vertconomy:
     description: Show the status of the plugin and wallet connection.
     usage: /vertconomy

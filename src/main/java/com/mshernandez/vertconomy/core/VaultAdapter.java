@@ -61,7 +61,7 @@ public class VaultAdapter implements Economy
     @Override
     public String format(double amount)
     {
-        return vertconomy.format(amount);
+        return vertconomy.getFormatter().format(amount);
     }
 
     // Player Economy Operations
@@ -159,7 +159,7 @@ public class VaultAdapter implements Economy
         return new EconomyResponse(0.0,
             vertconomy.getPlayerBalance(player),
             EconomyResponse.ResponseType.FAILURE,
-            "Failed To Move " + vertconomy.format(amount));
+            "Failed To Move " + vertconomy.getFormatter().format(amount));
     }
 
     @Override
@@ -195,7 +195,7 @@ public class VaultAdapter implements Economy
         return new EconomyResponse(0.0,
             vertconomy.getPlayerBalance(player),
             EconomyResponse.ResponseType.FAILURE,
-            "Failed To Claim " + vertconomy.format(amount));
+            "Failed To Claim " + vertconomy.getFormatter().format(amount));
     }
 
     @Override

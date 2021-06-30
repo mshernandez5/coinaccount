@@ -45,7 +45,7 @@ public class CheckDepositTask implements Runnable
                 message.append(ChatColor.BLUE);
                 message.append("[Vertconomy] Processed Deposits: ");
                 message.append(ChatColor.GREEN);
-                message.append(vertconomy.format(changes.getKey()));
+                message.append(vertconomy.getFormatter().format(changes.getKey()));
                 p.sendMessage(message.toString());
             }
         }

@@ -48,79 +48,52 @@ public class Vertconomy
     
     // RPC Wallet API
     private RPCWalletConnection wallet;
-    private int minConfirmations;
+    private int minDepositConfirmations;
+    private int minChangeConfirmations;
     private int targetBlockTime;
 
     // Currency Information
     private String symbol;
-    private String baseUnit;
+    private String baseUnitSymbol;
     private CoinScale scale;
 
+    // Sat Amount Formatter
+    private SatAmountFormat formatter;
+
+    // Keep Track Of Pending Withdrawals
+    Map<Account, PendingWithdraw> pendingWithdrawals;
+
     // Database Persistence
-    EntityManager entityManager = JPAUtil.getEntityManager();
+    EntityManager entityManager;
 
     // Periodically Check For New Deposits
     BukkitTask depositCheckTask;
 
-    public Vertconomy(Plugin plugin, RPCWalletConnection wallet, int minConfirmations,
-        int targetBlockTime, String symbol, String baseUnit, CoinScale scale)
+    /**
+     * Create an uninitialized Vertconomy instance.
+     * Must run initialize() after setting all fields to
+     * non-default values.
+     */
+    Vertconomy()
     {
-        // Save References / Values
-        this.plugin = plugin;
-        this.wallet = wallet;
-        this.minConfirmations = minConfirmations;
-        this.targetBlockTime = targetBlockTime;
-        this.symbol = symbol;
-        this.baseUnit = baseUnit;
-        this.scale = scale;
-        // Register Deposit Checking Task
+        // For Builder, Not For Direct Usage
+    }
+
+    /**
+     * Initialize this instance, must be done before
+     * using Vertconomy.
+     */
+    void initialize()
+    {
+        // Create Formatter
+        formatter = new SatAmountFormat(scale, symbol, baseUnitSymbol);
+        // No Pending Withdrawals At Startup
+        pendingWithdrawals = new HashMap<>();
+        // Get Entity Manager For Persistence
+        entityManager = JPAUtil.getEntityManager();
+        // Register Task To Check For New Deposits
         depositCheckTask = Bukkit.getScheduler()
             .runTaskTimer(plugin, new CheckDepositTask(this), DEPOSIT_CHECK_INTERVAL, DEPOSIT_CHECK_INTERVAL);
-    }
-
-    /**
-     * Get the plugin associated with this instance.
-     * 
-     * @return A plugin reference.
-     */
-    public Plugin getPlugin()
-    {
-        return plugin;
-    }
-
-    /**
-     * Get the coin symbol, ex. VTC.
-     * 
-     * @return The coin symbol.
-     */
-    public String getSymbol()
-    {
-        return symbol;
-    }
-
-    /**
-     * Format a sat amount into a readable String according
-     * to the current currency settings.
-     * 
-     * @param amount The unformatted amount, in sats.
-     * @return A formatted string representing the amount.
-     */
-    public String format(long amount)
-    {
-        return format((double) amount / scale.SAT_SCALE);
-    }
-
-    /**
-     * Format a double into a readable amount according
-     * to the current currency settings.
-     * 
-     * @param amount The unformatted amount, using the current scale.
-     * @return A formatted string representing the amount.
-     */
-    public String format(double amount)
-    {
-        return String.format("%." + scale.NUM_VALID_FRACTION_DIGITS + "f "
-            + ((scale == CoinScale.BASE) ? baseUnit : (scale.PREFIX + symbol)), amount);
     }
 
     /**
@@ -132,28 +105,6 @@ public class Vertconomy
     public int fractionalDigits()
     {
         return scale.NUM_VALID_FRACTION_DIGITS;
-    }
-
-    /**
-     * Get the minimum number of confirmations required
-     * for Vertconomy to consider a transaction valid.
-     * 
-     * @return The minimum number of transactions to consider a transaction valid.
-     */
-    public int getMinimumConfirmations()
-    {
-        return minConfirmations;
-    }
-
-    /**
-     * Get the target block time to process a
-     * withdrawal.
-     * 
-     * @return The target block time.
-     */
-    public int getTargetBlockTime()
-    {
-        return targetBlockTime;
     }
 
     /**
@@ -171,7 +122,7 @@ public class Vertconomy
         catch (WalletRequestException e)
         {
             ResponseError error = new ResponseError();
-            error.code = 0;
+            error.code = -1;
             error.message = e.getMessage();
             return error;
         }
@@ -263,7 +214,7 @@ public class Vertconomy
             // Check For New Unspent Outputs Deposited To Account
             for (UnspentOutput output : unspentOutputs)
             {
-                if (output.confirmations >= minConfirmations
+                if (output.confirmations >= minDepositConfirmations
                     && output.spendable && output.safe && output.solvable)
                 {
                     if (!oldTXIDs.contains(output.txid))
@@ -272,7 +223,7 @@ public class Vertconomy
                         // New Deposit Transaction Initially 100% Owned By Depositing Account
                         Map<Account, Long> distribution = new HashMap<>();
                         distribution.put(account, depositAmount);
-                        Deposit bt = new Deposit(output.txid, output.vout ,depositAmount, distribution);
+                        Deposit bt = new Deposit(output.txid, output.vout, depositAmount, true, distribution);
                         entityManager.persist(bt);
                         // Associate With Account
                         account.getTransactions().add(bt);
@@ -302,7 +253,7 @@ public class Vertconomy
     /**
      * Transfer an amount from one account to another,
      * internally redistributing ownership of the
-     * underlying blockchain transactions.
+     * underlying deposits.
      * 
      * @param sender The sending account.
      * @param receiver The receiving account.
@@ -474,5 +425,154 @@ public class Vertconomy
         }
         satAmount = Math.min(satAmount, sender.calculateBalance()); // TODO: temporary
         return transferBalance(sender, receiver, satAmount);
+    }
+
+    // Setters For Building An Instance (Not For Regular Use):
+
+    /**
+     * Set the plugin associated with this instance.
+     * 
+     * @param plugin The plugin associated with this instance.
+     */
+    void setPlugin(Plugin plugin)
+    {
+        this.plugin = plugin;
+    }
+
+    /**
+     * Set the wallet connection to use for this Vertconomy instance.
+     * 
+     * @param wallet The wallet connection to use for this vertconomy instance.
+     */
+    void setWallet(RPCWalletConnection wallet)
+    {
+        this.wallet = wallet;
+    }
+
+    /**
+     * Set the minimum number of confirmations to
+     * consider received deposits valid.
+     * 
+     * @param minChangeConfirmations The minimum number of confirmations to consider deposits valid.
+     */
+    void setMinDepositConfirmations(int minDepositConfirmations)
+    {
+        this.minDepositConfirmations = minDepositConfirmations;
+    }
+
+    /**
+     * Set the minimum number of confirmations to
+     * consider received change transactions valid.
+     * 
+     * @param minChangeConfirmations The minimum number of confirmations to consider change transactions valid.
+     */
+    void setMinChangeConfirmations(int minChangeConfirmations)
+    {
+        this.minChangeConfirmations = minChangeConfirmations;
+    }
+
+    /**
+     * Set the target number of blocks to confirm a withdrawal.
+     * 
+     * @param targetBlockTime The coin symbol.
+     */
+    void setTargetBlockTime(int targetBlockTime)
+    {
+        this.targetBlockTime = targetBlockTime;
+    }
+
+    /**
+     * Set the coin symbol, ex. VTC.
+     * 
+     * @param symbol The coin symbol.
+     */
+    void setSymbol(String symbol)
+    {
+        this.symbol = symbol;
+    }
+
+    /**
+     * Set base coin unit name, ex. sat.
+     * 
+     * @param baseUnit The base unit.
+     */
+    void setBaseUnitSymbol(String baseUnitSymbol)
+    {
+        this.baseUnitSymbol = baseUnitSymbol;
+    }
+
+    /**
+     * Set the scale to represent coin values with.
+     * 
+     * @param scale The scale to use.
+     */
+    void setScale(CoinScale scale)
+    {
+        this.scale = scale;
+    }
+
+    // Getters For Outside Usage:
+
+    /**
+     * Get the plugin associated with this instance.
+     * 
+     * @return A plugin reference.
+     */
+    public Plugin getPlugin()
+    {
+        return plugin;
+    }
+
+    /**
+     * Get the coin symbol, ex. VTC.
+     * 
+     * @return The coin symbol.
+     */
+    public String getSymbol()
+    {
+        return symbol;
+    }
+
+    /**
+     * Get a configured formatter to format and parse sat amounts.
+     * 
+     * @return A formatter for this Vertconomy instance.
+     */
+    public SatAmountFormat getFormatter()
+    {
+        return formatter;
+    }
+
+    /**
+     * Get the minimum number of confirmations required
+     * for Vertconomy to consider a deposit valid.
+     * 
+     * @return The minimum number of confirmations to consider a deposit valid.
+     */
+    public int getMinDepositConfirmations()
+    {
+        return minDepositConfirmations;
+    }
+
+    /**
+     * Get the minimum number of confirmations required
+     * for Vertconomy to consider change UTXOs valid.
+     * 
+     * @return The minimum number of confirmations to use change.
+     */
+    public int getMinChangeConfirmations()
+    {
+        return minChangeConfirmations;
+    }
+
+    /**
+     * Get the target block time to process a
+     * withdrawal.
+     * 
+     * @return The target block time.
+     */
+    public int getTargetBlockTime()
+    {
+        return targetBlockTime;
     }
 }
