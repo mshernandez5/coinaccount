@@ -49,5 +49,7 @@ public class CheckDepositTask implements Runnable
                 p.sendMessage(message.toString());
             }
         }
+        // Check For Change Deposits
+        vertconomy.registerChangeDeposits();
     }
 }

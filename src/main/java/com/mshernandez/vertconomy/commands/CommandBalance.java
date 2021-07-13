@@ -102,7 +102,7 @@ public class CommandBalance implements CommandExecutor, TabCompleter
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args)
     {
         List<String> options = new ArrayList<>();
-        if (args.length == 0 && sender.hasPermission(PERMISSION_VIEW_OTHER_BALANCES))
+        if (args.length == 1 && sender.hasPermission(PERMISSION_VIEW_OTHER_BALANCES))
         {
             for (OfflinePlayer p : Bukkit.getOfflinePlayers())
             {

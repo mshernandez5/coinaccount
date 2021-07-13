@@ -6,15 +6,24 @@ import com.google.gson.annotations.SerializedName;
 import com.mshernandez.vertconomy.wallet_interface.WalletResponse;
 
 /**
- * Used to store decoded transaction information.
+ * Used to get raw transaction information.
  */
-public class DecodeTransactionResponse extends WalletResponse<DecodeTransactionResponse.Result>
+public class RawTransactionResponse extends WalletResponse<RawTransactionResponse.Result>
 {
-    /**
-     * Decoded transaction information.
-     */
     public class Result
     {
+        /**
+         * Whether specified block is in the active chain or not
+         * (only present with explicit "blockhash" argument)
+         */
+        @SerializedName("in_active_chain")
+        public boolean inActiveChain;
+
+        /**
+         * The serialized, hex-encoded data for 'txid'
+         */
+        public String hex;
+
         /**
          * The transaction id.
          */
@@ -65,14 +74,25 @@ public class DecodeTransactionResponse extends WalletResponse<DecodeTransactionR
         public List<TXOutput> vout;
 
         /**
-         * Hex-encoded witness data.
+         * The block hash.
          */
-        @SerializedName("txinwitness")
-        public List<String> witnessData;
+        @SerializedName("blockhash")
+        public String blockHash;
 
         /**
-         * The script sequence number.
+         * The confirmations.
          */
-        public int sequence;
+        public int confirmations;
+
+        /**
+         * The block time expressed in UNIX epoch time.
+         */
+        @SerializedName("blocktime")
+        public long blockTime;
+
+        /**
+         * Same as "blocktime".
+         */
+        public long time;
     }
 }

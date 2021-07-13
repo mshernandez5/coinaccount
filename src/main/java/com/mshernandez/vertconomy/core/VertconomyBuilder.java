@@ -32,6 +32,7 @@ public class VertconomyBuilder
         // Create New Instance
         instance = new Vertconomy();
         // Default Values (Invalid)
+        plugin = null;
         wallet = null;
         minDepositConfirmations = -1;
         minChangeConfirmations = -1;
@@ -52,6 +53,7 @@ public class VertconomyBuilder
         {
             return null;
         }
+        instance.setPlugin(plugin);
         instance.setWallet(wallet);
         instance.setMinChangeConfirmations(minChangeConfirmations);
         instance.setMinDepositConfirmations(minDepositConfirmations);

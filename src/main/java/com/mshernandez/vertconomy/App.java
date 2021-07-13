@@ -123,8 +123,8 @@ public class App extends JavaPlugin
         }
 
         // Create Vertconomy Instance With Loaded Values
-        VertconomyBuilder vertconomyBuilder = new VertconomyBuilder();
-        Vertconomy vertconomy = vertconomyBuilder.setPlugin(this)
+        Vertconomy vertconomy = new VertconomyBuilder()
+            .setPlugin(this)
             .setWallet(wallet)
             .setMinDepositConfirmations(minDepositConfirmations)
             .setMinChangeConfirmations(minChangeConfirmations)

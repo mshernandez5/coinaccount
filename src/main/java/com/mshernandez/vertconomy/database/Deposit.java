@@ -9,6 +9,7 @@ import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.Id;
 import javax.persistence.IdClass;
+import javax.persistence.ManyToOne;
 
 /**
  * Saves details of a deposit transaction
@@ -45,17 +46,47 @@ public class Deposit
     private Map<Account, Long> distribution;
 
     /**
+     * Identifies any lock on the deposit for
+     * pending withdrawal, null if no lock exists.
+     * <p>
+     * Locks prevent multiple users from trying to
+     * spend the same UTXO when withdrawing.
+     */
+    @ManyToOne
+    private WithdrawRequest withdrawLock;
+
+    /**
+     * Create a new deposit initially owned solely
+     * by a single owner.
+     * 
+     * @param TXID The blockchain transaction ID.
+     * @param vout The transaction output index corresponding to this UTXO.
+     * @param total The total number of sats received in the transaction.
+     * @param owner The sole owner of this deposit.
+     */
+    public Deposit(String TXID, int vout, long total, Account owner)
+    {
+        this.TXID = TXID;
+        this.vout = vout;
+        this.total = total;
+        this.distribution = new HashMap<>();
+        withdrawLock = null;
+        distribution.put(owner, total);
+    }
+
+    /**
      * Save transaction details for player deposits.
      * 
      * @param TXID The blockchain transaction ID.
      * @param total The total number of sats received in the transaction.
      * @param ownership How the received sats should be distributed across accounts.
      */
-    public Deposit(String TXID, int vectorOutIndex, long total, boolean spendable, Map<Account, Long> ownership)
+    public Deposit(String TXID, int vout, long total, Map<Account, Long> ownership)
     {
         this.TXID = TXID;
-        this.vout = vectorOutIndex;
+        this.vout = vout;
         this.total = total;
+        withdrawLock = null;
         this.distribution = new HashMap<>(ownership);
     }
 
@@ -81,9 +112,9 @@ public class Deposit
     /**
      * Get the vout corresponding to this deposit.
      * 
-     * @return A vout index.
+     * @return The vout index.
      */
-    public int getVectorOutIndex()
+    public int getVout()
     {
         return vout;
     }
@@ -111,7 +142,7 @@ public class Deposit
     }
 
     /**
-     * Returns the number of sats in this transaction
+     * Returns the number of sats in this deposit
      * allocated to the given account.
      * 
      * @param account The account to lookup.
@@ -120,6 +151,64 @@ public class Deposit
     public long getDistribution(Account account)
     {
         return distribution.getOrDefault(account, 0L);
+    }
+
+    /**
+     * Sets the number of sats in this deposit
+     * allocated to the given account.
+     * <p>
+     * If an amount <= 0 is provided then the
+     * account will be removed from this deposit's records.
+     * 
+     * @param account The account associated with the new amount.
+     * @param amount The sats belonging to this account.
+     */
+    public void setDistribution(Account account, long amount)
+    {
+        if (amount > 0L)
+        {
+            distribution.put(account, amount);
+        }
+        else
+        {
+            distribution.remove(account);
+        }
+    }
+
+    /**
+     * Set a withdraw lock on this transaction by
+     * the given withdraw request.
+     * 
+     * @param withdrawRequest The withdraw request locking this deposit.
+     */
+    public void setWithdrawLock(WithdrawRequest withdrawRequest)
+    {
+        this.withdrawLock = withdrawRequest;
+    }
+
+    /**
+     * Determines whether this UTXO has a
+     * withdraw lock or not.
+     * <p>
+     * Locks prevent multiple users from trying to
+     * spend the same UTXO when withdrawing.
+     * 
+     * @return True if this deposit has an active withdraw lock.
+     */
+    public boolean hasWithdrawLock()
+    {
+        return withdrawLock != null;
+    }
+
+    /**
+     * Return any withdraw lock on this deposit,
+     * or null if there is none.
+     * 
+     * @return The active withdraw lock, or null if none exists.
+     */
+    public WithdrawRequest getWithdrawLock()
+    {
+        return withdrawLock;
     }
 
     @Override

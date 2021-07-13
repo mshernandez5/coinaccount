@@ -6,6 +6,7 @@ import java.util.UUID;
 
 import javax.persistence.ElementCollection;
 import javax.persistence.Entity;
+import javax.persistence.OneToOne;
 
 /**
  * A class to represent an account capable of
@@ -15,10 +16,32 @@ import javax.persistence.Entity;
 @Entity
 public class DepositAccount extends Account
 {
+    /**
+     * A wallet address assigned to this account
+     * to receive user deposits.
+     */
     private String depositAddress;
+
+    /**
+     * An address that can be used to refund
+     * account balances in the event of a server
+     * shutdown or user ban.
+     */
     private String returnAddress;
 
+    /**
+     * Stores the last known pending balance from
+     * deposits the user has made but have not yet
+     * met the minimum number of confirmations.
+     */
     private long pendingBalance;
+
+    /**
+     * Save any active withdraw request the user has
+     * created but not yet confirmed.
+     */
+    @OneToOne
+    private WithdrawRequest withdrawRequest;
 
     /**
      * Remembers transactions that have been applied to
@@ -44,8 +67,8 @@ public class DepositAccount extends Account
     }
 
     /**
-     * Required for Hibernate to instantiate
-     * class instances.
+     * Needed for Hibernate to instantiate the class,
+     * not for manual use.
      */
     DepositAccount()
     {
@@ -67,7 +90,7 @@ public class DepositAccount extends Account
      * Get an address that can be used to refund
      * account balances in the event of a server
      * shutdown or user ban.
-     * 
+     * <p>
      * This property is optional and not guaranteed
      * to be set.
      * 
@@ -88,6 +111,27 @@ public class DepositAccount extends Account
     public void setReturnAddress(String returnAddress)
     {
         this.returnAddress = returnAddress;
+    }
+
+    /**
+     * Get the active withdraw request for this account,
+     * or null if there is no active withdraw request.
+     * 
+     * @return The active withdraw request, or null if none exists.
+     */
+    public WithdrawRequest getWithdrawRequest()
+    {
+        return withdrawRequest;
+    }
+
+    /**
+     * Sets an active withdraw request for this account.
+     * 
+     * @param withdrawRequest The withdraw request to associate with this account.
+     */
+    public void setWithdrawRequest(WithdrawRequest withdrawRequest)
+    {
+        this.withdrawRequest = withdrawRequest;
     }
 
     /**

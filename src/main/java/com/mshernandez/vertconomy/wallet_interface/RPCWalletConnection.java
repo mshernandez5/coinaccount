@@ -7,7 +7,6 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandlers;
 import java.util.Base64;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -15,9 +14,12 @@ import com.google.common.reflect.TypeToken;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
 import com.mshernandez.vertconomy.wallet_interface.requests.FundRawTransactionOptions;
 import com.mshernandez.vertconomy.wallet_interface.requests.RawTransactionInput;
 import com.mshernandez.vertconomy.wallet_interface.responses.DecodeTransactionResponse;
+import com.mshernandez.vertconomy.wallet_interface.responses.FundRawTransactionResponse;
+import com.mshernandez.vertconomy.wallet_interface.responses.RawTransactionResponse;
 import com.mshernandez.vertconomy.wallet_interface.responses.SatResponse;
 import com.mshernandez.vertconomy.wallet_interface.responses.SignRawTransactionResponse;
 import com.mshernandez.vertconomy.wallet_interface.responses.SmartFeeResponse;
@@ -111,13 +113,15 @@ public class RPCWalletConnection
     public String createRawTransaction(List<RawTransactionInput> inputs, Map<String, Long> outputs) throws WalletRequestException
     {
         JsonArray params = new JsonArray();
-        params.add(gson.toJson(inputs));
-        Map<String, SatAmount> boxedAmounts = new HashMap<>();
+        params.add(gson.toJsonTree(inputs, new TypeToken<List<RawTransactionInput>>() {}.getType()));
+        JsonArray jsonOutputs = new JsonArray();
         for (String address : outputs.keySet())
         {
-            boxedAmounts.put(address, new SatAmount(outputs.get(address)));
+            JsonObject output = new JsonObject();
+            output.add(address, gson.toJsonTree(new SatAmount(outputs.get(address))));
+            jsonOutputs.add(output);
         }
-        params.add(gson.toJson(boxedAmounts));
+        params.add(jsonOutputs);
         WalletRequest jsonRequest = new WalletRequest()
             .setId(DEFAULT_REQUEST_ID)
             .setMethod("createrawtransaction")
@@ -127,9 +131,29 @@ public class RPCWalletConnection
     }
 
     /**
+     * Gets raw transaction information.
+     * 
+     * @param txid The transaction ID.
+     * @return Details about the raw transaction.
+     * @throws WalletRequestException If the wallet could not be reached or execute the command.
+     */
+    public RawTransactionResponse.Result getRawTransaction(String txid) throws WalletRequestException
+    {
+        JsonArray params = new JsonArray();
+        params.add(txid);
+        WalletRequest jsonRequest = new WalletRequest()
+            .setId(DEFAULT_REQUEST_ID)
+            .setMethod("getrawtransaction")
+            .setParams(params);
+        RawTransactionResponse response = gson.fromJson(makeRequest(jsonRequest), RawTransactionResponse.class);
+        return response.result;
+    }
+
+    /**
      * Decodes raw transaction information.
      * 
-     * @return A hex-encoded raw transaction.
+     * @param rawTransactionHex A hex-encoded raw transaction.
+     * @return Details about the raw transaction.
      * @throws WalletRequestException If the wallet could not be reached or execute the command.
      */
     public DecodeTransactionResponse.Result decodeRawTransaction(String rawTransactionHex) throws WalletRequestException
@@ -147,10 +171,12 @@ public class RPCWalletConnection
     /**
      * Funds a raw transaction.
      * 
-     * @return A hex-encoded raw transaction.
+     * @param rawTransactionHex A hex-encoded raw transaction.
+     * @param options Details on how to fund the raw transaction.
+     * @return Details about the funded raw transaction.
      * @throws WalletRequestException If the wallet could not be reached or execute the command.
      */
-    public String fundRawTransaction(String rawTransactionHex, FundRawTransactionOptions options) throws WalletRequestException
+    public FundRawTransactionResponse.Result fundRawTransaction(String rawTransactionHex, FundRawTransactionOptions options) throws WalletRequestException
     {
         JsonArray params = new JsonArray();
         params.add(rawTransactionHex);
@@ -159,7 +185,7 @@ public class RPCWalletConnection
             .setId(DEFAULT_REQUEST_ID)
             .setMethod("fundrawtransaction")
             .setParams(params);
-        WalletResponse<String> response = gson.fromJson(makeRequest(jsonRequest), new TypeToken<WalletResponse<String>>() {}.getType());
+        FundRawTransactionResponse response = gson.fromJson(makeRequest(jsonRequest), FundRawTransactionResponse.class);
         return response.result;
     }
 

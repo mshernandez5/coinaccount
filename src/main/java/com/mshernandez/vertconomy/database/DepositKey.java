@@ -3,6 +3,12 @@ package com.mshernandez.vertconomy.database;
 import java.io.Serializable;
 import java.util.Objects;
 
+/**
+ * Composite primary key for <code>Deposit</code> entities,
+ * allows the <code>TXID</code> and <code>vout</code> to
+ * form the primary key together (as necessary) instead
+ * of using only a single attribute as the primary key.
+ */
 class DepositKey implements Serializable
 {
     private String TXID;
@@ -14,6 +20,10 @@ class DepositKey implements Serializable
         this.vout = vout;
     }
 
+    /**
+     * Needed for Hibernate to instantiate the class,
+     * not for manual use.
+     */
     DepositKey()
     {
         // Required For Hibernate

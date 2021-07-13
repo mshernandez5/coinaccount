@@ -68,12 +68,32 @@ public class Account
     }
 
     /**
-     * Returns a reference to the set of transactions
+     * Associate a deposit with this account.
+     * 
+     * @param deposit The deposit to associate with this account.
+     */
+    public void associateDeposit(Deposit deposit)
+    {
+        balances.add(deposit);
+    }
+
+    /**
+     * Remove a deposit from this account.
+     * 
+     * @param deposit The deposit to remove from this account.
+     */
+    public void removeDeposit(Deposit deposit)
+    {
+        balances.remove(deposit);
+    }
+
+    /**
+     * Returns a reference to the set of deposits
      * this account is associated with.
      * 
-     * @return The transactions this account is associated with.
+     * @return The deposits this account is associated with.
      */
-    public Set<Deposit> getTransactions()
+    public Set<Deposit> getDeposits()
     {
         return balances;
     }

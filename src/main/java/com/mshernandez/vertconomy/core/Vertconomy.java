@@ -1,5 +1,8 @@
 package com.mshernandez.vertconomy.core;
 
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -7,16 +10,19 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import javax.persistence.EntityManager;
 
 import com.mshernandez.vertconomy.database.Account;
 import com.mshernandez.vertconomy.database.Deposit;
 import com.mshernandez.vertconomy.database.JPAUtil;
+import com.mshernandez.vertconomy.database.WithdrawRequest;
 import com.mshernandez.vertconomy.database.DepositAccount;
 import com.mshernandez.vertconomy.wallet_interface.RPCWalletConnection;
 import com.mshernandez.vertconomy.wallet_interface.ResponseError;
 import com.mshernandez.vertconomy.wallet_interface.WalletRequestException;
+import com.mshernandez.vertconomy.wallet_interface.requests.RawTransactionInput;
 import com.mshernandez.vertconomy.wallet_interface.responses.UnspentOutputResponse;
 import com.mshernandez.vertconomy.wallet_interface.responses.UnspentOutputResponse.UnspentOutput;
 
@@ -37,8 +43,8 @@ public class Vertconomy
     // Account Allowing Intermediate Transfers For Vault Compatibility
     private static final UUID TRANSFER_ACCOUNT_UUID = UUID.fromString("ced87bc1-4730-41e1-955b-c4c45b4e9ccf");
 
-    // Account To Receive Withdrawal Change Transactions
-    private static final UUID CHANGE_ACCOUNT_UUID = UUID.fromString("884b2231-6c7a-4db5-b022-1cc5aeb949a8");
+    // Account To Hold Funds For Pending Withdrawals & Receive Change Transactions
+    private static final UUID WITHDRAW_ACCOUNT_UUID = UUID.fromString("884b2231-6c7a-4db5-b022-1cc5aeb949a8");
 
     // How Often To Check For New Deposits, In Ticks
     private static final long DEPOSIT_CHECK_INTERVAL = 200L; // Approximately 10 Seconds
@@ -59,9 +65,6 @@ public class Vertconomy
 
     // Sat Amount Formatter
     private SatAmountFormat formatter;
-
-    // Keep Track Of Pending Withdrawals
-    Map<Account, PendingWithdraw> pendingWithdrawals;
 
     // Database Persistence
     EntityManager entityManager;
@@ -87,8 +90,6 @@ public class Vertconomy
     {
         // Create Formatter
         formatter = new SatAmountFormat(scale, symbol, baseUnitSymbol);
-        // No Pending Withdrawals At Startup
-        pendingWithdrawals = new HashMap<>();
         // Get Entity Manager For Persistence
         entityManager = JPAUtil.getEntityManager();
         // Register Task To Check For New Deposits
@@ -221,12 +222,10 @@ public class Vertconomy
                     {
                         long depositAmount = output.amount.satAmount;
                         // New Deposit Transaction Initially 100% Owned By Depositing Account
-                        Map<Account, Long> distribution = new HashMap<>();
-                        distribution.put(account, depositAmount);
-                        Deposit bt = new Deposit(output.txid, output.vout, depositAmount, true, distribution);
-                        entityManager.persist(bt);
+                        Deposit deposit = new Deposit(output.txid, output.vout, depositAmount, account);
+                        entityManager.persist(deposit);
                         // Associate With Account
-                        account.getTransactions().add(bt);
+                        account.associateDeposit(deposit);
                         newlyProcessedTXIDs.add(output.txid);
                         addedBalance += depositAmount;
                     }
@@ -251,6 +250,68 @@ public class Vertconomy
     }
 
     /**
+     * Register change transactions from recent withdrawals.
+     * <p>
+     * Associate and distribute change among the proper owners.
+     */
+    void registerChangeDeposits()
+    {
+        DepositAccount account = getOrCreateUserAccount(WITHDRAW_ACCOUNT_UUID);
+        try
+        {
+            entityManager.getTransaction().begin();
+            // Get Wallet Transactions For Addresses Associated With Account
+            List<UnspentOutputResponse.UnspentOutput> unspentOutputs = wallet.getUnspentOutputs(account.getDepositAddress());
+            // Remember Which Transactions Have Already Been Accounted For
+            Set<String> oldTXIDs = account.getProcessedDepositIDs();
+            Set<String> newlyProcessedTXIDs = new HashSet<>();
+            // Check For New Unspent Outputs Deposited To Account
+            for (UnspentOutput output : unspentOutputs)
+            {
+                if (output.confirmations >= minChangeConfirmations
+                    && output.spendable && output.safe && output.solvable)
+                {
+                    if (!oldTXIDs.contains(output.txid))
+                    {
+                        // Look For Withdraw Request The Transaction Was Created From
+                        WithdrawRequest withdrawRequest = entityManager.find(WithdrawRequest.class, output.txid);
+                        if (withdrawRequest != null)
+                        {
+                            Map<Account, Long> changeDistribution = new HashMap<>();
+                            Set<Deposit> inputs = withdrawRequest.getInputs();
+                            for (Deposit d : inputs)
+                            {
+                                Map<Account, Long> inputDistribution = d.getOwnershipDistribution();
+                                for (Account a : inputDistribution.keySet())
+                                {
+                                    changeDistribution.put(a, changeDistribution.getOrDefault(a, 0L) + inputDistribution.get(a));
+                                    a.removeDeposit(d);
+                                }
+                            }
+                            Deposit deposit = new Deposit(output.txid, output.vout, output.amount.satAmount, changeDistribution);
+                            entityManager.persist(deposit);
+                            for (Account a : deposit.getOwnershipDistribution().keySet())
+                            {
+                                a.associateDeposit(deposit);
+                                entityManager.merge(a);
+                            }
+                        }
+                        newlyProcessedTXIDs.add(output.txid);
+                    }
+                }
+            }
+            account.getProcessedDepositIDs().addAll(newlyProcessedTXIDs);
+            entityManager.merge(account);
+            entityManager.getTransaction().commit();
+        }
+        catch (Exception e)
+        {
+            plugin.getLogger().warning("Failed To Get Transactions: " + e.getMessage());
+            entityManager.getTransaction().rollback();
+        }
+    }
+
+    /**
      * Transfer an amount from one account to another,
      * internally redistributing ownership of the
      * underlying deposits.
@@ -271,28 +332,27 @@ public class Vertconomy
         {
             entityManager.getTransaction().begin();
             long remainingOwed = amount;
-            Iterator<Deposit> it = sender.getTransactions().iterator();
+            Iterator<Deposit> it = sender.getDeposits().iterator();
             while (it.hasNext() && remainingOwed > 0L)
             {
                 Deposit deposit = it.next();
-                Map<Account, Long> distribution = deposit.getOwnershipDistribution();
-                long senderShare = distribution.get(sender);
+                long senderShare = deposit.getDistribution(sender);
                 long takenAmount;
                 if (senderShare <= remainingOwed)
                 {
-                    distribution.remove(sender);
-                    distribution.put(receiver, distribution.getOrDefault(receiver, 0L) + senderShare);
+                    deposit.setDistribution(sender, 0L);
+                    deposit.setDistribution(receiver, deposit.getDistribution(receiver) + senderShare);
                     deposit = entityManager.merge(deposit);
                     it.remove();
-                    receiver.getTransactions().add(deposit);
+                    receiver.associateDeposit(deposit);
                     takenAmount = senderShare;
                 }
                 else
                 {
-                    distribution.put(sender, senderShare - remainingOwed);
-                    distribution.put(receiver, distribution.getOrDefault(receiver, 0L) + remainingOwed);
+                    deposit.setDistribution(sender, senderShare - remainingOwed);
+                    deposit.setDistribution(receiver, deposit.getDistribution(receiver) + remainingOwed);
                     deposit = entityManager.merge(deposit);
-                    receiver.getTransactions().add(deposit);
+                    receiver.associateDeposit(deposit);
                     takenAmount = remainingOwed;
                 }
                 remainingOwed -= takenAmount;
@@ -302,7 +362,6 @@ public class Vertconomy
         }
         catch (Exception e)
         {
-            e.printStackTrace();
             plugin.getLogger().info(sender + " failed to send " + amount + " to " + receiver);
             entityManager.getTransaction().rollback();
         }
@@ -335,6 +394,12 @@ public class Vertconomy
         return playerAccount == null ? 0L : playerAccount.getPendingBalance();
     }
 
+    public WithdrawRequest getPlayerWithdrawRequest(OfflinePlayer player)
+    {
+        DepositAccount playerAccount = getOrCreateUserAccount(player.getUniqueId());
+        return playerAccount == null ? null : playerAccount.getWithdrawRequest();
+    }
+
     /**
      * Return both the usable and unconfirmed balances
      * associated with a player's account.
@@ -360,6 +425,261 @@ public class Vertconomy
     {
         DepositAccount playerAccount = getOrCreateUserAccount(player.getUniqueId());
         return playerAccount == null ? "ERROR" : playerAccount.getDepositAddress();
+    }
+
+    // Base Size + 2 Outputs (Destination & Change)
+    private static final int BASE_WITHDRAW_TX_SIZE = 10 + (34 * 2);
+    // Additional Size For Each Input (Including +1 Uncertainty Assuming Worst Case)
+    private static final int P2PKH_INPUT_VSIZE = 149;
+
+    /**
+     * Initiates a withdrawal that will not be sent to the network
+     * until player confirmation is received.
+     * 
+     * @param player The player initiating the withdrawal.
+     * @param amount The amount the player is attempting to withdraw, excluding fees.
+     * @param destAddress The wallet address the player is attempting to withdraw to.
+     * @return An object holding withdraw details including determined fees, or null if the withdraw request failed.
+     */
+    public WithdrawRequest initiateWithdraw(OfflinePlayer player, long amount, String destAddress)
+    {
+        try
+        {
+            DepositAccount account = getOrCreateUserAccount(player.getUniqueId());
+            DepositAccount withdrawAccount = getOrCreateUserAccount(WITHDRAW_ACCOUNT_UUID);
+            long playerBalance = account.calculateBalance();
+            // Can't Withdraw If Player Does Not Have At Least Withdraw Amount
+            if (playerBalance < amount)
+            {
+                return null;
+            }
+            // Account For Fees
+            double feeRate = wallet.estimateSmartFee(targetBlockTime);
+            long inputFee = (long) Math.ceil(P2PKH_INPUT_VSIZE * feeRate);
+            // Attempt To Grab Inputs For Transaction
+            long fees = (long) Math.ceil(BASE_WITHDRAW_TX_SIZE * feeRate);
+            Set<Deposit> inputDeposits = selectInputDeposits(account, amount, inputFee);
+            if (inputDeposits == null)
+            {
+                return null;
+            }
+            fees += inputDeposits.size() * inputFee;
+            // TX Inputs
+            long totalInputValue = 0L;
+            List<RawTransactionInput> txInputs = new ArrayList<>();
+            for (Deposit d : inputDeposits)
+            {
+                txInputs.add(new RawTransactionInput(d.getTXID(), d.getVout()));
+                totalInputValue += d.getTotal();
+            }
+            // TX Outputs
+            Map<String, Long> txOutputs = new HashMap<>();
+            txOutputs.put(destAddress, amount);
+            String changeAddress = withdrawAccount.getDepositAddress();
+            long changeAmount = totalInputValue - (amount + fees);
+            txOutputs.put(changeAddress, changeAmount);
+            // Build TX
+            String txHex = wallet.createRawTransaction(txInputs, txOutputs);
+            txHex = wallet.signRawTransactionWithWallet(txHex).hex;
+            String withdrawTxid = wallet.decodeRawTransaction(txHex).txid;
+            // Save Records
+            long timestamp = System.currentTimeMillis();
+            WithdrawRequest request = new WithdrawRequest(withdrawTxid, account, inputDeposits, amount, fees, txHex, timestamp);
+            // Save Request & Lock Input Deposits
+            entityManager.getTransaction().begin();
+            entityManager.persist(request);
+            long remainingHoldAmount = amount + fees;
+            for (Deposit d : inputDeposits)
+            {
+                if (remainingHoldAmount != 0)
+                {
+                    long depositValue = d.getDistribution(account);
+                    if (depositValue <= remainingHoldAmount)
+                    {
+                        d.setDistribution(account, 0L);
+                        d.setDistribution(withdrawAccount, depositValue);
+                        withdrawAccount.associateDeposit(d);
+                        remainingHoldAmount -= depositValue;
+                    }
+                    else
+                    {
+                        d.setDistribution(account, depositValue - remainingHoldAmount);
+                        d.setDistribution(withdrawAccount, remainingHoldAmount);
+                        remainingHoldAmount = 0L;
+                    }
+                }
+                d.setWithdrawLock(request);
+                entityManager.merge(d);
+            }
+            account.setWithdrawRequest(request);
+            entityManager.merge(account);
+            entityManager.merge(withdrawAccount);
+            entityManager.getTransaction().commit();
+            return request;
+        }
+        catch (Exception e)
+        {
+            e.printStackTrace();
+            entityManager.getTransaction().rollback();
+            return null;
+        }
+    }
+
+    /**
+     * Signs & sends a pending withdraw transaction out to the network.
+     * 
+     * @param withdrawRequest The withdraw request made by the user.
+     * @return The TXID of the sent transaction, or null if there was an issue.
+     */
+    public String completeWithdraw(WithdrawRequest withdrawRequest)
+    {
+        String txid;
+        try
+        {
+            // Send Transaction
+            txid = wallet.sendRawTransaction(withdrawRequest.getTxHex());
+            // Clear Completed Request From Account
+            withdrawRequest.getAccount().setWithdrawRequest(null);
+        }
+        catch (WalletRequestException e)
+        {
+            txid = null;
+        }
+        return txid;
+    }
+
+    /**
+     * Select Deposit inputs to use for transferring or withdrawing
+     * the specified amount.
+     * <p>
+     * Uses a binary search algorithm to find inputs closest to the
+     * target amount, which is dynamically updated as inputs are selected.
+     * If the next selected input is larger than the last, the previous
+     * input is unselected and selection continues attempting to use only
+     * the larger input.
+     * 
+     * @param account The account associated with the Deposit objects.
+     * @param amount The amount needed from the resulting inputs excluding input fees.
+     * @param inputFee The expected fee for adding a single input.
+     * @return A set of deposits that can make up the desired amount or null if the target cannot be reached.
+     */
+    private Set<Deposit> selectInputDeposits(Account account, long amount, long inputFee)
+    {
+        Deque<Deposit> selectedInputs = new ArrayDeque<>();
+        // Get List Of Transactions That Can Be Used
+        List<Deposit> inputs = account.getDeposits().stream()
+            .filter(d -> !d.hasWithdrawLock())
+            .sorted(new DepositShareComparator(account))
+            .collect(Collectors.toCollection(ArrayList::new));
+        // Remember Index Of Last Selected Deposit
+        int lastSelectedIndex = -1;
+        // Set Target Value
+        long selectionTarget = amount;
+        // Keep Selecting Inputs Until Target Value Is Met
+        while (selectionTarget > 0L && !inputs.isEmpty())
+        {
+            // Every Selected Input Adds Fees To The Target Amount
+            selectionTarget += inputFee;
+            // Binary Search For Next Input Closest To Current Target Amount
+            int first = 0,
+                last = inputs.size() - 1,
+                mid;
+            while (first <= last)
+            {
+                mid = (first + last) / 2;
+                long value = inputs.get(mid).getDistribution(account);
+                double difference = difference(value, selectionTarget);
+                // Check If Any Smaller Deposits Closer To Target Amount
+                if (mid - 1 >= first
+                    && difference(inputs.get(mid - 1).getDistribution(account), selectionTarget) < difference)
+                {
+                    last = mid - 1;
+                }
+                // Check If Any Larger Deposits Closer To Target Amount
+                else if (mid + 1 <= last
+                    && difference(inputs.get(mid + 1).getDistribution(account), selectionTarget) < difference)
+                {
+                    first = mid + 1;
+                }
+                // This Deposit Is Closest To The Target Amount
+                else
+                {
+                    Deposit selected = inputs.get(mid);
+                    Deposit lastSelected = selectedInputs.peek();
+                    // If Selected Input Larger Than Last Selected, Try To Only Use Larger Input
+                    if (lastSelected != null && value > lastSelected.getDistribution(account))
+                    {
+                        inputs.add(lastSelectedIndex, selectedInputs.pop());
+                        selectionTarget += lastSelected.getDistribution(account);
+                        selectionTarget -= inputFee;
+                    }
+                    lastSelectedIndex = inputs.indexOf(selected);
+                    selectedInputs.push(selected);
+                    inputs.remove(selected);
+                    selectionTarget -= value;
+                    break;
+                }
+            }
+        }
+        // Return null If Target Value Couldn't Be Fulfilled
+        if (selectionTarget > 0L)
+        {
+            return null;
+        }
+        return new HashSet<>(selectedInputs);
+    }
+
+    /**
+     * Calculate the percent difference between the two values.
+     * 
+     * @param a The first value.
+     * @param b The second value.
+     * @return The percent difference.
+     */
+    private double difference(long a, long b)
+    {
+        return Math.abs(b - a) / ((a + b) / 2.0);
+    }
+
+    /**
+     * Cancel the given withdraw request, restoring
+     * reserved funds to the owner and unlocking the
+     * deposits involved for future withdrawals.
+     * <p>
+     * SHOULD NOT BE USED ON A COMPLETED WITHDRAW REQUEST!
+     * 
+     * @param withdrawRequest The withdraw request to cancel.
+     */
+    public void cancelWithdraw(WithdrawRequest withdrawRequest)
+    {
+        DepositAccount withdrawAccount = getOrCreateUserAccount(WITHDRAW_ACCOUNT_UUID);
+        DepositAccount initiatorAccount = withdrawRequest.getAccount();
+        try
+        {
+            entityManager.getTransaction().begin();
+            Set<Deposit> lockedDeposits = withdrawRequest.getInputs();
+            for (Deposit deposit : lockedDeposits)
+            {
+                long lockedAmount = deposit.getDistribution(withdrawAccount);
+                long updatedAmount = deposit.getDistribution(initiatorAccount) + lockedAmount;
+                deposit.setDistribution(withdrawAccount, 0L);
+                deposit.setDistribution(initiatorAccount, updatedAmount);
+                deposit.setWithdrawLock(null);
+                deposit = entityManager.merge(deposit);
+                initiatorAccount.associateDeposit(deposit);
+                withdrawAccount.removeDeposit(deposit);
+            }
+            initiatorAccount.setWithdrawRequest(null);
+            entityManager.merge(initiatorAccount);
+            entityManager.merge(withdrawAccount);
+            entityManager.remove(withdrawRequest);
+            entityManager.getTransaction().commit();
+        }
+        catch (Exception e)
+        {
+            plugin.getLogger().info("Failed to cancel withdraw request!");
+            entityManager.getTransaction().rollback();
+        }
     }
 
     /**

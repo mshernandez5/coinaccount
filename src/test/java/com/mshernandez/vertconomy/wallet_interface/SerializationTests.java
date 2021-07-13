@@ -47,6 +47,16 @@ public class SerializationTests
 
     /**
      * Test custom serializer and deserializer
+     * for 1.00000000 VTC.
+     */
+    @Test
+    public void satAmountSerializationTest()
+    {
+        testSatAmountSerialization(100000000L, "\"1.00000000\"");
+    }
+
+    /**
+     * Test custom serializer and deserializer
      * for amounts over 1.00000000 VTC.
      */
     @Test

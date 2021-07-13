@@ -18,6 +18,7 @@
         <class>com.mshernandez.vertconomy.database.Account</class>
         <class>com.mshernandez.vertconomy.database.DepositAccount</class>
         <class>com.mshernandez.vertconomy.database.Deposit</class>
+        <class>com.mshernandez.vertconomy.database.WithdrawRequest</class>
         
         <!-- Hibernate Configuration -->
         <properties>
@@ -35,5 +36,4 @@
         </properties>
 
     </persistence-unit>
-
 </persistence>
