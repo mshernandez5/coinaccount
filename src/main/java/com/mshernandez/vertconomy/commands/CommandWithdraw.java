@@ -43,17 +43,8 @@ public class CommandWithdraw implements CommandExecutor, TabCompleter
         StringBuilder message = new StringBuilder();
         if (sender instanceof Player)
         {
-            if (args[0].equals("all"))
-            {
-                // Withdraw All
-                if (args.length != 1)
-                {
-                    return false;
-                }
-                message.append(ChatColor.DARK_RED);
-                message.append("Not currently supported!");
-            }
-            else if (args[0].equals("confirm"))
+            Player player = (Player) sender;
+            if (args[0].equals("confirm"))
             {
                 // Confirm Pending Withdrawal
                 if (args.length != 1)
@@ -61,11 +52,14 @@ public class CommandWithdraw implements CommandExecutor, TabCompleter
                     return false;
                 }
                 // Get Withdraw Request
-                WithdrawRequest request = vertconomy.getPlayerWithdrawRequest((Player) sender);
+                WithdrawRequest request = vertconomy.getPlayerWithdrawRequest(player);
                 if (request == null)
                 {
                     message.append(ChatColor.DARK_RED);
                     message.append("No withdraw request was found.");
+                    messageComponent.addExtra(message.toString());
+                    sender.spigot().sendMessage(messageComponent);
+                    return true;
                 }
                 else
                 {
@@ -75,11 +69,14 @@ public class CommandWithdraw implements CommandExecutor, TabCompleter
                     {
                         message.append(ChatColor.DARK_RED);
                         message.append("There was an error processing your withdraw request.");
+                        messageComponent.addExtra(message.toString());
+                        sender.spigot().sendMessage(messageComponent);
+                        return true;
                     }
                     else
                     {
-                        // Inform User
-                        message.append("\n\n");
+                        // Display Completed TX Details
+                        message.append("\n");
                         message.append(ChatColor.AQUA);
                         message.append(ChatColor.UNDERLINE);
                         message.append("Withdraw Request Completed:");
@@ -100,6 +97,9 @@ public class CommandWithdraw implements CommandExecutor, TabCompleter
                         message.append("\n\n");
                         message.append(ChatColor.YELLOW);
                         message.append("Allow some time for the transaction to be confirmed before making another withdraw request.");
+                        messageComponent.addExtra(message.toString());
+                        sender.spigot().sendMessage(messageComponent);
+                        return true;
                     }
                 }
             }
@@ -111,17 +111,23 @@ public class CommandWithdraw implements CommandExecutor, TabCompleter
                     return false;
                 }
                 // Get Withdraw Request
-                WithdrawRequest request = vertconomy.getPlayerWithdrawRequest((Player) sender);
+                WithdrawRequest request = vertconomy.getPlayerWithdrawRequest(player);
                 if (request == null)
                 {
                     message.append(ChatColor.DARK_RED);
                     message.append("No withdraw request was found.");
+                    messageComponent.addExtra(message.toString());
+                    sender.spigot().sendMessage(messageComponent);
+                    return true;
                 }
                 else
                 {
                     vertconomy.cancelWithdraw(request);
                     message.append(ChatColor.YELLOW);
                     message.append("The withdraw request has been canceled.");
+                    messageComponent.addExtra(message.toString());
+                    sender.spigot().sendMessage(messageComponent);
+                    return true;
                 }
             }
             else
@@ -130,27 +136,55 @@ public class CommandWithdraw implements CommandExecutor, TabCompleter
                 {
                     return false;
                 }
-                // Parse Specified Amount
-                long satAmount = 0;
-                try
+                if (vertconomy.getPlayerWithdrawRequest(player) != null)
                 {
-                    satAmount = vertconomy.getFormatter().parseSats(args[0]);
+                    message.append(ChatColor.DARK_RED);
+                    message.append("A withdraw request already exists, please cancel it before making a new one!");
+                    messageComponent.addExtra(message.toString());
+                    sender.spigot().sendMessage(messageComponent);
+                    return true;
                 }
-                catch (InvalidSatAmountException e)
+                long satAmount = 0L;
+                if (args[0].equals("all"))
                 {
-                    sender.sendMessage(e.getMessage());
-                    return false;
+                    // Withdraw All
+                    satAmount = -1L;
+                }
+                else
+                {
+                    // Parse Specified Amount
+                    try
+                    {
+                        satAmount = vertconomy.getFormatter().parseSats(args[0]);
+                    }
+                    catch (InvalidSatAmountException e)
+                    {
+                        message.append(ChatColor.DARK_RED);
+                        message.append(e.getMessage());
+                    }
+                    if (satAmount <= 0 || satAmount > vertconomy.getPlayerBalance(player))
+                    {
+                        message.append(ChatColor.DARK_RED);
+                        message.append("You don't have the funds to withdraw " + vertconomy.getFormatter().format(satAmount));
+                        messageComponent.addExtra(message.toString());
+                        sender.spigot().sendMessage(messageComponent);
+                        return true;
+                    }
                 }
                 // Withdraw Amount
-                WithdrawRequest request = vertconomy.initiateWithdraw((Player) sender, satAmount, args[1]);
+                WithdrawRequest request = vertconomy.initiateWithdraw(player, args[1], satAmount);
                 if (request == null)
                 {
                     message.append(ChatColor.DARK_RED);
                     message.append("Failed to withdraw the specified amount!");
+                    messageComponent.addExtra(message.toString());
+                    sender.spigot().sendMessage(messageComponent);
+                    return true;
                 }
                 else
                 {
-                    message.append("\n\n");
+                    // Withdraw Request Details
+                    message.append("\n");
                     message.append(ChatColor.AQUA);
                     message.append(ChatColor.UNDERLINE);
                     message.append("Withdraw Request Created:");
@@ -206,6 +240,9 @@ public class CommandWithdraw implements CommandExecutor, TabCompleter
                     message.append("\n\n");
                     message.append(ChatColor.YELLOW);
                     message.append("This request will automatically be canceled if not confirmed soon.");
+                    messageComponent.addExtra(message.toString());
+                    sender.spigot().sendMessage(messageComponent);
+                    return true;
                 }
             }
         }
@@ -213,11 +250,10 @@ public class CommandWithdraw implements CommandExecutor, TabCompleter
         {
             message.append(ChatColor.DARK_RED);
             message.append("Unsupported");
+            messageComponent.addExtra(message.toString());
+            sender.spigot().sendMessage(messageComponent);
+            return true;
         }
-
-        messageComponent.addExtra(message.toString());
-        sender.spigot().sendMessage(messageComponent);
-        return true;
     }
 
     @Override

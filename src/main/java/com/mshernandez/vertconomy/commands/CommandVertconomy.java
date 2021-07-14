@@ -45,12 +45,12 @@ public class CommandVertconomy implements CommandExecutor
             if (walletError.code == 0)
             {
                 message.append(ChatColor.DARK_RED);
-                message.append("WALLET CANNOT BE REACHED");
+                message.append("Request Error");
             }
             else
             {
                 message.append(ChatColor.YELLOW);
-                message.append("Wallet Not Ready");
+                message.append("Wallet Unreachable / Not Ready");
             }
         }
         else

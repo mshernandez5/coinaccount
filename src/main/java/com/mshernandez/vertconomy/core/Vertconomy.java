@@ -349,6 +349,7 @@ public class Vertconomy
                     deposit.setDistribution(receiver, deposit.getDistribution(receiver) + senderShare);
                     deposit = entityManager.merge(deposit);
                     it.remove();
+                    sender.removeDeposit(deposit);
                     receiver.associateDeposit(deposit);
                     takenAmount = senderShare;
                 }
@@ -442,28 +443,37 @@ public class Vertconomy
      * until player confirmation is received.
      * 
      * @param player The player initiating the withdrawal.
-     * @param amount The amount the player is attempting to withdraw, excluding fees.
      * @param destAddress The wallet address the player is attempting to withdraw to.
+     * @param amount The amount the player is attempting to withdraw, excluding fees. Use < 0 for all funds.
      * @return An object holding withdraw details including determined fees, or null if the withdraw request failed.
      */
-    public WithdrawRequest initiateWithdraw(OfflinePlayer player, long amount, String destAddress)
+    public WithdrawRequest initiateWithdraw(OfflinePlayer player, String destAddress, long amount)
     {
+        boolean withdrawAll = amount < 0L;
+        DepositAccount account = getOrCreateUserAccount(player.getUniqueId());
+        DepositAccount withdrawAccount = getOrCreateUserAccount(WITHDRAW_ACCOUNT_UUID);
+        long playerBalance = account.calculateBalance();
+        // Can't Withdraw If Player Does Not Have At Least Withdraw Amount
+        if (!withdrawAll && playerBalance < amount)
+        {
+            return null;
+        }
         try
         {
-            DepositAccount account = getOrCreateUserAccount(player.getUniqueId());
-            DepositAccount withdrawAccount = getOrCreateUserAccount(WITHDRAW_ACCOUNT_UUID);
-            long playerBalance = account.calculateBalance();
-            // Can't Withdraw If Player Does Not Have At Least Withdraw Amount
-            if (playerBalance < amount)
-            {
-                return null;
-            }
             // Account For Fees
             double feeRate = wallet.estimateSmartFee(targetBlockTime);
             long inputFee = (long) Math.ceil(P2PKH_INPUT_VSIZE * feeRate);
             // Attempt To Grab Inputs For Transaction
             long fees = (long) Math.ceil(BASE_WITHDRAW_TX_SIZE * feeRate);
-            Set<Deposit> inputDeposits = selectInputDeposits(account, amount, inputFee);
+            Set<Deposit> inputDeposits;
+            if (withdrawAll)
+            {
+                inputDeposits = selectInputDeposits(account, inputFee);
+            }
+            else
+            {
+                inputDeposits = selectInputDeposits(account, amount, inputFee);
+            }
             if (inputDeposits == null)
             {
                 return null;
@@ -478,22 +488,25 @@ public class Vertconomy
                 totalInputValue += d.getTotal();
             }
             // TX Outputs
+            long withdrawAmount = withdrawAll ? (totalInputValue - fees) : amount;
+            long changeAmount = totalInputValue - (withdrawAmount + fees);
             Map<String, Long> txOutputs = new HashMap<>();
-            txOutputs.put(destAddress, amount);
-            String changeAddress = withdrawAccount.getDepositAddress();
-            long changeAmount = totalInputValue - (amount + fees);
-            txOutputs.put(changeAddress, changeAmount);
+            txOutputs.put(destAddress, withdrawAmount);
+            if (changeAmount > 0L)
+            {
+                txOutputs.put(withdrawAccount.getDepositAddress(), changeAmount);
+            }
             // Build TX
             String txHex = wallet.createRawTransaction(txInputs, txOutputs);
             txHex = wallet.signRawTransactionWithWallet(txHex).hex;
             String withdrawTxid = wallet.decodeRawTransaction(txHex).txid;
             // Save Records
             long timestamp = System.currentTimeMillis();
-            WithdrawRequest request = new WithdrawRequest(withdrawTxid, account, inputDeposits, amount, fees, txHex, timestamp);
+            WithdrawRequest request = new WithdrawRequest(withdrawTxid, account, inputDeposits, withdrawAmount, fees, txHex, timestamp);
             // Save Request & Lock Input Deposits
             entityManager.getTransaction().begin();
             entityManager.persist(request);
-            long remainingHoldAmount = amount + fees;
+            long remainingHoldAmount = withdrawAmount + fees;
             for (Deposit d : inputDeposits)
             {
                 if (remainingHoldAmount != 0)
@@ -503,6 +516,7 @@ public class Vertconomy
                     {
                         d.setDistribution(account, 0L);
                         d.setDistribution(withdrawAccount, depositValue);
+                        account.removeDeposit(d);
                         withdrawAccount.associateDeposit(d);
                         remainingHoldAmount -= depositValue;
                     }
@@ -524,7 +538,6 @@ public class Vertconomy
         }
         catch (Exception e)
         {
-            e.printStackTrace();
             entityManager.getTransaction().rollback();
             return null;
         }
@@ -538,17 +551,43 @@ public class Vertconomy
      */
     public String completeWithdraw(WithdrawRequest withdrawRequest)
     {
-        String txid;
+        String txid = null;
         try
         {
             // Send Transaction
             txid = wallet.sendRawTransaction(withdrawRequest.getTxHex());
             // Clear Completed Request From Account
             withdrawRequest.getAccount().setWithdrawRequest(null);
+            // If No Change Will Be Received From TX, Request Can Be Removed Immediately
+            DepositAccount withdrawAccount = getOrCreateUserAccount(WITHDRAW_ACCOUNT_UUID);
+            boolean change = false;
+            Set<Deposit> inputs = withdrawRequest.getInputs();
+            for (Deposit d : inputs)
+            {
+                // Only Remember Deposits Contributing To Change
+                if (d.getDistribution(withdrawAccount) == d.getTotal())
+                {
+                    withdrawAccount.removeDeposit(d);
+                    inputs.remove(d);
+                    entityManager.remove(d);
+                }
+                else
+                {
+                    change = true;
+                }
+            }
+            if (!change)
+            {
+                withdrawAccount.setWithdrawRequest(null);
+                entityManager.remove(withdrawRequest);
+            }
         }
-        catch (WalletRequestException e)
+        catch (Exception e)
         {
-            txid = null;
+            if (txid == null)
+            {
+                txid = "ERROR";
+            }
         }
         return txid;
     }
@@ -564,11 +603,11 @@ public class Vertconomy
      * the larger input.
      * 
      * @param account The account associated with the Deposit objects.
-     * @param amount The amount needed from the resulting inputs excluding input fees.
      * @param inputFee The expected fee for adding a single input.
+     * @param selectionTarget The amount needed from the resulting inputs excluding input fees.
      * @return A set of deposits that can make up the desired amount or null if the target cannot be reached.
      */
-    private Set<Deposit> selectInputDeposits(Account account, long amount, long inputFee)
+    private Set<Deposit> selectInputDeposits(Account account, long inputFee, long selectionTarget)
     {
         Deque<Deposit> selectedInputs = new ArrayDeque<>();
         // Get List Of Transactions That Can Be Used
@@ -578,8 +617,6 @@ public class Vertconomy
             .collect(Collectors.toCollection(ArrayList::new));
         // Remember Index Of Last Selected Deposit
         int lastSelectedIndex = -1;
-        // Set Target Value
-        long selectionTarget = amount;
         // Keep Selecting Inputs Until Target Value Is Met
         while (selectionTarget > 0L && !inputs.isEmpty())
         {
@@ -632,6 +669,27 @@ public class Vertconomy
             return null;
         }
         return new HashSet<>(selectedInputs);
+    }
+
+    /**
+     * Select all valid input deposits that have values greater than
+     * the fees required to withdraw them.
+     * 
+     * @param account The account associated with the Deposit objects.
+     * @param inputFee The expected fee for adding a single input.
+     * @return A set of deposits that can be withdrawn or null if none meet the criteria.
+     */
+    private Set<Deposit> selectInputDeposits(Account account, long inputFee)
+    {
+        Set<Deposit> selectedInputs = new HashSet<>();
+        for (Deposit deposit : account.getDeposits())
+        {
+            if (!deposit.hasWithdrawLock() && deposit.getDistribution(account) > inputFee)
+            {
+                selectedInputs.add(deposit);
+            }
+        }
+        return selectedInputs.isEmpty() ? null : selectedInputs;
     }
 
     /**
