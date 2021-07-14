@@ -3,10 +3,17 @@ package com.mshernandez.vertconomy.commands;
 import com.mshernandez.vertconomy.core.Vertconomy;
 import com.mshernandez.vertconomy.wallet_interface.ResponseError;
 
-import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
+
+import net.md_5.bungee.api.ChatColor;
+import net.md_5.bungee.api.chat.BaseComponent;
+import net.md_5.bungee.api.chat.ClickEvent;
+import net.md_5.bungee.api.chat.ComponentBuilder;
+import net.md_5.bungee.api.chat.HoverEvent;
+import net.md_5.bungee.api.chat.TextComponent;
+import net.md_5.bungee.api.chat.hover.content.Text;
 
 /**
  *  /vertconomy
@@ -30,56 +37,58 @@ public class CommandVertconomy implements CommandExecutor
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args)
     {
+        // Wallet Connection Status Message
         ResponseError walletError = vertconomy.checkWalletConnection();
-        StringBuilder message = new StringBuilder();
-        message.append('\n');
-        message.append(ChatColor.DARK_GREEN);
-        message.append(ChatColor.UNDERLINE);
-        message.append("Vertconomy Status");
-        message.append(ChatColor.RESET);
-        message.append('\n');
-        message.append(ChatColor.GOLD);
-        message.append("Wallet Connection: ");
+        TextComponent statusMsg = new TextComponent();
         if (walletError != null)
         {
             if (walletError.code == 0)
             {
-                message.append(ChatColor.DARK_RED);
-                message.append("Request Error");
+                statusMsg.setText("Request Error");
+                statusMsg.setColor(ChatColor.DARK_RED);
             }
             else
             {
-                message.append(ChatColor.YELLOW);
-                message.append("Wallet Unreachable / Not Ready");
+                statusMsg.setText("Wallet Unreachable / Not Ready");
+                statusMsg.setColor(ChatColor.YELLOW);
             }
         }
         else
         {
-            message.append(ChatColor.GREEN);
-            message.append("Connected");
+            statusMsg.setText("Connected");
+            statusMsg.setColor(ChatColor.GREEN);
         }
-        message.append(ChatColor.RESET);
-        message.append("\n\n");
-        message.append(ChatColor.DARK_GREEN);
-        message.append(ChatColor.UNDERLINE);
-        message.append("Author");
-        message.append(ChatColor.RESET);
-        message.append('\n');
-        message.append(ChatColor.BLUE);
-        message.append("https://github.com/mshernandez5");
-        message.append(ChatColor.RESET);
-        message.append("\n\n");
-        message.append(ChatColor.DARK_GREEN);
-        message.append(ChatColor.UNDERLINE);
-        message.append("Official Repository");
-        message.append(ChatColor.RESET);
-        message.append('\n');
-        message.append(ChatColor.BLUE);
-        message.append("https://github.com/mshernandez5/vertconomy");
-        message.append(ChatColor.RESET);
-        message.append('\n');
-
-        sender.sendMessage(message.toString());
+        // Github Links
+        TextComponent authorLinkMsg = new TextComponent("https://github.com/mshernandez5");
+        authorLinkMsg.setColor(ChatColor.BLUE);
+        authorLinkMsg.setUnderlined(true);
+        authorLinkMsg.setBold(true);
+        authorLinkMsg.setClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, authorLinkMsg.getText()));
+        authorLinkMsg.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, new Text("Click to open URL!")));
+        TextComponent repoLinkMsg = new TextComponent("https://github.com/mshernandez5/vertconomy");
+        repoLinkMsg.setColor(ChatColor.BLUE);
+        repoLinkMsg.setUnderlined(true);
+        repoLinkMsg.setBold(true);
+        repoLinkMsg.setClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, repoLinkMsg.getText()));
+        repoLinkMsg.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, new Text("Click to open URL!")));
+        // Build Message
+        BaseComponent[] component = new ComponentBuilder()
+            .append("\n")
+            .append("Vertconomy Status: ").color(ChatColor.DARK_GREEN).underlined(true)
+            .append("\n\n").reset()
+            .append("Wallet Connection: ").color(ChatColor.YELLOW)
+            .append(statusMsg)
+            .append("\n\n").reset()
+            .append("Plugin Information: ").color(ChatColor.DARK_GREEN).underlined(true)
+            .append("\n\n").reset()
+            .append("Author: ").color(ChatColor.YELLOW)
+            .append(authorLinkMsg)
+            .append("\n").reset()
+            .append("Official Repository: ").color(ChatColor.YELLOW)
+            .append(repoLinkMsg)
+            .append("\n")
+            .create();
+        sender.spigot().sendMessage(component);
         return true;
     }
 }
