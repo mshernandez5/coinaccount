@@ -14,7 +14,9 @@ import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 
 import net.md_5.bungee.api.ChatColor;
+import net.md_5.bungee.api.chat.BaseComponent;
 import net.md_5.bungee.api.chat.ClickEvent;
+import net.md_5.bungee.api.chat.ComponentBuilder;
 import net.md_5.bungee.api.chat.HoverEvent;
 import net.md_5.bungee.api.chat.TextComponent;
 import net.md_5.bungee.api.chat.hover.content.Text;
@@ -41,8 +43,6 @@ public class CommandWithdraw implements CommandExecutor, TabCompleter
         {
             return false;
         }
-        TextComponent messageComponent = new TextComponent();
-        StringBuilder message = new StringBuilder();
         if (sender instanceof Player)
         {
             Player player = (Player) sender;
@@ -57,10 +57,10 @@ public class CommandWithdraw implements CommandExecutor, TabCompleter
                 WithdrawRequest request = vertconomy.getPlayerWithdrawRequest(player);
                 if (request == null)
                 {
-                    message.append(ChatColor.DARK_RED);
-                    message.append("No withdraw request was found.");
-                    messageComponent.addExtra(message.toString());
-                    sender.spigot().sendMessage(messageComponent);
+                    BaseComponent[] component = new ComponentBuilder()
+                        .append("No withdraw request was found.").color(ChatColor.DARK_RED)
+                        .create();
+                    sender.spigot().sendMessage(component);
                     return true;
                 }
                 else
@@ -69,39 +69,30 @@ public class CommandWithdraw implements CommandExecutor, TabCompleter
                     String txid = vertconomy.completeWithdraw(request);
                     if (txid == null)
                     {
-                        message.append(ChatColor.DARK_RED);
-                        message.append("There was an error processing your withdraw request.");
-                        messageComponent.addExtra(message.toString());
-                        sender.spigot().sendMessage(messageComponent);
+                        BaseComponent[] component = new ComponentBuilder()
+                            .append("There was an error processing your withdraw request.").color(ChatColor.DARK_RED)
+                            .create();
+                        sender.spigot().sendMessage(component);
                         return true;
                     }
                     else
                     {
-                        // Display Completed TX Details
-                        message.append("\n");
-                        message.append(ChatColor.AQUA);
-                        message.append(ChatColor.UNDERLINE);
-                        message.append("Withdraw Request Completed:");
-                        message.append(ChatColor.RESET);
-                        message.append('\n');
-                        message.append(ChatColor.YELLOW);
-                        message.append("TXID: ");
-                        message.append(ChatColor.GREEN);
-                        message.append(ChatColor.BOLD);
                         // Copyable TXID
-                        messageComponent.addExtra(message.toString());
                         TextComponent txidMsg = new TextComponent(txid);
                         txidMsg.setClickEvent(new ClickEvent(ClickEvent.Action.COPY_TO_CLIPBOARD, txid));
                         txidMsg.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, new Text("Click to copy TXID!")));
-                        txidMsg.setColor(ChatColor.GREEN);
-                        messageComponent.addExtra(txidMsg);
-                        message = new StringBuilder();
-                        message.append(ChatColor.RESET);
-                        message.append("\n\n");
-                        message.append(ChatColor.YELLOW);
-                        message.append("Allow some time for the transaction to be confirmed before making another withdraw request.");
-                        messageComponent.addExtra(message.toString());
-                        sender.spigot().sendMessage(messageComponent);
+                        // Build Message
+                        BaseComponent[] component = new ComponentBuilder()
+                            .append("\n")
+                            .append("Withdraw Request Completed:").color(ChatColor.AQUA).underlined(true)
+                            .append("\n")
+                            .append("TXID").color(ChatColor.YELLOW)
+                            .append(txidMsg).color(ChatColor.GREEN).bold(true)
+                            .append("\n\n")
+                            .append("Allow some time for the transaction to be confirmed before making another withdraw request.")
+                            .color(ChatColor.YELLOW)
+                            .create();
+                        sender.spigot().sendMessage(component);
                         return true;
                     }
                 }
@@ -117,19 +108,18 @@ public class CommandWithdraw implements CommandExecutor, TabCompleter
                 WithdrawRequest request = vertconomy.getPlayerWithdrawRequest(player);
                 if (request == null)
                 {
-                    message.append(ChatColor.DARK_RED);
-                    message.append("No withdraw request was found.");
-                    messageComponent.addExtra(message.toString());
-                    sender.spigot().sendMessage(messageComponent);
+                    BaseComponent[] component = new ComponentBuilder()
+                        .append("No withdraw request was found.").color(ChatColor.DARK_RED)
+                        .create();
+                    sender.spigot().sendMessage(component);
                     return true;
                 }
                 else
                 {
-                    vertconomy.cancelWithdraw(request);
-                    message.append(ChatColor.YELLOW);
-                    message.append("The withdraw request has been canceled.");
-                    messageComponent.addExtra(message.toString());
-                    sender.spigot().sendMessage(messageComponent);
+                    BaseComponent[] component = new ComponentBuilder()
+                        .append("The withdraw request has been canceled.").color(ChatColor.YELLOW)
+                        .create();
+                    sender.spigot().sendMessage(component);
                     return true;
                 }
             }
@@ -141,10 +131,10 @@ public class CommandWithdraw implements CommandExecutor, TabCompleter
                 }
                 if (vertconomy.getPlayerWithdrawRequest(player) != null)
                 {
-                    message.append(ChatColor.DARK_RED);
-                    message.append("A withdraw request already exists, please cancel it before making a new one!");
-                    messageComponent.addExtra(message.toString());
-                    sender.spigot().sendMessage(messageComponent);
+                    BaseComponent[] component = new ComponentBuilder()
+                        .append("A withdraw request already exists, please cancel it before making a new one!").color(ChatColor.DARK_RED)
+                        .create();
+                    sender.spigot().sendMessage(component);
                     return true;
                 }
                 long satAmount = 0L;
@@ -162,15 +152,19 @@ public class CommandWithdraw implements CommandExecutor, TabCompleter
                     }
                     catch (InvalidSatAmountException e)
                     {
-                        message.append(ChatColor.DARK_RED);
-                        message.append(e.getMessage());
+                        BaseComponent[] component = new ComponentBuilder()
+                            .append(e.getMessage()).color(ChatColor.DARK_RED)
+                            .create();
+                        sender.spigot().sendMessage(component);
+                        return true;
                     }
                     if (satAmount <= 0 || satAmount > vertconomy.getPlayerBalance(player))
                     {
-                        message.append(ChatColor.DARK_RED);
-                        message.append("You don't have the funds to withdraw " + vertconomy.getFormatter().format(satAmount));
-                        messageComponent.addExtra(message.toString());
-                        sender.spigot().sendMessage(messageComponent);
+                        BaseComponent[] component = new ComponentBuilder()
+                            .append("You don't have the funds to withdraw ").color(ChatColor.DARK_RED)
+                            .append(vertconomy.getFormatter().format(satAmount)).color(ChatColor.RED)
+                            .create();
+                        sender.spigot().sendMessage(component);
                         return true;
                     }
                 }
@@ -178,83 +172,54 @@ public class CommandWithdraw implements CommandExecutor, TabCompleter
                 WithdrawRequest request = vertconomy.initiateWithdraw(player, args[1], satAmount);
                 if (request == null)
                 {
-                    message.append(ChatColor.DARK_RED);
-                    message.append("Failed to withdraw the specified amount!");
-                    messageComponent.addExtra(message.toString());
-                    sender.spigot().sendMessage(messageComponent);
+                    BaseComponent[] component = new ComponentBuilder()
+                        .append("Failed to withdraw the specified amount!").color(ChatColor.DARK_RED)
+                        .create();
+                    sender.spigot().sendMessage(component);
                     return true;
                 }
                 else
                 {
-                    // Withdraw Request Details
-                    message.append("\n");
-                    message.append(ChatColor.AQUA);
-                    message.append(ChatColor.UNDERLINE);
-                    message.append("Withdraw Request Created:");
-                    message.append(ChatColor.RESET);
-                    message.append('\n');
-                    message.append(ChatColor.YELLOW);
-                    message.append("Amount Excluding Fees: ");
-                    message.append(ChatColor.GREEN);
-                    message.append(ChatColor.BOLD);
-                    message.append(vertconomy.getFormatter().format(request.getWithdrawAmount()));
-                    message.append(ChatColor.RESET);
-                    message.append('\n');
-                    message.append(ChatColor.YELLOW);
-                    message.append("Fees: ");
-                    message.append(ChatColor.GREEN);
-                    message.append(ChatColor.BOLD);
-                    message.append(vertconomy.getFormatter().format(request.getFeeAmount()));
-                    message.append(ChatColor.RESET);
-                    message.append('\n');
-                    message.append(ChatColor.YELLOW);
-                    message.append("Total Cost: ");
-                    message.append(ChatColor.RED);
-                    message.append(ChatColor.BOLD);
-                    message.append(vertconomy.getFormatter().format(request.getTotalCost()));
-                    message.append(ChatColor.RESET);
-                    message.append('\n');
-                    message.append(ChatColor.YELLOW);
-                    message.append("Withdraw Address: ");
-                    message.append(ChatColor.RED);
-                    message.append(ChatColor.BOLD);
-                    message.append(args[1]);
-                    message.append(ChatColor.RESET);
-                    message.append("\n\n");
-                    message.append(ChatColor.AQUA);
-                    message.append("To ");
-                    message.append(ChatColor.GREEN);
-                    message.append("confirm");
-                    message.append(ChatColor.AQUA);
-                    message.append(" and send the withdrawal, use ");
-                    message.append(ChatColor.GREEN);
-                    message.append("/withdraw confirm");
-                    message.append(ChatColor.RESET);
-                    message.append('\n');
-                    message.append(ChatColor.AQUA);
-                    message.append("To ");
-                    message.append(ChatColor.RED);
-                    message.append("cancel");
-                    message.append(ChatColor.AQUA);
-                    message.append(" the withdrawal, use ");
-                    message.append(ChatColor.RED);
-                    message.append("/withdraw cancel");
-                    message.append(ChatColor.RESET);
-                    message.append("\n\n");
-                    message.append(ChatColor.YELLOW);
-                    message.append("This request will automatically be canceled if not confirmed soon.");
-                    messageComponent.addExtra(message.toString());
-                    sender.spigot().sendMessage(messageComponent);
+                    // Show Withdraw Request Details
+                    BaseComponent[] component = new ComponentBuilder()
+                        .append("\n")
+                        .append("Withdraw Request Created:").color(ChatColor.AQUA).underlined(true)
+                        .append("\n")
+                        .append("Amount Excluding Fees: ").color(ChatColor.YELLOW)
+                        .append(vertconomy.getFormatter().format(request.getWithdrawAmount())).color(ChatColor.GREEN).bold(true)
+                        .append("\n")
+                        .append("Fees: ").color(ChatColor.YELLOW)
+                        .append(vertconomy.getFormatter().format(request.getFeeAmount())).color(ChatColor.BLUE).bold(true)
+                        .append("\n")
+                        .append("Total Cost: ").color(ChatColor.YELLOW)
+                        .append(vertconomy.getFormatter().format(request.getTotalCost())).color(ChatColor.RED).bold(true)
+                        .append("\n")
+                        .append("Withdraw Address: ").color(ChatColor.YELLOW)
+                        .append(args[1]).color(ChatColor.RED).bold(true)
+                        .append("\n\n")
+                        .append("To ").color(ChatColor.AQUA)
+                        .append("confirm").color(ChatColor.GREEN)
+                        .append(" and send the withdrawal, use ").color(ChatColor.AQUA)
+                        .append("/withdraw confirm").color(ChatColor.GREEN)
+                        .append("\n")
+                        .append("To ").color(ChatColor.AQUA)
+                        .append("cancel").color(ChatColor.RED)
+                        .append(" and send the withdrawal, use ").color(ChatColor.AQUA)
+                        .append("/withdraw cancel").color(ChatColor.RED)
+                        .append("\n\n")
+                        .append("This request will automatically be canceled if not confirmed soon.").color(ChatColor.YELLOW)
+                        .create();
+                    sender.spigot().sendMessage(component);
                     return true;
                 }
             }
         }
         else
         {
-            message.append(ChatColor.DARK_RED);
-            message.append("Unsupported");
-            messageComponent.addExtra(message.toString());
-            sender.spigot().sendMessage(messageComponent);
+            BaseComponent[] component = new ComponentBuilder()
+                .append("Unsupported").color(ChatColor.DARK_RED)
+                .create();
+            sender.spigot().sendMessage(component);
             return true;
         }
     }
