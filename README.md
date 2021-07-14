@@ -36,7 +36,7 @@ rpcport=5888
 
 Please change the username and password to non-default values. After saving the new configuration, the changes will take effect after starting `vertcoind` (recommended, headless) or `vertcoin-qt` (graphical interface).
 
-The plugin will need to know how to connect to the wallet, so you will also need a plugin configuration to match in `plugins/Vertconomy/config.yml` relative to the Minecraft server directory.
+The plugin will need to know how to connect to the wallet, so you will also need a plugin configuration to match in `plugins/Vertconomy/config.yml` relative to the Minecraft server directory. If no configuration exists on startup, a default configuration will be created which should be modified to work with your RPC settings.
 
 The default configuration is as follows:
 
