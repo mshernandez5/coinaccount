@@ -31,6 +31,9 @@ scale: base
 # General Plugin Behavior
 ###################################
 
+# Experimental Vault Integration - Risk Of Lost Funds
+vault-integration: false
+
 # Automatically Configure Essentials Economy Commands If Found
 configure-essentials: false
 

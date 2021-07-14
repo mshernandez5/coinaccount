@@ -83,7 +83,7 @@ public class App extends JavaPlugin
 
         // If Essentials Economy Exists, Configure Economy Commands
         Plugin essentials = getServer().getPluginManager().getPlugin("Essentials");
-        if (configuration.getBoolean("configure-essentials") && essentials != null)
+        if (configuration.getBoolean("configure-essentials", false) && essentials != null)
         {
             getLogger().info("Found Essentials, customizing currency formatting.");
             FileConfiguration essentialsConfiguration = essentials.getConfig();
@@ -135,15 +135,18 @@ public class App extends JavaPlugin
             .build();
 
         // Register Vertconomy Wrapper With Vault
-        Plugin vault = getServer().getPluginManager().getPlugin("Vault");
-        if (vault == null)
+        if (configuration.getBoolean("vault-integration", false))
         {
-            getLogger().warning("ERROR: The Vault plugin cannot be found!");
-            return;
+            Plugin vault = getServer().getPluginManager().getPlugin("Vault");
+            if (vault == null)
+            {
+                getLogger().warning("ERROR: The Vault plugin cannot be found!");
+                return;
+            }
+            getLogger().info("Vault found, attempting to register economy...");
+            getServer().getServicesManager().register(Economy.class, new VaultAdapter(vertconomy),
+                vault, ServicePriority.Normal);
         }
-        getLogger().info("Vault found, attempting to register economy...");
-        getServer().getServicesManager().register(Economy.class, new VaultAdapter(vertconomy),
-            vault, ServicePriority.Normal);
 
         // Register Commands
         getCommand("balance").setExecutor(new CommandBalance(vertconomy));

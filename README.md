@@ -13,7 +13,7 @@ All player balances are held as part of the same wallet with an embedded databas
 Minecraft [Vault API](https://github.com/MilkBowl/VaultAPI) integration enables Vertcoin support across a wide variety of existing plugins.
 
 ## Does it work with existing plugins?
-Vertconomy aims to provide at least limited compatibility with existing plugins designed to work with the Vault API. Unfortunately, Minecraft plugins are built on the (fair) assumption that in-game currency can be created out of thin air and sent back into the void at will. Vertconomy works around these assumptions by transforming the money void into a server-owned account and rejecting the creation of currency beyond that available as excess funds within the account. This general idea ensures that the existing currency owned by players must be bound to real wallet funds. Of course, a few more tricks go into the implementation as some external plugins internally interact with player balances in complicated ways.
+Vertconomy aims to provide at least limited compatibility with existing plugins designed to work with the Vault API. Unfortunately, Minecraft plugins are built on the (fair) assumption that in-game currency can be created out of thin air and sent back into the void at will. Vertconomy works around these assumptions by transforming the money void into a server-owned account and rejecting the creation of currency beyond that available as excess funds within the account. This general idea ensures that the existing currency owned by players must be bound to real wallet funds. Of course, a few more tricks go into the implementation as some external plugins internally interact with player balances in complicated ways. Due to the complexities of working with Vault plugins and relatively high risk of unintended behavior Vault support is disabled by default, but this can be changed in the plugin configuration.
 
 ## How can I use this plugin?
 You will need a dedicated Vertcoin wallet configured to listen for RPC connections. Do not use an existing Vertcoin wallet. The configuration file for Vertcoin wallet can be found at one of the following locations if the wallet configuration directory was not manually changed:
@@ -50,8 +50,11 @@ user: vtcuser
 pass: vtcpass
 uri: http://127.0.0.1:5888
 
-# Minimum Confirmations To Consider Transaction Valid
-min-confirmations: 10
+# Minimum Confirmations To Consider Deposits Valid
+min-deposit-confirmations: 6
+
+# Minimum Confirmations To Use Change Outputs
+min-change-confirmations: 1
 
 # Target Number Of Blocks To Confirm Withdrawals
 target-block-time: 2
@@ -70,6 +73,9 @@ scale: base
 ###################################
 # General Plugin Behavior
 ###################################
+
+# Experimental Vault Integration - Risk Of Lost Funds
+vault-integration: false
 
 # Automatically Configure Essentials Economy Commands If Found
 configure-essentials: false
