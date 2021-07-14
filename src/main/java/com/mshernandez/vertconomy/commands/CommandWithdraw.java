@@ -85,10 +85,10 @@ public class CommandWithdraw implements CommandExecutor, TabCompleter
                         BaseComponent[] component = new ComponentBuilder()
                             .append("\n")
                             .append("Withdraw Request Completed:").color(ChatColor.AQUA).underlined(true)
-                            .append("\n")
-                            .append("TXID").color(ChatColor.YELLOW)
+                            .append("\n\n").reset()
+                            .append("TXID: ").color(ChatColor.YELLOW)
                             .append(txidMsg).color(ChatColor.GREEN).bold(true)
-                            .append("\n\n")
+                            .append("\n\n").reset()
                             .append("Allow some time for the transaction to be confirmed before making another withdraw request.")
                             .color(ChatColor.YELLOW)
                             .create();
@@ -116,6 +116,7 @@ public class CommandWithdraw implements CommandExecutor, TabCompleter
                 }
                 else
                 {
+                    vertconomy.cancelWithdraw(request);
                     BaseComponent[] component = new ComponentBuilder()
                         .append("The withdraw request has been canceled.").color(ChatColor.YELLOW)
                         .create();
@@ -184,19 +185,19 @@ public class CommandWithdraw implements CommandExecutor, TabCompleter
                     BaseComponent[] component = new ComponentBuilder()
                         .append("\n")
                         .append("Withdraw Request Created:").color(ChatColor.AQUA).underlined(true)
-                        .append("\n")
+                        .append("\n\n").reset()
                         .append("Amount Excluding Fees: ").color(ChatColor.YELLOW)
                         .append(vertconomy.getFormatter().format(request.getWithdrawAmount())).color(ChatColor.GREEN).bold(true)
-                        .append("\n")
+                        .append("\n").reset()
                         .append("Fees: ").color(ChatColor.YELLOW)
                         .append(vertconomy.getFormatter().format(request.getFeeAmount())).color(ChatColor.BLUE).bold(true)
-                        .append("\n")
+                        .append("\n").reset()
                         .append("Total Cost: ").color(ChatColor.YELLOW)
                         .append(vertconomy.getFormatter().format(request.getTotalCost())).color(ChatColor.RED).bold(true)
-                        .append("\n")
+                        .append("\n").reset()
                         .append("Withdraw Address: ").color(ChatColor.YELLOW)
                         .append(args[1]).color(ChatColor.RED).bold(true)
-                        .append("\n\n")
+                        .append("\n\n").reset()
                         .append("To ").color(ChatColor.AQUA)
                         .append("confirm").color(ChatColor.GREEN)
                         .append(" and send the withdrawal, use ").color(ChatColor.AQUA)
