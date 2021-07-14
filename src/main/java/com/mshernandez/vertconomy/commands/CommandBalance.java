@@ -8,7 +8,6 @@ import com.mshernandez.vertconomy.core.SatAmountFormat;
 import com.mshernandez.vertconomy.core.Vertconomy;
 
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -16,6 +15,10 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.command.ConsoleCommandSender;
 import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
+
+import net.md_5.bungee.api.ChatColor;
+import net.md_5.bungee.api.chat.BaseComponent;
+import net.md_5.bungee.api.chat.ComponentBuilder;
 
 /**
  *  /balance
@@ -40,62 +43,57 @@ public class CommandBalance implements CommandExecutor, TabCompleter
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args)
     {
         SatAmountFormat formatter = vertconomy.getFormatter();
-        StringBuilder message = new StringBuilder();
-        if (args.length == 1 && sender.hasPermission(PERMISSION_VIEW_OTHER_BALANCES))
+        boolean otherPlayerLookup = args.length == 1 && sender.hasPermission(PERMISSION_VIEW_OTHER_BALANCES);
+        if (otherPlayerLookup || sender instanceof Player)
         {
-            OfflinePlayer player = Bukkit.getOfflinePlayer(args[0]);
-            if (player.hasPlayedBefore())
+            OfflinePlayer player;
+            if (otherPlayerLookup)
             {
-                Pair<Long, Long> balances = vertconomy.getPlayerBalances(player);
-                message.append(ChatColor.RED);
-                message.append("Balance: ");
-                message.append(ChatColor.GREEN);
-                message.append(formatter.format(balances.getKey()));
-                if (balances.getVal() != 0L)
+                player = Bukkit.getOfflinePlayer(args[0]);
+                if (!player.hasPlayedBefore())
                 {
-                    message.append(ChatColor.GRAY);
-                    message.append(" ( Pending: ");
-                    message.append(formatter.format(balances.getVal()));
-                    message.append(" )");
+                    BaseComponent[] component = new ComponentBuilder()
+                        .append("Unknown Player: ").color(ChatColor.DARK_RED)
+                        .append(args[0]).color(ChatColor.RED)
+                        .create();
+                    sender.spigot().sendMessage(component);
+                    return true;
                 }
             }
             else
             {
-                message.append(ChatColor.RED);
-                message.append("Unknown Player: ");
-                message.append(ChatColor.DARK_RED);
-                message.append(args[0]);
+                player = (Player) sender;
             }
-        }
-        else if (sender instanceof Player)
-        {
-            Pair<Long, Long> balances = vertconomy.getPlayerBalances(((Player) sender));
-            message.append(ChatColor.RED);
-            message.append("Balance: ");
-            message.append(ChatColor.GREEN);
-            message.append(formatter.format(balances.getKey()));
+            Pair<Long, Long> balances = vertconomy.getPlayerBalances(player);
+            ComponentBuilder cb = new ComponentBuilder()
+                .append("Balance: ").color(ChatColor.RED)
+                .append(formatter.format(balances.getKey())).color(ChatColor.GREEN);
             if (balances.getVal() != 0L)
             {
-                message.append(ChatColor.GRAY);
-                message.append(" (Pending: ");
-                message.append(formatter.format(balances.getVal()));
-                message.append(")");
+                cb.append(" ( Pending: ").color(ChatColor.GRAY)
+                    .append(formatter.format(balances.getVal())).color(ChatColor.GRAY)
+                    .append(" )").color(ChatColor.GRAY);
             }
+            sender.spigot().sendMessage(cb.create());
+            return true;
         }
         else if (sender instanceof ConsoleCommandSender)
         {
-            message.append(ChatColor.RED);
-            message.append("Server-Owned Balance: ");
-            message.append(ChatColor.GREEN);
-            // TODO: message.append(vertconomy.format(vertconomy.getServerAccountBalance()));
+            BaseComponent[] component = new ComponentBuilder()
+                .append("Server-Owned Balance: ").color(ChatColor.RED)
+                .append("NOT YET SUPPORTED").color(ChatColor.GREEN)
+                .create();
+            sender.spigot().sendMessage(component);
+            return true;
         }
         else
         {
-            message.append(ChatColor.DARK_RED);
-            message.append("UNSUPPORTED");
+            BaseComponent[] component = new ComponentBuilder()
+                .append("UNSUPPORTED").color(ChatColor.DARK_RED)
+                .create();
+            sender.spigot().sendMessage(component);
+            return true;
         }
-        sender.sendMessage(message.toString());
-        return true;
     }
 
     @Override
