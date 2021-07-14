@@ -70,9 +70,9 @@ public class CommandBalance implements CommandExecutor, TabCompleter
                 .append(formatter.format(balances.getKey())).color(ChatColor.GREEN);
             if (balances.getVal() != 0L)
             {
-                cb.append(" ( Pending: ").color(ChatColor.GRAY)
+                cb.append(" (Pending: ").color(ChatColor.GRAY)
                     .append(formatter.format(balances.getVal())).color(ChatColor.GRAY)
-                    .append(" )").color(ChatColor.GRAY);
+                    .append(")").color(ChatColor.GRAY);
             }
             sender.spigot().sendMessage(cb.create());
             return true;

@@ -91,6 +91,7 @@ public class CommandWithdraw implements CommandExecutor, TabCompleter
                             .append("\n\n").reset()
                             .append("Allow some time for the transaction to be confirmed before making another withdraw request.")
                             .color(ChatColor.YELLOW)
+                            .append("\n")
                             .create();
                         sender.spigot().sendMessage(component);
                         return true;
@@ -181,34 +182,42 @@ public class CommandWithdraw implements CommandExecutor, TabCompleter
                 }
                 else
                 {
+                    // Confirm & Cancel Click Commands
+                    TextComponent confirmCmdMsg = new TextComponent("confirm");
+                    confirmCmdMsg.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/withdraw confirm"));
+                    confirmCmdMsg.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, new Text("Click to confirm the transaction!")));
+                    TextComponent cancelCmdMsg = new TextComponent("cancel");
+                    cancelCmdMsg.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/withdraw cancel"));
+                    cancelCmdMsg.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, new Text("Click to cancel the transaction!")));
                     // Show Withdraw Request Details
                     BaseComponent[] component = new ComponentBuilder()
                         .append("\n")
                         .append("Withdraw Request Created:").color(ChatColor.AQUA).underlined(true)
                         .append("\n\n").reset()
                         .append("Amount Excluding Fees: ").color(ChatColor.YELLOW)
-                        .append(vertconomy.getFormatter().format(request.getWithdrawAmount())).color(ChatColor.GREEN).bold(true)
+                        .append(vertconomy.getFormatter().format(request.getWithdrawAmount())).color(ChatColor.GREEN)
                         .append("\n").reset()
                         .append("Fees: ").color(ChatColor.YELLOW)
-                        .append(vertconomy.getFormatter().format(request.getFeeAmount())).color(ChatColor.BLUE).bold(true)
+                        .append(vertconomy.getFormatter().format(request.getFeeAmount())).color(ChatColor.BLUE)
                         .append("\n").reset()
                         .append("Total Cost: ").color(ChatColor.YELLOW)
-                        .append(vertconomy.getFormatter().format(request.getTotalCost())).color(ChatColor.RED).bold(true)
+                        .append(vertconomy.getFormatter().format(request.getTotalCost())).color(ChatColor.RED)
                         .append("\n").reset()
                         .append("Withdraw Address: ").color(ChatColor.YELLOW)
-                        .append(args[1]).color(ChatColor.RED).bold(true)
+                        .append(args[1]).color(ChatColor.RED)
                         .append("\n\n").reset()
                         .append("To ").color(ChatColor.AQUA)
-                        .append("confirm").color(ChatColor.GREEN)
-                        .append(" and send the withdrawal, use ").color(ChatColor.AQUA)
+                        .append(confirmCmdMsg).color(ChatColor.GREEN).bold(true)
+                        .append(" and send the withdrawal, use ").reset().color(ChatColor.AQUA)
                         .append("/withdraw confirm").color(ChatColor.GREEN)
                         .append("\n")
                         .append("To ").color(ChatColor.AQUA)
-                        .append("cancel").color(ChatColor.RED)
-                        .append(" and send the withdrawal, use ").color(ChatColor.AQUA)
+                        .append(cancelCmdMsg).color(ChatColor.RED).bold(true)
+                        .append(" and send the withdrawal, use ").reset().color(ChatColor.AQUA)
                         .append("/withdraw cancel").color(ChatColor.RED)
                         .append("\n\n")
                         .append("This request will automatically be canceled if not confirmed soon.").color(ChatColor.YELLOW)
+                        .append("\n")
                         .create();
                     sender.spigot().sendMessage(component);
                     return true;
