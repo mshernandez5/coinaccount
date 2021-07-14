@@ -89,7 +89,7 @@ public class CommandWithdraw implements CommandExecutor, TabCompleter
                             .append("TXID: ").color(ChatColor.YELLOW)
                             .append(txidMsg).color(ChatColor.GREEN).bold(true)
                             .append("\n\n").reset()
-                            .append("Allow some time for the transaction to be confirmed before making another withdraw request.")
+                            .append("Some of your remaining funds may be unavailable for withdraw until the transaction is confirmed.")
                             .color(ChatColor.YELLOW)
                             .append("\n")
                             .create();

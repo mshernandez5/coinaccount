@@ -65,8 +65,13 @@ public class CommandBalance implements CommandExecutor, TabCompleter
                 player = (Player) sender;
             }
             Pair<Long, Long> balances = vertconomy.getPlayerBalances(player);
-            ComponentBuilder cb = new ComponentBuilder()
-                .append("Balance: ").color(ChatColor.RED)
+            ComponentBuilder cb = new ComponentBuilder();
+            if (otherPlayerLookup)
+            {
+                cb.append(player.getName()).color(ChatColor.GOLD)
+                    .append("'s ").color(ChatColor.GOLD);
+            }
+            cb.append("Balance: ").color(ChatColor.GOLD)
                 .append(formatter.format(balances.getKey())).color(ChatColor.GREEN);
             if (balances.getVal() != 0L)
             {

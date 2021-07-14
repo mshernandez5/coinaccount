@@ -191,6 +191,71 @@ public class Vertconomy
     }
 
     /**
+     * Return the useable balance held by the player's
+     * account.
+     * 
+     * @param player The player associated with the account.
+     * @return The balance associated with the account.
+     */
+    public long getPlayerBalance(OfflinePlayer player)
+    {
+        DepositAccount playerAccount = getOrCreateUserAccount(player.getUniqueId());
+        return playerAccount == null ? 0L : playerAccount.calculateBalance();
+    }
+
+    /**
+     * Return the total unconfirmed balances associated
+     * with the player's account.
+     * 
+     * @param player The player associated with the account.
+     * @return Unconfirmed deposit balances for the account.
+     */
+    public long getPlayerUnconfirmedBalance(OfflinePlayer player)
+    {
+        DepositAccount playerAccount = getOrCreateUserAccount(player.getUniqueId());
+        return playerAccount == null ? 0L : playerAccount.getPendingBalance();
+    }
+
+    /**
+     * Return both the usable and unconfirmed balances
+     * associated with a player's account.
+     * 
+     * @param player The player associated with the account.
+     * @return The usable and unconfirmed balances.
+     */
+    public Pair<Long, Long> getPlayerBalances(OfflinePlayer player)
+    {
+        DepositAccount playerAccount = getOrCreateUserAccount(player.getUniqueId());
+        return playerAccount == null ? new Pair<Long,Long>(0L, 0L)
+            : new Pair<Long, Long>(playerAccount.calculateBalance(), playerAccount.getPendingBalance());
+    }
+
+    /**
+     * Get the public wallet address allowing the player to
+     * deposit funds into their account.
+     * 
+     * @param player The player associated with the account.
+     * @return The deposit address associated with the account.
+     */
+    public String getPlayerDepositAddress(OfflinePlayer player)
+    {
+        DepositAccount playerAccount = getOrCreateUserAccount(player.getUniqueId());
+        return playerAccount == null ? "ERROR" : playerAccount.getDepositAddress();
+    }
+
+    /**
+     * Return any active withdraw request initiated by the user.
+     * 
+     * @param player The player that initiated the request.
+     * @return Any active withdraw request initiated by the user.
+     */
+    public WithdrawRequest getPlayerWithdrawRequest(OfflinePlayer player)
+    {
+        DepositAccount playerAccount = getOrCreateUserAccount(player.getUniqueId());
+        return playerAccount == null ? null : playerAccount.getWithdrawRequest();
+    }
+
+    /**
      * Register new deposits for the given user account.
      * <p>
      * Returns newly confirmed balances as well as pending
@@ -316,123 +381,6 @@ public class Vertconomy
         }
     }
 
-    /**
-     * Transfer an amount from one account to another,
-     * internally redistributing ownership of the
-     * underlying deposits.
-     * 
-     * @param sender The sending account.
-     * @param receiver The receiving account.
-     * @param amount The amount to transfer, in sats.
-     * @return True if the transfer was successful.
-     */
-    boolean transferBalance(Account sender, Account receiver, long amount)
-    {
-        if (sender.calculateBalance() < amount)
-        {
-            plugin.getLogger().info(sender + " can't send " + amount + " to " + receiver);
-            return false;
-        }
-        try
-        {
-            entityManager.getTransaction().begin();
-            long remainingOwed = amount;
-            Iterator<Deposit> it = sender.getDeposits().iterator();
-            while (it.hasNext() && remainingOwed > 0L)
-            {
-                Deposit deposit = it.next();
-                long senderShare = deposit.getDistribution(sender);
-                long takenAmount;
-                if (senderShare <= remainingOwed)
-                {
-                    deposit.setDistribution(sender, 0L);
-                    deposit.setDistribution(receiver, deposit.getDistribution(receiver) + senderShare);
-                    deposit = entityManager.merge(deposit);
-                    it.remove();
-                    sender.removeDeposit(deposit);
-                    receiver.associateDeposit(deposit);
-                    takenAmount = senderShare;
-                }
-                else
-                {
-                    deposit.setDistribution(sender, senderShare - remainingOwed);
-                    deposit.setDistribution(receiver, deposit.getDistribution(receiver) + remainingOwed);
-                    deposit = entityManager.merge(deposit);
-                    receiver.associateDeposit(deposit);
-                    takenAmount = remainingOwed;
-                }
-                remainingOwed -= takenAmount;
-            }
-            entityManager.getTransaction().commit();
-            plugin.getLogger().info(sender + " successfully sent " + amount + " to " + receiver);
-        }
-        catch (Exception e)
-        {
-            plugin.getLogger().info(sender + " failed to send " + amount + " to " + receiver);
-            entityManager.getTransaction().rollback();
-        }
-        return true;
-    }
-
-    /**
-     * Return the useable balance held by the player's
-     * account.
-     * 
-     * @param player The player associated with the account.
-     * @return The balance associated with the account.
-     */
-    public long getPlayerBalance(OfflinePlayer player)
-    {
-        DepositAccount playerAccount = getOrCreateUserAccount(player.getUniqueId());
-        return playerAccount == null ? 0L : playerAccount.calculateBalance();
-    }
-
-    /**
-     * Return the total unconfirmed balances associated
-     * with the player's account.
-     * 
-     * @param player The player associated with the account.
-     * @return Unconfirmed deposit balances for the account.
-     */
-    public long getPlayerUnconfirmedBalance(OfflinePlayer player)
-    {
-        DepositAccount playerAccount = getOrCreateUserAccount(player.getUniqueId());
-        return playerAccount == null ? 0L : playerAccount.getPendingBalance();
-    }
-
-    public WithdrawRequest getPlayerWithdrawRequest(OfflinePlayer player)
-    {
-        DepositAccount playerAccount = getOrCreateUserAccount(player.getUniqueId());
-        return playerAccount == null ? null : playerAccount.getWithdrawRequest();
-    }
-
-    /**
-     * Return both the usable and unconfirmed balances
-     * associated with a player's account.
-     * 
-     * @param player The player associated with the account.
-     * @return The usable and unconfirmed balances.
-     */
-    public Pair<Long, Long> getPlayerBalances(OfflinePlayer player)
-    {
-        DepositAccount playerAccount = getOrCreateUserAccount(player.getUniqueId());
-        return playerAccount == null ? new Pair<Long,Long>(0L, 0L)
-            : new Pair<Long, Long>(playerAccount.calculateBalance(), playerAccount.getPendingBalance());
-    }
-
-    /**
-     * Get the public wallet address allowing the player to
-     * deposit funds into their account.
-     * 
-     * @param player The player associated with the account.
-     * @return The deposit address associated with the account.
-     */
-    public String getPlayerDepositAddress(OfflinePlayer player)
-    {
-        DepositAccount playerAccount = getOrCreateUserAccount(player.getUniqueId());
-        return playerAccount == null ? "ERROR" : playerAccount.getDepositAddress();
-    }
-
     // Base Size + 2 Outputs (Destination & Change)
     private static final int BASE_WITHDRAW_TX_SIZE = 10 + (34 * 2);
     // Additional Size For Each Input (Including +1 Uncertainty Assuming Worst Case)
@@ -540,6 +488,47 @@ public class Vertconomy
         {
             entityManager.getTransaction().rollback();
             return null;
+        }
+    }
+
+    /**
+     * Cancel the given withdraw request, restoring
+     * reserved funds to the owner and unlocking the
+     * deposits involved for future withdrawals.
+     * <p>
+     * SHOULD NOT BE USED ON A COMPLETED WITHDRAW REQUEST!
+     * 
+     * @param withdrawRequest The withdraw request to cancel.
+     */
+    public void cancelWithdraw(WithdrawRequest withdrawRequest)
+    {
+        DepositAccount withdrawAccount = getOrCreateUserAccount(WITHDRAW_ACCOUNT_UUID);
+        DepositAccount initiatorAccount = withdrawRequest.getAccount();
+        try
+        {
+            entityManager.getTransaction().begin();
+            Set<Deposit> lockedDeposits = withdrawRequest.getInputs();
+            for (Deposit deposit : lockedDeposits)
+            {
+                long lockedAmount = deposit.getDistribution(withdrawAccount);
+                long updatedAmount = deposit.getDistribution(initiatorAccount) + lockedAmount;
+                deposit.setDistribution(withdrawAccount, 0L);
+                deposit.setDistribution(initiatorAccount, updatedAmount);
+                deposit.setWithdrawLock(null);
+                deposit = entityManager.merge(deposit);
+                initiatorAccount.associateDeposit(deposit);
+                withdrawAccount.removeDeposit(deposit);
+            }
+            initiatorAccount.setWithdrawRequest(null);
+            entityManager.merge(initiatorAccount);
+            entityManager.merge(withdrawAccount);
+            entityManager.remove(withdrawRequest);
+            entityManager.getTransaction().commit();
+        }
+        catch (Exception e)
+        {
+            plugin.getLogger().info("Failed to cancel withdraw request!");
+            entityManager.getTransaction().rollback();
         }
     }
 
@@ -705,44 +694,61 @@ public class Vertconomy
     }
 
     /**
-     * Cancel the given withdraw request, restoring
-     * reserved funds to the owner and unlocking the
-     * deposits involved for future withdrawals.
-     * <p>
-     * SHOULD NOT BE USED ON A COMPLETED WITHDRAW REQUEST!
+     * Transfer an amount from one account to another,
+     * internally redistributing ownership of the
+     * underlying deposits.
      * 
-     * @param withdrawRequest The withdraw request to cancel.
+     * @param sender The sending account.
+     * @param receiver The receiving account.
+     * @param amount The amount to transfer, in sats.
+     * @return True if the transfer was successful.
      */
-    public void cancelWithdraw(WithdrawRequest withdrawRequest)
+    boolean transferBalance(Account sender, Account receiver, long amount)
     {
-        DepositAccount withdrawAccount = getOrCreateUserAccount(WITHDRAW_ACCOUNT_UUID);
-        DepositAccount initiatorAccount = withdrawRequest.getAccount();
+        if (sender.calculateBalance() < amount)
+        {
+            plugin.getLogger().info(sender + " can't send " + amount + " to " + receiver);
+            return false;
+        }
         try
         {
             entityManager.getTransaction().begin();
-            Set<Deposit> lockedDeposits = withdrawRequest.getInputs();
-            for (Deposit deposit : lockedDeposits)
+            long remainingOwed = amount;
+            Iterator<Deposit> it = sender.getDeposits().iterator();
+            while (it.hasNext() && remainingOwed > 0L)
             {
-                long lockedAmount = deposit.getDistribution(withdrawAccount);
-                long updatedAmount = deposit.getDistribution(initiatorAccount) + lockedAmount;
-                deposit.setDistribution(withdrawAccount, 0L);
-                deposit.setDistribution(initiatorAccount, updatedAmount);
-                deposit.setWithdrawLock(null);
-                deposit = entityManager.merge(deposit);
-                initiatorAccount.associateDeposit(deposit);
-                withdrawAccount.removeDeposit(deposit);
+                Deposit deposit = it.next();
+                long senderShare = deposit.getDistribution(sender);
+                long takenAmount;
+                if (senderShare <= remainingOwed)
+                {
+                    deposit.setDistribution(sender, 0L);
+                    deposit.setDistribution(receiver, deposit.getDistribution(receiver) + senderShare);
+                    deposit = entityManager.merge(deposit);
+                    it.remove();
+                    sender.removeDeposit(deposit);
+                    receiver.associateDeposit(deposit);
+                    takenAmount = senderShare;
+                }
+                else
+                {
+                    deposit.setDistribution(sender, senderShare - remainingOwed);
+                    deposit.setDistribution(receiver, deposit.getDistribution(receiver) + remainingOwed);
+                    deposit = entityManager.merge(deposit);
+                    receiver.associateDeposit(deposit);
+                    takenAmount = remainingOwed;
+                }
+                remainingOwed -= takenAmount;
             }
-            initiatorAccount.setWithdrawRequest(null);
-            entityManager.merge(initiatorAccount);
-            entityManager.merge(withdrawAccount);
-            entityManager.remove(withdrawRequest);
             entityManager.getTransaction().commit();
+            plugin.getLogger().info(sender + " successfully sent " + amount + " to " + receiver);
         }
         catch (Exception e)
         {
-            plugin.getLogger().info("Failed to cancel withdraw request!");
+            plugin.getLogger().info(sender + " failed to send " + amount + " to " + receiver);
             entityManager.getTransaction().rollback();
         }
+        return true;
     }
 
     /**
