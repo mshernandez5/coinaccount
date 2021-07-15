@@ -429,14 +429,16 @@ public class Vertconomy
             fees += inputDeposits.size() * inputFee;
             // TX Inputs
             long totalInputValue = 0L;
+            long totalOwnedValue = 0L;
             List<RawTransactionInput> txInputs = new ArrayList<>();
             for (Deposit d : inputDeposits)
             {
                 txInputs.add(new RawTransactionInput(d.getTXID(), d.getVout()));
-                totalInputValue += d.getDistribution(account);
+                totalInputValue += d.getTotal();
+                totalOwnedValue += d.getDistribution(account);
             }
             // TX Outputs
-            long withdrawAmount = withdrawAll ? (totalInputValue - fees) : amount;
+            long withdrawAmount = withdrawAll ? (totalOwnedValue - fees) : amount;
             long changeAmount = totalInputValue - (withdrawAmount + fees);
             Map<String, Long> txOutputs = new HashMap<>();
             txOutputs.put(destAddress, withdrawAmount);
