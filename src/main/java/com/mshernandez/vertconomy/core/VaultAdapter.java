@@ -69,7 +69,7 @@ public class VaultAdapter implements Economy
     @Override
     public double getBalance(OfflinePlayer player)
     {
-        return vertconomy.getPlayerBalance(player);
+        return vertconomy.getFormatter().relativeAmount(vertconomy.getPlayerBalance(player));
     }
 
     @Override
@@ -95,7 +95,7 @@ public class VaultAdapter implements Economy
     @Override
     public boolean has(OfflinePlayer player, double amount)
     {
-        return vertconomy.getPlayerBalance(player) >= amount;
+        return getBalance(player) >= amount;
     }
 
     @Override

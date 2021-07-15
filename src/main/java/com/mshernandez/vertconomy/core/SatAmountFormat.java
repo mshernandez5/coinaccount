@@ -97,12 +97,25 @@ public class SatAmountFormat
      * Format a double into a readable amount according
      * to the current currency settings.
      * 
-     * @param amount The unformatted amount, using the current scale.
+     * @param amount The unformatted amount, relative to the current scale.
      * @return A formatted string representing the amount.
      */
     public String format(double amount)
     {
         return String.format("%." + scale.NUM_VALID_FRACTION_DIGITS + "f "
             + ((scale == CoinScale.BASE) ? baseUnitSymbol : (scale.PREFIX + symbol)), amount);
+    }
+
+    /**
+     * Get the relative scaled amount corresponding
+     * to the absolute sat amount according to
+     * the current currency settings.
+     * 
+     * @param amount The absolute amount in sats.
+     * @return The relative amount.
+     */
+    public double relativeAmount(long amount)
+    {
+        return amount / (double) scale.SAT_SCALE;
     }
 }
