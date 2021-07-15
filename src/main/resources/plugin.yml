@@ -30,4 +30,23 @@ commands:
     description: Show the status of the plugin and wallet connection.
     usage: /vertconomy
     permission: vertconomy.status
-  
+
+# Permissions
+permissions:
+  verconomy.balance:
+    description: Allows players to use the /balance command.
+    default: op
+  vertconomy.balance.others:
+    description: Allows players to see other player balances.
+    default: op
+    children:
+      vertconomy.balance: true
+  vertconomy.deposit:
+    description: Allows players to use the /deposit command.
+    default: op
+  vertconomy.withdraw:
+    description: Allows players to use the /withdraw command.
+    default: op
+  vertconomy.status:
+    description: Allows players to use the /vertconomy command.
+    default: op
