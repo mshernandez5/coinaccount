@@ -111,32 +111,9 @@ public class WalletInfoResponse extends WalletResponse<WalletInfoResponse.Result
         public boolean avoidReuse;
 
         /**
-         * Current scanning details,
-         * or null if no scan is in progress
-         */
-        public ScanningDetails scanning;
-
-        /**
          * Whether this wallet uses descriptors for
          * scriptPubKey management.
          */
         public boolean descriptors;
-    }
-
-    /**
-     * Holds scanning progress details if the wallet
-     * is busy scanning.
-     */
-    public class ScanningDetails
-    {
-        /**
-         * Elapsed seconds since scan start.
-         */
-        public long duration;
-
-        /**
-         * Scanning progress percentage [0.0, 1.0]
-         */
-        public double progress;
     }
 }
