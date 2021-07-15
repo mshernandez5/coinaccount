@@ -330,7 +330,7 @@ public class Vertconomy
             List<UnspentOutputResponse.UnspentOutput> unspentOutputs = wallet.getUnspentOutputs(account.getDepositAddress());
             // Remember Which Transactions Have Already Been Accounted For
             Set<String> oldTXIDs = account.getProcessedDepositIDs();
-            Set<String> newlyProcessedTXIDs = new HashSet<>();
+            Set<String> unspentTXIDs = new HashSet<>();
             // Check For New Unspent Outputs Deposited To Account
             for (UnspentOutput output : unspentOutputs)
             {
@@ -367,11 +367,12 @@ public class Vertconomy
                             }
                             entityManager.remove(withdrawRequest);
                         }
-                        newlyProcessedTXIDs.add(output.txid);
                     }
+                    unspentTXIDs.add(output.txid);
                 }
             }
-            account.getProcessedDepositIDs().addAll(newlyProcessedTXIDs);
+            account.getProcessedDepositIDs().clear();
+            account.getProcessedDepositIDs().addAll(unspentTXIDs);
             entityManager.merge(account);
             entityManager.getTransaction().commit();
         }
