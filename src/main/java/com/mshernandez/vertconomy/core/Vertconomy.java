@@ -433,7 +433,7 @@ public class Vertconomy
             for (Deposit d : inputDeposits)
             {
                 txInputs.add(new RawTransactionInput(d.getTXID(), d.getVout()));
-                totalInputValue += d.getTotal();
+                totalInputValue += d.getDistribution(account);
             }
             // TX Outputs
             long withdrawAmount = withdrawAll ? (totalInputValue - fees) : amount;
