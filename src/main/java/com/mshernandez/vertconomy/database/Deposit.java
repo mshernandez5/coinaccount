@@ -3,6 +3,7 @@ package com.mshernandez.vertconomy.database;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 import javax.persistence.ElementCollection;
 import javax.persistence.Entity;
@@ -131,14 +132,14 @@ public class Deposit
     }
 
     /**
-     * Get a mapping from Account to the
-     * number of sats they own from this transaction.
+     * Get the set of accounts owning a share
+     * of this deposit.
      * 
-     * @return How many sats each player owns.
+     * @return The set of accounts with a share in this deposit.
      */
-    public Map<Account, Long> getOwnershipDistribution()
+    public Set<Account> getOwners()
     {
-        return distribution;
+        return distribution.keySet();
     }
 
     /**

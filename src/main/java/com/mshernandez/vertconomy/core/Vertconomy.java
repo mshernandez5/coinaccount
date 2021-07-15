@@ -347,12 +347,11 @@ public class Vertconomy
                             Set<Deposit> inputs = withdrawRequest.getInputs();
                             for (Deposit d : inputs)
                             {
-                                Map<Account, Long> inputDistribution = d.getOwnershipDistribution();
-                                for (Account a : inputDistribution.keySet())
+                                for (Account a : d.getOwners())
                                 {
                                     if (!a.equals(account))
                                     {
-                                        changeDistribution.put(a, changeDistribution.getOrDefault(a, 0L) + inputDistribution.get(a));
+                                        changeDistribution.put(a, changeDistribution.getOrDefault(a, 0L) + d.getDistribution(a));
                                     }
                                     a.removeDeposit(d);
                                 }
@@ -360,7 +359,7 @@ public class Vertconomy
                             }
                             Deposit deposit = new Deposit(output.txid, output.vout, output.amount.satAmount, changeDistribution);
                             entityManager.persist(deposit);
-                            for (Account a : deposit.getOwnershipDistribution().keySet())
+                            for (Account a : deposit.getOwners())
                             {
                                 a.associateDeposit(deposit);
                                 entityManager.merge(a);
