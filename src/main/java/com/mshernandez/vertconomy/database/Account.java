@@ -99,16 +99,37 @@ public class Account
     }
 
     /**
-     * Calculate the account balance.
+     * Calculate the usable account balance.
+     * Usable balances can be transferred
+     * between accounts but in some situations
+     * may not be withdrawn for a period of time.
      * 
      * @return The total balance of this account.
      */
     public long calculateBalance()
     {
         long balance = 0L;
-        for (Deposit t : balances)
+        for (Deposit d : balances)
         {
-            balance += t.getDistribution(this);
+            balance += d.getDistribution(this);
+        }
+        return balance;
+    }
+
+    /**
+     * Calculate the withdrawable account balance.
+     * 
+     * @return The total balance of this account.
+     */
+    public long calculateWithdrawableBalance()
+    {
+        long balance = 0L;
+        for (Deposit d : balances)
+        {
+            if (!d.hasWithdrawLock())
+            {
+                balance += d.getDistribution(this);
+            }
         }
         return balance;
     }

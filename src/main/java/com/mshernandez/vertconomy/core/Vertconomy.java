@@ -1,8 +1,6 @@
 package com.mshernandez.vertconomy.core;
 
-import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -10,7 +8,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 import javax.persistence.EntityManager;
 
@@ -414,15 +411,16 @@ public class Vertconomy
             long inputFee = (long) Math.ceil(P2PKH_INPUT_VSIZE * feeRate);
             // Attempt To Grab Inputs For Transaction
             long fees = (long) Math.ceil(BASE_WITHDRAW_TX_SIZE * feeRate);
-            Set<Deposit> inputDeposits;
+            CoinSelector<Deposit> coinSelector;
             if (withdrawAll)
             {
-                inputDeposits = selectInputDeposits(account, inputFee);
+                coinSelector = new MaxAmountCoinSelector<>();
             }
             else
             {
-                inputDeposits = selectInputDeposits(account, amount, inputFee);
+                coinSelector = new BinarySearchCoinSelector<>();
             }
+            Set<Deposit> inputDeposits = coinSelector.selectInputs(new WithdrawDepositShareEvaluator(account), account.getDeposits(), inputFee, amount);
             if (inputDeposits == null)
             {
                 return null;
@@ -582,118 +580,6 @@ public class Vertconomy
             }
         }
         return txid;
-    }
-
-    /**
-     * Select Deposit inputs to use for transferring or withdrawing
-     * the specified amount.
-     * <p>
-     * Uses a binary search algorithm to find inputs closest to the
-     * target amount, which is dynamically updated as inputs are selected.
-     * If the next selected input is larger than the last, the previous
-     * input is unselected and selection continues attempting to use only
-     * the larger input.
-     * 
-     * @param account The account associated with the Deposit objects.
-     * @param inputFee The expected fee for adding a single input.
-     * @param selectionTarget The amount needed from the resulting inputs excluding input fees.
-     * @return A set of deposits that can make up the desired amount or null if the target cannot be reached.
-     */
-    private Set<Deposit> selectInputDeposits(Account account, long inputFee, long selectionTarget)
-    {
-        Deque<Deposit> selectedInputs = new ArrayDeque<>();
-        // Get List Of Transactions That Can Be Used
-        List<Deposit> inputs = account.getDeposits().stream()
-            .filter(d -> !d.hasWithdrawLock())
-            .sorted(new DepositShareComparator(account))
-            .collect(Collectors.toCollection(ArrayList::new));
-        // Remember Index Of Last Selected Deposit
-        int lastSelectedIndex = -1;
-        // Keep Selecting Inputs Until Target Value Is Met
-        while (selectionTarget > 0L && !inputs.isEmpty())
-        {
-            // Every Selected Input Adds Fees To The Target Amount
-            selectionTarget += inputFee;
-            // Binary Search For Next Input Closest To Current Target Amount
-            int first = 0,
-                last = inputs.size() - 1,
-                mid;
-            while (first <= last)
-            {
-                mid = (first + last) / 2;
-                long value = inputs.get(mid).getDistribution(account);
-                double difference = difference(value, selectionTarget);
-                // Check If Any Smaller Deposits Closer To Target Amount
-                if (mid - 1 >= first
-                    && difference(inputs.get(mid - 1).getDistribution(account), selectionTarget) < difference)
-                {
-                    last = mid - 1;
-                }
-                // Check If Any Larger Deposits Closer To Target Amount
-                else if (mid + 1 <= last
-                    && difference(inputs.get(mid + 1).getDistribution(account), selectionTarget) < difference)
-                {
-                    first = mid + 1;
-                }
-                // This Deposit Is Closest To The Target Amount
-                else
-                {
-                    Deposit selected = inputs.get(mid);
-                    Deposit lastSelected = selectedInputs.peek();
-                    // If Selected Input Larger Than Last Selected, Try To Only Use Larger Input
-                    if (lastSelected != null && value > lastSelected.getDistribution(account))
-                    {
-                        inputs.add(lastSelectedIndex, selectedInputs.pop());
-                        selectionTarget += lastSelected.getDistribution(account);
-                        selectionTarget -= inputFee;
-                    }
-                    lastSelectedIndex = inputs.indexOf(selected);
-                    selectedInputs.push(selected);
-                    inputs.remove(selected);
-                    selectionTarget -= value;
-                    break;
-                }
-            }
-        }
-        // Return null If Target Value Couldn't Be Fulfilled
-        if (selectionTarget > 0L)
-        {
-            return null;
-        }
-        return new HashSet<>(selectedInputs);
-    }
-
-    /**
-     * Select all valid input deposits that have values greater than
-     * the fees required to withdraw them.
-     * 
-     * @param account The account associated with the Deposit objects.
-     * @param inputFee The expected fee for adding a single input.
-     * @return A set of deposits that can be withdrawn or null if none meet the criteria.
-     */
-    private Set<Deposit> selectInputDeposits(Account account, long inputFee)
-    {
-        Set<Deposit> selectedInputs = new HashSet<>();
-        for (Deposit deposit : account.getDeposits())
-        {
-            if (!deposit.hasWithdrawLock() && deposit.getDistribution(account) > inputFee)
-            {
-                selectedInputs.add(deposit);
-            }
-        }
-        return selectedInputs.isEmpty() ? null : selectedInputs;
-    }
-
-    /**
-     * Calculate the percent difference between the two values.
-     * 
-     * @param a The first value.
-     * @param b The second value.
-     * @return The percent difference.
-     */
-    private double difference(long a, long b)
-    {
-        return Math.abs(b - a) / ((a + b) / 2.0);
     }
 
     /**
