@@ -1,16 +1,24 @@
-package com.mshernandez.vertconomy.database;
+package com.mshernandez.vertconomy.core.deposit;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
+import javax.persistence.CollectionTable;
+import javax.persistence.Column;
 import javax.persistence.ElementCollection;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.Id;
 import javax.persistence.IdClass;
+import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
+import javax.persistence.MapKeyJoinColumn;
+import javax.persistence.Table;
+
+import com.mshernandez.vertconomy.core.account.Account;
+import com.mshernandez.vertconomy.core.withdraw.WithdrawRequest;
 
 /**
  * Saves details of a deposit transaction
@@ -27,24 +35,36 @@ import javax.persistence.ManyToOne;
  */
 @Entity
 @IdClass(DepositKey.class)
+@Table(name = "DEPOSIT")
 public class Deposit
 {
     @Id
+    @Column(name = "TXID")
     private String TXID;
+    
     @Id
+    @Column(name = "VOUT")
     private int vout;
     
+    @Column(name = "TOTAL")
     private long total;
 
     /**
-     * Distributes the balance held by this transaction
-     * across multiple accounts.
-     * 
-     * Eagerly fetched since this will always be accessed
-     * when looking up a transaction.
+     * All shares of this deposit.
      */
     @ElementCollection(fetch = FetchType.EAGER)
-    private Map<Account, Long> distribution;
+    @CollectionTable
+    (
+        name = "SHARES",
+        joinColumns =
+        {
+            @JoinColumn(name = "TXID"),
+            @JoinColumn(name = "VOUT")
+        }
+    )
+    @MapKeyJoinColumn(name = "OWNER", referencedColumnName = "ID")
+    @Column(name = "AMOUNT")
+    private Map<Account, Long> shares;
 
     /**
      * Identifies any lock on the deposit for
@@ -54,41 +74,23 @@ public class Deposit
      * spend the same UTXO when withdrawing.
      */
     @ManyToOne
+    @JoinColumn(name = "WITHDRAW_LOCK", referencedColumnName = "TXID")
     private WithdrawRequest withdrawLock;
-
-    /**
-     * Create a new deposit initially owned solely
-     * by a single owner.
-     * 
-     * @param TXID The blockchain transaction ID.
-     * @param vout The transaction output index corresponding to this UTXO.
-     * @param total The total number of sats received in the transaction.
-     * @param owner The sole owner of this deposit.
-     */
-    public Deposit(String TXID, int vout, long total, Account owner)
-    {
-        this.TXID = TXID;
-        this.vout = vout;
-        this.total = total;
-        this.distribution = new HashMap<>();
-        withdrawLock = null;
-        distribution.put(owner, total);
-    }
 
     /**
      * Save transaction details for player deposits.
      * 
      * @param TXID The blockchain transaction ID.
+     * @param vout The vout index.
      * @param total The total number of sats received in the transaction.
-     * @param ownership How the received sats should be distributed across accounts.
      */
-    public Deposit(String TXID, int vout, long total, Map<Account, Long> ownership)
+    public Deposit(String TXID, int vout, long total)
     {
         this.TXID = TXID;
         this.vout = vout;
         this.total = total;
+        this.shares = new HashMap<>();
         withdrawLock = null;
-        this.distribution = new HashMap<>(ownership);
     }
 
     /**
@@ -139,40 +141,40 @@ public class Deposit
      */
     public Set<Account> getOwners()
     {
-        return distribution.keySet();
+        return shares.keySet();
     }
 
     /**
-     * Returns the number of sats in this deposit
-     * allocated to the given account.
+     * Return the share an account has over this deposit.
      * 
-     * @param account The account to lookup.
-     * @return The sats belonging to this account.
+     * @param account The account owning a share.
+     * @return This account's share in the deposit.
      */
-    public long getDistribution(Account account)
+    public long getShare(Account account)
     {
-        return distribution.getOrDefault(account, 0L);
+        return shares.getOrDefault(account, 0L);
     }
 
     /**
-     * Sets the number of sats in this deposit
-     * allocated to the given account.
+     * Set the share an account has over this deposit.
      * <p>
-     * If an amount <= 0 is provided then the
-     * account will be removed from this deposit's records.
+     * The account will be removed from this deposit
+     * if the share is <= 0.
      * 
-     * @param account The account associated with the new amount.
-     * @param amount The sats belonging to this account.
+     * @param deposit The account to associate with the share.
+     * @param amount How much of this deposit is owned by the account.
      */
-    public void setDistribution(Account account, long amount)
+    public void setShare(Account account, long amount)
     {
         if (amount > 0L)
         {
-            distribution.put(account, amount);
+            shares.put(account, amount);
+            account.associateDeposit(this);
         }
         else
         {
-            distribution.remove(account);
+            shares.remove(account);
+            account.removeDeposit(this);
         }
     }
 

@@ -5,7 +5,7 @@ import java.util.List;
 
 import com.mshernandez.vertconomy.core.InvalidSatAmountException;
 import com.mshernandez.vertconomy.core.Vertconomy;
-import com.mshernandez.vertconomy.database.WithdrawRequest;
+import com.mshernandez.vertconomy.core.withdraw.WithdrawRequest;
 
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -66,7 +66,7 @@ public class CommandWithdraw implements CommandExecutor, TabCompleter
                 else
                 {
                     // Broadcast TX
-                    String txid = vertconomy.completeWithdraw(request);
+                    String txid = vertconomy.completePlayerWithdrawRequest(player);
                     if (txid == null)
                     {
                         BaseComponent[] component = new ComponentBuilder()
@@ -117,7 +117,7 @@ public class CommandWithdraw implements CommandExecutor, TabCompleter
                 }
                 else
                 {
-                    vertconomy.cancelWithdraw(request);
+                    vertconomy.cancelPlayerWithdrawRequest(player);
                     BaseComponent[] component = new ComponentBuilder()
                         .append("The withdraw request has been canceled.").color(ChatColor.YELLOW)
                         .create();
@@ -171,7 +171,7 @@ public class CommandWithdraw implements CommandExecutor, TabCompleter
                     }
                 }
                 // Withdraw Amount
-                WithdrawRequest request = vertconomy.initiateWithdraw(player, args[1], satAmount);
+                WithdrawRequest request = vertconomy.initiatePlayerWithdrawRequest(player, args[1], satAmount);
                 if (request == null)
                 {
                     BaseComponent[] component = new ComponentBuilder()

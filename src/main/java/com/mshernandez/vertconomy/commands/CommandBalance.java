@@ -3,7 +3,6 @@ package com.mshernandez.vertconomy.commands;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.mshernandez.vertconomy.core.Pair;
 import com.mshernandez.vertconomy.core.SatAmountFormat;
 import com.mshernandez.vertconomy.core.Vertconomy;
 
@@ -49,7 +48,7 @@ public class CommandBalance implements CommandExecutor, TabCompleter
             OfflinePlayer player;
             if (otherPlayerLookup)
             {
-                player = Bukkit.getOfflinePlayer(args[0]);
+                player = Bukkit.getPlayer(args[0]);
                 if (!player.hasPlayedBefore())
                 {
                     BaseComponent[] component = new ComponentBuilder()
@@ -64,7 +63,6 @@ public class CommandBalance implements CommandExecutor, TabCompleter
             {
                 player = (Player) sender;
             }
-            Pair<Long, Long> balances = vertconomy.getPlayerBalances(player);
             ComponentBuilder cb = new ComponentBuilder();
             if (otherPlayerLookup)
             {
@@ -72,11 +70,12 @@ public class CommandBalance implements CommandExecutor, TabCompleter
                     .append("'s ").color(ChatColor.GOLD);
             }
             cb.append("Balance: ").color(ChatColor.GOLD)
-                .append(formatter.format(balances.getKey())).color(ChatColor.GREEN);
-            if (balances.getVal() != 0L)
+                .append(formatter.format(vertconomy.getPlayerBalance(player))).color(ChatColor.GREEN);
+            long unconfirmedBalance = vertconomy.getPlayerUnconfirmedBalance(player);
+            if (unconfirmedBalance != 0L)
             {
                 cb.append(" (Pending: ").color(ChatColor.GRAY)
-                    .append(formatter.format(balances.getVal())).color(ChatColor.GRAY)
+                    .append(formatter.format(unconfirmedBalance)).color(ChatColor.GRAY)
                     .append(")").color(ChatColor.GRAY);
             }
             sender.spigot().sendMessage(cb.create());
@@ -107,7 +106,7 @@ public class CommandBalance implements CommandExecutor, TabCompleter
         List<String> options = new ArrayList<>();
         if (args.length == 1 && sender.hasPermission(PERMISSION_VIEW_OTHER_BALANCES))
         {
-            for (OfflinePlayer p : Bukkit.getOfflinePlayers())
+            for (OfflinePlayer p : Bukkit.getOnlinePlayers())
             {
                 options.add(p.getName());
             }

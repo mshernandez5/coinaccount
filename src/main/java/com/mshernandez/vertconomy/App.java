@@ -11,16 +11,19 @@ import com.mshernandez.vertconomy.commands.CommandDeposit;
 import com.mshernandez.vertconomy.commands.CommandVertconomy;
 import com.mshernandez.vertconomy.commands.CommandWithdraw;
 import com.mshernandez.vertconomy.core.CoinScale;
+import com.mshernandez.vertconomy.core.JPAUtil;
 import com.mshernandez.vertconomy.core.VaultAdapter;
 import com.mshernandez.vertconomy.core.Vertconomy;
 import com.mshernandez.vertconomy.core.VertconomyBuilder;
-import com.mshernandez.vertconomy.database.JPAUtil;
+import com.mshernandez.vertconomy.tasks.CheckDepositTask;
 import com.mshernandez.vertconomy.wallet_interface.RPCWalletConnection;
 
+import org.bukkit.Bukkit;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.ServicePriority;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.scheduler.BukkitTask;
 import org.h2.tools.Server;
 
 import net.milkbowl.vault.economy.Economy;
@@ -30,6 +33,12 @@ import net.milkbowl.vault.economy.Economy;
  */
 public class App extends JavaPlugin
 {
+    // How Often To Check For New Deposits, In Ticks
+    private static final long DEPOSIT_CHECK_INTERVAL = 200L; // Approximately 10 Seconds
+
+    // Periodically Check For New Deposits
+    private BukkitTask depositCheckTask;
+
     private static Server webServer = null;
 
     @Override
@@ -64,7 +73,7 @@ public class App extends JavaPlugin
 
         // Grab Currency Information
         String symbol = configuration.getString("symbol", "VTC");
-        String baseUnit = configuration.getString("base-unit", "sat");
+        String baseUnitSymbol = configuration.getString("base-unit", "sat");
         CoinScale scale;
         switch (configuration.getString("scale", "base"))
         {
@@ -130,7 +139,7 @@ public class App extends JavaPlugin
             .setMinChangeConfirmations(minChangeConfirmations)
             .setTargetBlockTime(targetBlockTime)
             .setSymbol(symbol)
-            .setBaseUnit(baseUnit)
+            .setBaseUnitSymbol(baseUnitSymbol)
             .setScale(scale)
             .build();
 
@@ -153,12 +162,18 @@ public class App extends JavaPlugin
         getCommand("deposit").setExecutor(new CommandDeposit(vertconomy));
         getCommand("withdraw").setExecutor(new CommandWithdraw(vertconomy));
         getCommand("vertconomy").setExecutor(new CommandVertconomy(vertconomy));
+
+        // Register Tasks
+        depositCheckTask = Bukkit.getScheduler()
+            .runTaskTimer(this, new CheckDepositTask(vertconomy), DEPOSIT_CHECK_INTERVAL, DEPOSIT_CHECK_INTERVAL);
     }
 
     @Override
     public void onDisable()
     {
         getLogger().info("Stopping Vertconomy...");
+        // End Running Tasks
+        depositCheckTask.cancel();
         // Close H2 Web Console
         try
         {

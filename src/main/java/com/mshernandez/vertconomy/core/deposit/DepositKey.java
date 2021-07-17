@@ -1,4 +1,4 @@
-package com.mshernandez.vertconomy.database;
+package com.mshernandez.vertconomy.core.deposit;
 
 import java.io.Serializable;
 import java.util.Objects;

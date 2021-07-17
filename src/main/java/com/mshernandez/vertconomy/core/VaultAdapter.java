@@ -43,19 +43,19 @@ public class VaultAdapter implements Economy
     @Override
     public String currencyNamePlural()
     {
-        return vertconomy.getSymbol();
+        return vertconomy.getFormatter().getSymbol();
     }
 
     @Override
     public String currencyNameSingular()
     {
-        return vertconomy.getSymbol();
+        return vertconomy.getFormatter().getSymbol();
     }
 
     @Override
     public int fractionalDigits()
     {
-        return vertconomy.fractionalDigits();
+        return vertconomy.getFormatter().getNumFractionalDigits();
     }
 
     @Override

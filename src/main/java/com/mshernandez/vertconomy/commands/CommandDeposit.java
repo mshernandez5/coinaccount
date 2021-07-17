@@ -49,7 +49,7 @@ public class CommandDeposit implements CommandExecutor
             BaseComponent[] component = new ComponentBuilder()
                 .append("\n")
                 .append("Deposit ").color(ChatColor.AQUA)
-                .append(vertconomy.getSymbol()).color(ChatColor.GREEN)
+                .append(vertconomy.getFormatter().getSymbol()).color(ChatColor.GREEN)
                 .append("\n").append("1) ").reset()
                 .append("Deposit To: ").color(ChatColor.AQUA)
                 .append(addressMsg).color(ChatColor.GREEN)

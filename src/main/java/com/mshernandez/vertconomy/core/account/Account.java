@@ -1,28 +1,33 @@
-package com.mshernandez.vertconomy.database;
+package com.mshernandez.vertconomy.core.account;
 
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 
+import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.Id;
 import javax.persistence.Inheritance;
 import javax.persistence.InheritanceType;
 import javax.persistence.ManyToMany;
+import javax.persistence.Table;
 
+import com.mshernandez.vertconomy.core.deposit.Deposit;
 /**
  * A class to represent a general account,
  * compatible with Hibernate for persistence in a
  * relational database.
  */
 @Entity
+@Table(name = "ACCOUNT")
 @Inheritance(strategy = InheritanceType.SINGLE_TABLE)
 public class Account
 {
     @Id
-    private UUID accountUUID;
+    @Column(name = "ID")
+    private UUID id;
 
     /**
      * The set of deposits actively contributing
@@ -42,9 +47,9 @@ public class Account
      * @param playerUUID The player UUID to associate with the account.
      * @param returnAddress A wallet refund address, required.
      */
-    public Account(UUID accountUUID)
+    public Account(UUID id)
     {
-        this.accountUUID = accountUUID;
+        this.id = id;
         balances = new HashSet<>();
     }
 
@@ -64,7 +69,7 @@ public class Account
      */
     public UUID getAccountUUID()
     {
-        return accountUUID;
+        return id;
     }
 
     /**
@@ -109,9 +114,9 @@ public class Account
     public long calculateBalance()
     {
         long balance = 0L;
-        for (Deposit d : balances)
+        for (Deposit deposit : balances)
         {
-            balance += d.getDistribution(this);
+            balance += deposit.getShare(this);
         }
         return balance;
     }
@@ -124,11 +129,11 @@ public class Account
     public long calculateWithdrawableBalance()
     {
         long balance = 0L;
-        for (Deposit d : balances)
+        for (Deposit deposit : balances)
         {
-            if (!d.hasWithdrawLock())
+            if (!deposit.hasWithdrawLock())
             {
-                balance += d.getDistribution(this);
+                balance += deposit.getShare(this);
             }
         }
         return balance;
@@ -137,7 +142,7 @@ public class Account
     @Override
     public int hashCode()
     {
-        return Objects.hash(accountUUID);
+        return Objects.hash(id);
     }
 
     @Override
@@ -147,12 +152,12 @@ public class Account
         {
             return false;
         }
-        return accountUUID.equals(((Account) other).accountUUID);
+        return id.equals(((Account) other).id);
     }
 
     @Override
     public String toString()
     {
-        return String.format("Account: %s, Balance: %d", accountUUID.toString(), calculateBalance());
+        return String.format("Account: %s, Balance: %d", id.toString(), calculateBalance());
     }
 }

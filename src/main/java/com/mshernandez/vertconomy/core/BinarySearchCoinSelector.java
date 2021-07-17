@@ -35,9 +35,8 @@ public class BinarySearchCoinSelector<T> implements CoinSelector<T>
      * a large number of inputs are used.
      * <p>
      * 0 indicates the algorithm will never rewind results
-     * even if a better solution is available, turning this
-     * into a greedy method. In this case, the worst-case
-     * complexity is O(n*log(n)).
+     * even if a better solution is available.
+     * In this case, the worst-case complexity is O(n*log(n)).
      */
     private int maxRewindSetting;
 

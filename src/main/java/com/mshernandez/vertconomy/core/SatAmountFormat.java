@@ -118,4 +118,39 @@ public class SatAmountFormat
     {
         return amount / (double) scale.SAT_SCALE;
     }
+
+    /**
+     * Get the absolute sat amount corresponding
+     * to the given relative scaled amount according to
+     * the current currency settings.
+     * 
+     * @param amount The relative amount.
+     * @return The absolute amount in sats.
+     */
+    public long absoluteAmount(double amount)
+    {
+        // Must Round Fractional Values Up, No Partial Sats
+        return (long) (Math.ceil(amount * scale.SAT_SCALE));
+    }
+
+    /**
+     * How many fractional digits should be displayed
+     * based on the coin scale being used.
+     * 
+     * @return The proper number of fractional digits.
+     */
+    public int getNumFractionalDigits()
+    {
+        return scale.NUM_VALID_FRACTION_DIGITS;
+    }
+
+    /**
+     * Get the coin symbol, ex. VTC.
+     * 
+     * @return The coin symbol.
+     */
+    public String getSymbol()
+    {
+        return symbol;
+    }
 }

@@ -1,12 +1,17 @@
-package com.mshernandez.vertconomy.database;
+package com.mshernandez.vertconomy.core.account;
 
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 
+import javax.persistence.CollectionTable;
+import javax.persistence.Column;
 import javax.persistence.ElementCollection;
 import javax.persistence.Entity;
+import javax.persistence.JoinColumn;
 import javax.persistence.OneToOne;
+
+import com.mshernandez.vertconomy.core.withdraw.WithdrawRequest;
 
 /**
  * A class to represent an account capable of
@@ -20,6 +25,7 @@ public class DepositAccount extends Account
      * A wallet address assigned to this account
      * to receive user deposits.
      */
+    @Column(name = "DEPOSIT_ADDRESS")
     private String depositAddress;
 
     /**
@@ -27,6 +33,7 @@ public class DepositAccount extends Account
      * account balances in the event of a server
      * shutdown or user ban.
      */
+    @Column(name = "RETURN_ADDRESS")
     private String returnAddress;
 
     /**
@@ -34,6 +41,7 @@ public class DepositAccount extends Account
      * deposits the user has made but have not yet
      * met the minimum number of confirmations.
      */
+    @Column(name = "PENDING_BALANCE")
     private long pendingBalance;
 
     /**
@@ -41,14 +49,21 @@ public class DepositAccount extends Account
      * created but not yet confirmed.
      */
     @OneToOne
+    @JoinColumn(name = "WITHDRAW_REQUEST", referencedColumnName = "TXID")
     private WithdrawRequest withdrawRequest;
 
     /**
      * Remembers transactions that have been applied to
      * the account, regardless of whether their balances
-     * are still available or not.
+     * are still available to this account or not.
      */
     @ElementCollection
+    @CollectionTable
+    (
+        name = "PROCESSED_DEPOSITS",
+        joinColumns = @JoinColumn(name = "DEPOSITOR", referencedColumnName = "ID")
+    )
+    @Column(name = "TXID")
     private Set<String> processedDepositIDs;
 
     /**
@@ -158,13 +173,24 @@ public class DepositAccount extends Account
 
     /**
      * Get a set of transaction IDs corresponding
-     * to blockchain deposits to this account which
+     * to account deposits which
      * have already been processed.
      * 
      * @return Set of previously processed deposit IDs.
      */
     public Set<String> getProcessedDepositIDs()
     {
-        return processedDepositIDs;
+        return new HashSet<>(processedDepositIDs);
+    }
+
+    /**
+     * Define the set of transaction IDs which should
+     * be remembered as already processed.
+     * 
+     * @param newIds Set of previously processed deposit IDs.
+     */
+    public void setProcessedDepositIDs(Set<String> newIds)
+    {
+        processedDepositIDs = new HashSet<>(newIds);
     }
 }

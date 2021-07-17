@@ -1,4 +1,4 @@
-package com.mshernandez.vertconomy.database;
+package com.mshernandez.vertconomy.core;
 
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;

@@ -1,36 +1,35 @@
 package com.mshernandez.vertconomy.core;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 
 import javax.persistence.EntityManager;
 
-import com.mshernandez.vertconomy.database.Account;
-import com.mshernandez.vertconomy.database.Deposit;
-import com.mshernandez.vertconomy.database.JPAUtil;
-import com.mshernandez.vertconomy.database.WithdrawRequest;
-import com.mshernandez.vertconomy.database.DepositAccount;
+import com.mshernandez.vertconomy.core.account.Account;
+import com.mshernandez.vertconomy.core.account.AccountRepository;
+import com.mshernandez.vertconomy.core.account.DepositAccount;
+import com.mshernandez.vertconomy.core.deposit.DepositHelper;
+import com.mshernandez.vertconomy.core.transfer.TransferHelper;
+import com.mshernandez.vertconomy.core.withdraw.WithdrawHelper;
+import com.mshernandez.vertconomy.core.withdraw.WithdrawRequest;
 import com.mshernandez.vertconomy.wallet_interface.RPCWalletConnection;
 import com.mshernandez.vertconomy.wallet_interface.ResponseError;
 import com.mshernandez.vertconomy.wallet_interface.WalletRequestException;
-import com.mshernandez.vertconomy.wallet_interface.requests.RawTransactionInput;
-import com.mshernandez.vertconomy.wallet_interface.responses.UnspentOutputResponse;
-import com.mshernandez.vertconomy.wallet_interface.responses.UnspentOutputResponse.UnspentOutput;
 
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
+import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
-import org.bukkit.scheduler.BukkitTask;
+
+import net.md_5.bungee.api.ChatColor;
+import net.md_5.bungee.api.chat.BaseComponent;
+import net.md_5.bungee.api.chat.ComponentBuilder;
 
 /**
  * The core of the plugin, the duct tape
  * bonding Minecraft and Vertcoin together.
+ * <p>
+ * Delegates most responsibilities to helper
+ * objects.
  */
 public class Vertconomy
 {
@@ -43,66 +42,54 @@ public class Vertconomy
     // Account To Hold Funds For Pending Withdrawals & Receive Change Transactions
     private static final UUID WITHDRAW_ACCOUNT_UUID = UUID.fromString("884b2231-6c7a-4db5-b022-1cc5aeb949a8");
 
-    // How Often To Check For New Deposits, In Ticks
-    private static final long DEPOSIT_CHECK_INTERVAL = 200L; // Approximately 10 Seconds
-
-    // Plugin For Reference
+    // Plugin
     private Plugin plugin;
-    
-    // RPC Wallet API
-    private RPCWalletConnection wallet;
-    private int minDepositConfirmations;
-    private int minChangeConfirmations;
-    private int targetBlockTime;
-
-    // Currency Information
-    private String symbol;
-    private String baseUnitSymbol;
-    private CoinScale scale;
-
-    // Sat Amount Formatter
-    private SatAmountFormat formatter;
 
     // Database Persistence
     EntityManager entityManager;
+    
+    // RPC Wallet API - Connection To The Wallet
+    private RPCWalletConnection wallet;
 
-    // Periodically Check For New Deposits
-    BukkitTask depositCheckTask;
+    // Sat Amount Formatter - Utilities To Format & Parse Sat Amounts
+    private SatAmountFormat formatter;
+
+    // Account Repository - Lookup & Create Accounts
+    private AccountRepository accountRepository;
+
+    // Deposit Helper - Processes UTXOs Into Deposits
+    private DepositHelper depositHelper;
+
+    // Withdraw Helper - Helps Withdraw Deposit Balances
+    private WithdrawHelper withdrawHelper;
+
+    // Transfer Helper - Helps Transfer Balances Between Accounts
+    private TransferHelper transferHelper;
 
     /**
-     * Create an uninitialized Vertconomy instance.
-     * Must run initialize() after setting all fields to
-     * non-default values.
+     * Please use <code>VertconomyBuilder</code> to create Vertconomy instances.
+     * <p>
+     * Create an instance of Vertconomy.
      */
-    Vertconomy()
+    Vertconomy(Plugin plugin, RPCWalletConnection wallet,
+               int minDepositConfirmations, int minChangeConfirmations, int targetBlockTime,
+               String symbol, String baseUnitSymbol, CoinScale scale)
     {
-        // For Builder, Not For Direct Usage
-    }
-
-    /**
-     * Initialize this instance, must be done before
-     * using Vertconomy.
-     */
-    void initialize()
-    {
-        // Create Formatter
-        formatter = new SatAmountFormat(scale, symbol, baseUnitSymbol);
+        // Store Properties
+        this.plugin = plugin;
+        this.wallet = wallet;
         // Get Entity Manager For Persistence
         entityManager = JPAUtil.getEntityManager();
-        // Register Task To Check For New Deposits
-        depositCheckTask = Bukkit.getScheduler()
-            .runTaskTimer(plugin, new CheckDepositTask(this), DEPOSIT_CHECK_INTERVAL, DEPOSIT_CHECK_INTERVAL);
-    }
-
-    /**
-     * How many fractional digits should be displayed
-     * based on the coin scale being used.
-     * 
-     * @return The proper number of fractional digits.
-     */
-    public int fractionalDigits()
-    {
-        return scale.NUM_VALID_FRACTION_DIGITS;
+        // Initialize Account Repository
+        accountRepository = new AccountRepository(plugin.getLogger(), wallet, entityManager);
+        // Initialize Helper Objects
+        depositHelper = new DepositHelper(plugin.getLogger(), wallet, entityManager,accountRepository,
+                                          WITHDRAW_ACCOUNT_UUID, minDepositConfirmations,
+                                          minChangeConfirmations);
+        withdrawHelper = new WithdrawHelper(plugin.getLogger(), wallet, entityManager, accountRepository,
+                                            WITHDRAW_ACCOUNT_UUID, targetBlockTime);
+        transferHelper = new TransferHelper(plugin.getLogger(), entityManager);
+        formatter = new SatAmountFormat(scale, symbol, baseUnitSymbol);
     }
 
     /**
@@ -127,517 +114,38 @@ public class Vertconomy
     }
 
     /**
-     * Gets a deposit account or creates a new one
-     * if one does not already exist.
-     * 
-     * @param accountUUID The account UUID.
-     * @return A deposit account reference.
-     */
-    DepositAccount getOrCreateUserAccount(UUID accountUUID)
-    {
-        DepositAccount account = null;
-        try
-        {
-            entityManager.getTransaction().begin();
-            account = entityManager.find(DepositAccount.class, accountUUID);
-            if (account == null)
-            {
-                plugin.getLogger().info("Creating New Account For User: " + accountUUID);
-                String depositAddress = wallet.getNewAddress(accountUUID.toString());
-                account = new DepositAccount(accountUUID, depositAddress);
-                entityManager.persist(account);
-            }
-            entityManager.getTransaction().commit();
-        }
-        catch (Exception e)
-        {
-            plugin.getLogger().warning("Failed To Get/Create Account: " + e.getMessage());
-            entityManager.getTransaction().rollback();
-        }
-        return account;
-    }
-
-    /**
-     * Gets a holding account or creates a new one
-     * if one does not already exist.
-     * 
-     * @param accountUUID The account UUID.
-     * @return A holding account reference.
-     */
-    Account getOrCreateHoldingAccount(UUID accountUUID)
-    {
-        Account account = null;
-        try
-        {
-            entityManager.getTransaction().begin();
-            account = entityManager.find(Account.class, accountUUID);
-            if (account == null)
-            {
-                plugin.getLogger().info("Initializing Holding Account: " + accountUUID);
-                account = new Account(accountUUID);
-                entityManager.persist(account);
-            }
-            entityManager.getTransaction().commit();
-        }
-        catch (Exception e)
-        {
-            plugin.getLogger().warning("Failed To Get/Create Account: " + e.getMessage());
-            entityManager.getTransaction().rollback();
-        }
-        return account;
-    }
-
-    /**
-     * Return the useable balance held by the player's
-     * account.
-     * 
-     * @param player The player associated with the account.
-     * @return The balance associated with the account.
-     */
-    public long getPlayerBalance(OfflinePlayer player)
-    {
-        DepositAccount playerAccount = getOrCreateUserAccount(player.getUniqueId());
-        return playerAccount == null ? 0L : playerAccount.calculateBalance();
-    }
-
-    /**
-     * Return the total unconfirmed balances associated
-     * with the player's account.
-     * 
-     * @param player The player associated with the account.
-     * @return Unconfirmed deposit balances for the account.
-     */
-    public long getPlayerUnconfirmedBalance(OfflinePlayer player)
-    {
-        DepositAccount playerAccount = getOrCreateUserAccount(player.getUniqueId());
-        return playerAccount == null ? 0L : playerAccount.getPendingBalance();
-    }
-
-    /**
-     * Return both the usable and unconfirmed balances
-     * associated with a player's account.
-     * 
-     * @param player The player associated with the account.
-     * @return The usable and unconfirmed balances.
-     */
-    public Pair<Long, Long> getPlayerBalances(OfflinePlayer player)
-    {
-        DepositAccount playerAccount = getOrCreateUserAccount(player.getUniqueId());
-        return playerAccount == null ? new Pair<Long,Long>(0L, 0L)
-            : new Pair<Long, Long>(playerAccount.calculateBalance(), playerAccount.getPendingBalance());
-    }
-
-    /**
-     * Get the public wallet address allowing the player to
-     * deposit funds into their account.
-     * 
-     * @param player The player associated with the account.
-     * @return The deposit address associated with the account.
-     */
-    public String getPlayerDepositAddress(OfflinePlayer player)
-    {
-        DepositAccount playerAccount = getOrCreateUserAccount(player.getUniqueId());
-        return playerAccount == null ? "ERROR" : playerAccount.getDepositAddress();
-    }
-
-    /**
-     * Return any active withdraw request initiated by the user.
-     * 
-     * @param player The player that initiated the request.
-     * @return Any active withdraw request initiated by the user.
-     */
-    public WithdrawRequest getPlayerWithdrawRequest(OfflinePlayer player)
-    {
-        DepositAccount playerAccount = getOrCreateUserAccount(player.getUniqueId());
-        return playerAccount == null ? null : playerAccount.getWithdrawRequest();
-    }
-
-    /**
-     * Register new deposits for the given user account.
+     * Check for any new unprocessed UTXOs.
+     * Register new UTXOs and allocate their
+     * funds appropriately.
      * <p>
-     * Returns newly confirmed balances as well as pending
-     * deposits.
-     * 
-     * @param account The account to check for new deposits.
-     * @return Balance gained from newly registered deposits, and unconfirmed deposit balances.
+     * Processes both user deposits and withdraw
+     * transaction change.
      */
-    Pair<Long, Long> registerNewDeposits(DepositAccount account)
+    public void checkForNewDeposits()
     {
-        // Keep Track Of New Balances & Pending Unconfirmed Balances
-        long addedBalance = 0L;
-        long unconfirmedBalance = 0L;
-        try
+        // Don't Attempt To Check For Deposits If Wallet Unreachable
+        ResponseError error = checkWalletConnection();
+        if (error != null)
         {
-            entityManager.getTransaction().begin();
-            // Get Wallet Transactions For Addresses Associated With Account
-            List<UnspentOutputResponse.UnspentOutput> unspentOutputs = wallet.getUnspentOutputs(account.getDepositAddress());
-            // Remember Which Transactions Have Already Been Accounted For
-            Set<String> oldTXIDs = account.getProcessedDepositIDs();
-            Set<String> unspentTXIDs = new HashSet<>();
-            // Check For New Unspent Outputs Deposited To Account
-            for (UnspentOutput output : unspentOutputs)
-            {
-                if (output.confirmations >= minDepositConfirmations
-                    && output.spendable && output.safe && output.solvable)
-                {
-                    if (!oldTXIDs.contains(output.txid))
-                    {
-                        long depositAmount = output.amount.satAmount;
-                        // New Deposit Transaction Initially 100% Owned By Depositing Account
-                        Deposit deposit = new Deposit(output.txid, output.vout, depositAmount, account);
-                        entityManager.persist(deposit);
-                        // Associate With Account
-                        account.associateDeposit(deposit);
-                        addedBalance += depositAmount;
-                    }
-                    unspentTXIDs.add(output.txid);
-                }
-                else
-                {
-                    unconfirmedBalance += output.amount.satAmount;
-                }
-            }
-            account.getProcessedDepositIDs().clear();
-            account.getProcessedDepositIDs().addAll(unspentTXIDs);
-            account.setPendingBalance(unconfirmedBalance);
-            entityManager.merge(account);
-            entityManager.getTransaction().commit();
+            plugin.getLogger().warning("Wallet Request Error, Can't Check For Deposits: " + error.message);
+            return;
         }
-        catch (Exception e)
+        // Only Check Deposits For Online Players
+        for (Player player : Bukkit.getOnlinePlayers())
         {
-            plugin.getLogger().warning("Failed To Get Transactions: " + e.getMessage());
-            entityManager.getTransaction().rollback();
-            return new Pair<Long, Long>(0L, 0L);
-        }
-        return new Pair<Long, Long>(addedBalance, unconfirmedBalance);
-    }
-
-    /**
-     * Register change transactions from recent withdrawals.
-     * <p>
-     * Associate and distribute change among the proper owners.
-     */
-    void registerChangeDeposits()
-    {
-        DepositAccount account = getOrCreateUserAccount(WITHDRAW_ACCOUNT_UUID);
-        try
-        {
-            entityManager.getTransaction().begin();
-            // Get Wallet Transactions For Addresses Associated With Account
-            List<UnspentOutputResponse.UnspentOutput> unspentOutputs = wallet.getUnspentOutputs(account.getDepositAddress());
-            // Remember Which Transactions Have Already Been Accounted For
-            Set<String> oldTXIDs = account.getProcessedDepositIDs();
-            Set<String> unspentTXIDs = new HashSet<>();
-            // Check For New Unspent Outputs Deposited To Account
-            for (UnspentOutput output : unspentOutputs)
+            DepositAccount account = accountRepository.getOrCreateUserAccount(player.getUniqueId());
+            long addedBalance = depositHelper.registerNewDeposits(account);
+            if (addedBalance != 0L)
             {
-                if (output.confirmations >= minChangeConfirmations
-                    && output.spendable && output.safe && output.solvable)
-                {
-                    if (!oldTXIDs.contains(output.txid))
-                    {
-                        // Look For Withdraw Request The Transaction Was Created From
-                        WithdrawRequest withdrawRequest = entityManager.find(WithdrawRequest.class, output.txid);
-                        if (withdrawRequest != null)
-                        {
-                            Map<Account, Long> changeDistribution = new HashMap<>();
-                            Set<Deposit> inputs = withdrawRequest.getInputs();
-                            for (Deposit d : inputs)
-                            {
-                                for (Account a : d.getOwners())
-                                {
-                                    if (!a.equals(account))
-                                    {
-                                        changeDistribution.put(a, changeDistribution.getOrDefault(a, 0L) + d.getDistribution(a));
-                                    }
-                                    a.removeDeposit(d);
-                                }
-                                entityManager.remove(d);
-                            }
-                            Deposit deposit = new Deposit(output.txid, output.vout, output.amount.satAmount, changeDistribution);
-                            entityManager.persist(deposit);
-                            for (Account a : deposit.getOwners())
-                            {
-                                a.associateDeposit(deposit);
-                                entityManager.merge(a);
-                            }
-                            entityManager.remove(withdrawRequest);
-                        }
-                    }
-                    unspentTXIDs.add(output.txid);
-                }
-            }
-            account.getProcessedDepositIDs().clear();
-            account.getProcessedDepositIDs().addAll(unspentTXIDs);
-            entityManager.merge(account);
-            entityManager.getTransaction().commit();
-        }
-        catch (Exception e)
-        {
-            plugin.getLogger().warning("Failed To Get Transactions: " + e.getMessage());
-            entityManager.getTransaction().rollback();
-        }
-    }
-
-    // Base Size + 2 Outputs (Destination & Change)
-    private static final int BASE_WITHDRAW_TX_SIZE = 10 + (34 * 2);
-    // Additional Size For Each Input (Including +1 Uncertainty Assuming Worst Case)
-    private static final int P2PKH_INPUT_VSIZE = 149;
-
-    /**
-     * Initiates a withdrawal that will not be sent to the network
-     * until player confirmation is received.
-     * 
-     * @param player The player initiating the withdrawal.
-     * @param destAddress The wallet address the player is attempting to withdraw to.
-     * @param amount The amount the player is attempting to withdraw, excluding fees. Use < 0 for all funds.
-     * @return An object holding withdraw details including determined fees, or null if the withdraw request failed.
-     */
-    public WithdrawRequest initiateWithdraw(OfflinePlayer player, String destAddress, long amount)
-    {
-        boolean withdrawAll = amount < 0L;
-        DepositAccount account = getOrCreateUserAccount(player.getUniqueId());
-        DepositAccount withdrawAccount = getOrCreateUserAccount(WITHDRAW_ACCOUNT_UUID);
-        long playerBalance = account.calculateBalance();
-        // Can't Withdraw If Player Does Not Have At Least Withdraw Amount
-        if (!withdrawAll && playerBalance < amount)
-        {
-            return null;
-        }
-        try
-        {
-            // Account For Fees
-            double feeRate = wallet.estimateSmartFee(targetBlockTime);
-            long inputFee = (long) Math.ceil(P2PKH_INPUT_VSIZE * feeRate);
-            // Attempt To Grab Inputs For Transaction
-            long fees = (long) Math.ceil(BASE_WITHDRAW_TX_SIZE * feeRate);
-            CoinSelector<Deposit> coinSelector;
-            if (withdrawAll)
-            {
-                coinSelector = new MaxAmountCoinSelector<>();
-            }
-            else
-            {
-                coinSelector = new BinarySearchCoinSelector<>();
-            }
-            Set<Deposit> inputDeposits = coinSelector.selectInputs(new WithdrawDepositShareEvaluator(account), account.getDeposits(), inputFee, amount);
-            if (inputDeposits == null)
-            {
-                return null;
-            }
-            fees += inputDeposits.size() * inputFee;
-            // TX Inputs
-            long totalInputValue = 0L;
-            long totalOwnedValue = 0L;
-            List<RawTransactionInput> txInputs = new ArrayList<>();
-            for (Deposit d : inputDeposits)
-            {
-                txInputs.add(new RawTransactionInput(d.getTXID(), d.getVout()));
-                totalInputValue += d.getTotal();
-                totalOwnedValue += d.getDistribution(account);
-            }
-            // TX Outputs
-            long withdrawAmount = withdrawAll ? (totalOwnedValue - fees) : amount;
-            long changeAmount = totalInputValue - (withdrawAmount + fees);
-            Map<String, Long> txOutputs = new HashMap<>();
-            txOutputs.put(destAddress, withdrawAmount);
-            if (changeAmount > 0L)
-            {
-                txOutputs.put(withdrawAccount.getDepositAddress(), changeAmount);
-            }
-            // Build TX
-            String txHex = wallet.createRawTransaction(txInputs, txOutputs);
-            txHex = wallet.signRawTransactionWithWallet(txHex).hex;
-            String withdrawTxid = wallet.decodeRawTransaction(txHex).txid;
-            // Save Records
-            long timestamp = System.currentTimeMillis();
-            WithdrawRequest request = new WithdrawRequest(withdrawTxid, account, inputDeposits, withdrawAmount, fees, txHex, timestamp);
-            // Save Request & Lock Input Deposits
-            entityManager.getTransaction().begin();
-            entityManager.persist(request);
-            long remainingHoldAmount = withdrawAmount + fees;
-            for (Deposit d : inputDeposits)
-            {
-                if (remainingHoldAmount != 0)
-                {
-                    long depositValue = d.getDistribution(account);
-                    if (depositValue <= remainingHoldAmount)
-                    {
-                        d.setDistribution(account, 0L);
-                        d.setDistribution(withdrawAccount, depositValue);
-                        account.removeDeposit(d);
-                        withdrawAccount.associateDeposit(d);
-                        remainingHoldAmount -= depositValue;
-                    }
-                    else
-                    {
-                        d.setDistribution(account, depositValue - remainingHoldAmount);
-                        d.setDistribution(withdrawAccount, remainingHoldAmount);
-                        remainingHoldAmount = 0L;
-                    }
-                }
-                d.setWithdrawLock(request);
-                entityManager.merge(d);
-            }
-            account.setWithdrawRequest(request);
-            entityManager.merge(account);
-            entityManager.merge(withdrawAccount);
-            entityManager.getTransaction().commit();
-            return request;
-        }
-        catch (Exception e)
-        {
-            entityManager.getTransaction().rollback();
-            return null;
-        }
-    }
-
-    /**
-     * Cancel the given withdraw request, restoring
-     * reserved funds to the owner and unlocking the
-     * deposits involved for future withdrawals.
-     * <p>
-     * SHOULD NOT BE USED ON A COMPLETED WITHDRAW REQUEST!
-     * 
-     * @param withdrawRequest The withdraw request to cancel.
-     */
-    public void cancelWithdraw(WithdrawRequest withdrawRequest)
-    {
-        DepositAccount withdrawAccount = getOrCreateUserAccount(WITHDRAW_ACCOUNT_UUID);
-        DepositAccount initiatorAccount = withdrawRequest.getAccount();
-        try
-        {
-            entityManager.getTransaction().begin();
-            Set<Deposit> lockedDeposits = withdrawRequest.getInputs();
-            for (Deposit deposit : lockedDeposits)
-            {
-                long lockedAmount = deposit.getDistribution(withdrawAccount);
-                long updatedAmount = deposit.getDistribution(initiatorAccount) + lockedAmount;
-                deposit.setDistribution(withdrawAccount, 0L);
-                deposit.setDistribution(initiatorAccount, updatedAmount);
-                deposit.setWithdrawLock(null);
-                deposit = entityManager.merge(deposit);
-                initiatorAccount.associateDeposit(deposit);
-                withdrawAccount.removeDeposit(deposit);
-            }
-            initiatorAccount.setWithdrawRequest(null);
-            entityManager.merge(initiatorAccount);
-            entityManager.merge(withdrawAccount);
-            entityManager.remove(withdrawRequest);
-            entityManager.getTransaction().commit();
-        }
-        catch (Exception e)
-        {
-            plugin.getLogger().info("Failed to cancel withdraw request!");
-            entityManager.getTransaction().rollback();
-        }
-    }
-
-    /**
-     * Signs & sends a pending withdraw transaction out to the network.
-     * 
-     * @param withdrawRequest The withdraw request made by the user.
-     * @return The TXID of the sent transaction, or null if there was an issue.
-     */
-    public String completeWithdraw(WithdrawRequest withdrawRequest)
-    {
-        String txid = null;
-        try
-        {
-            // Send Transaction
-            txid = wallet.sendRawTransaction(withdrawRequest.getTxHex());
-            // Clear Completed Request From Account
-            withdrawRequest.getAccount().setWithdrawRequest(null);
-            // If No Change Will Be Received From TX, Request Can Be Removed Immediately
-            DepositAccount withdrawAccount = getOrCreateUserAccount(WITHDRAW_ACCOUNT_UUID);
-            boolean change = false;
-            Set<Deposit> inputs = withdrawRequest.getInputs();
-            for (Deposit d : inputs)
-            {
-                // Only Remember Deposits Contributing To Change
-                if (d.getDistribution(withdrawAccount) == d.getTotal())
-                {
-                    withdrawAccount.removeDeposit(d);
-                    inputs.remove(d);
-                    entityManager.remove(d);
-                }
-                else
-                {
-                    change = true;
-                }
-            }
-            if (!change)
-            {
-                withdrawAccount.setWithdrawRequest(null);
-                entityManager.remove(withdrawRequest);
+                BaseComponent[] component = new ComponentBuilder()
+                    .append("[Vertconomy] Processed Deposits: ").color(ChatColor.BLUE)
+                    .append(formatter.format(addedBalance)).color(ChatColor.GREEN)
+                    .create();
+                player.spigot().sendMessage(component);
             }
         }
-        catch (Exception e)
-        {
-            if (txid == null)
-            {
-                txid = "ERROR";
-            }
-        }
-        return txid;
-    }
-
-    /**
-     * Transfer an amount from one account to another,
-     * internally redistributing ownership of the
-     * underlying deposits.
-     * 
-     * @param sender The sending account.
-     * @param receiver The receiving account.
-     * @param amount The amount to transfer, in sats.
-     * @return True if the transfer was successful.
-     */
-    boolean transferBalance(Account sender, Account receiver, long amount)
-    {
-        if (sender.calculateBalance() < amount)
-        {
-            plugin.getLogger().info(sender + " can't send " + amount + " to " + receiver);
-            return false;
-        }
-        try
-        {
-            entityManager.getTransaction().begin();
-            long remainingOwed = amount;
-            Iterator<Deposit> it = sender.getDeposits().iterator();
-            while (it.hasNext() && remainingOwed > 0L)
-            {
-                Deposit deposit = it.next();
-                long senderShare = deposit.getDistribution(sender);
-                long takenAmount;
-                if (senderShare <= remainingOwed)
-                {
-                    deposit.setDistribution(sender, 0L);
-                    deposit.setDistribution(receiver, deposit.getDistribution(receiver) + senderShare);
-                    deposit = entityManager.merge(deposit);
-                    it.remove();
-                    sender.removeDeposit(deposit);
-                    receiver.associateDeposit(deposit);
-                    takenAmount = senderShare;
-                }
-                else
-                {
-                    deposit.setDistribution(sender, senderShare - remainingOwed);
-                    deposit.setDistribution(receiver, deposit.getDistribution(receiver) + remainingOwed);
-                    deposit = entityManager.merge(deposit);
-                    receiver.associateDeposit(deposit);
-                    takenAmount = remainingOwed;
-                }
-                remainingOwed -= takenAmount;
-            }
-            entityManager.getTransaction().commit();
-            plugin.getLogger().info(sender + " successfully sent " + amount + " to " + receiver);
-        }
-        catch (Exception e)
-        {
-            plugin.getLogger().info(sender + " failed to send " + amount + " to " + receiver);
-            entityManager.getTransaction().rollback();
-        }
-        return true;
+        // Check For Change Deposits
+        depositHelper.registerChangeDeposits();
     }
 
     /**
@@ -665,15 +173,15 @@ public class Vertconomy
             plugin.getLogger().warning("Cannot Support Asynchronous Vault API Requests");
             return false;
         }
-        DepositAccount sender = getOrCreateUserAccount(player.getUniqueId());
-        Account receiver = getOrCreateHoldingAccount(TRANSFER_ACCOUNT_UUID);
+        DepositAccount sender = accountRepository.getOrCreateUserAccount(player.getUniqueId());
+        Account receiver = accountRepository.getOrCreateHoldingAccount(TRANSFER_ACCOUNT_UUID);
         // Can't Have Fractions Of Satoshi, Celing Function To Next Satoshi
-        long satAmount = (long) (Math.ceil(amount * scale.SAT_SCALE));
+        long satAmount = formatter.absoluteAmount(amount);
         if (satAmount < 0L)
         {
             return false;
         }
-        return transferBalance(sender, receiver, satAmount);
+        return transferHelper.transferBalance(sender, receiver, satAmount);
     }
 
     /**
@@ -693,132 +201,131 @@ public class Vertconomy
             plugin.getLogger().warning("Cannot Support Asynchronous Vault API Requests");
             return false;
         }
-        DepositAccount receiver = getOrCreateUserAccount(player.getUniqueId());
-        Account sender = getOrCreateHoldingAccount(TRANSFER_ACCOUNT_UUID);
+        DepositAccount receiver = accountRepository.getOrCreateUserAccount(player.getUniqueId());
+        Account sender = accountRepository.getOrCreateHoldingAccount(TRANSFER_ACCOUNT_UUID);
         // Can't Have Fractions Of Satoshi, Celing Function To Next Satoshi
-        long satAmount = (long) (Math.ceil(amount * scale.SAT_SCALE));
+        long satAmount = formatter.absoluteAmount(amount);
         if (satAmount < 0L)
         {
             return false;
         }
         satAmount = Math.min(satAmount, sender.calculateBalance()); // TODO: temporary
-        return transferBalance(sender, receiver, satAmount);
-    }
-
-    // Setters For Building An Instance (Not For Regular Use):
-
-    /**
-     * Set the plugin associated with this instance.
-     * 
-     * @param plugin The plugin associated with this instance.
-     */
-    void setPlugin(Plugin plugin)
-    {
-        this.plugin = plugin;
+        return transferHelper.transferBalance(sender, receiver, satAmount);
     }
 
     /**
-     * Set the wallet connection to use for this Vertconomy instance.
+     * Return the useable balance held by the player's
+     * account.
      * 
-     * @param wallet The wallet connection to use for this vertconomy instance.
+     * @param player The player associated with the account.
+     * @return The balance associated with the account.
      */
-    void setWallet(RPCWalletConnection wallet)
+    public long getPlayerBalance(OfflinePlayer player)
     {
-        this.wallet = wallet;
+        DepositAccount playerAccount = accountRepository.getOrCreateUserAccount(player.getUniqueId());
+        return playerAccount == null ? 0L : playerAccount.calculateBalance();
     }
 
     /**
-     * Set the minimum number of confirmations to
-     * consider received deposits valid.
+     * Return the withdrawable balance held by the player's
+     * account.
      * 
-     * @param minChangeConfirmations The minimum number of confirmations to consider deposits valid.
+     * @param player The player associated with the account.
+     * @return The withdrawable balance associated with the account.
      */
-    void setMinDepositConfirmations(int minDepositConfirmations)
+    public long getPlayerWithdrawableBalance(OfflinePlayer player)
     {
-        this.minDepositConfirmations = minDepositConfirmations;
+        DepositAccount playerAccount = accountRepository.getOrCreateUserAccount(player.getUniqueId());
+        return playerAccount == null ? 0L : playerAccount.calculateWithdrawableBalance();
     }
 
     /**
-     * Set the minimum number of confirmations to
-     * consider received change transactions valid.
+     * Return the total unconfirmed balances associated
+     * with the player's account.
      * 
-     * @param minChangeConfirmations The minimum number of confirmations to consider change transactions valid.
+     * @param player The player associated with the account.
+     * @return Unconfirmed deposit balances for the account.
      */
-    void setMinChangeConfirmations(int minChangeConfirmations)
+    public long getPlayerUnconfirmedBalance(OfflinePlayer player)
     {
-        this.minChangeConfirmations = minChangeConfirmations;
+        DepositAccount playerAccount = accountRepository.getOrCreateUserAccount(player.getUniqueId());
+        return playerAccount == null ? 0L : playerAccount.getPendingBalance();
     }
 
     /**
-     * Set the target number of blocks to confirm a withdrawal.
+     * Return both the usable and unconfirmed balances
+     * associated with a player's account.
      * 
-     * @param targetBlockTime The coin symbol.
+     * @param player The player associated with the account.
+     * @return The usable and unconfirmed balances.
      */
-    void setTargetBlockTime(int targetBlockTime)
+    /*public Pair<Long, Long> getPlayerBalances(OfflinePlayer player)
     {
-        this.targetBlockTime = targetBlockTime;
+        DepositAccount playerAccount = accountRepository.getOrCreateUserAccount(player.getUniqueId());
+        return playerAccount == null ? new Pair<Long,Long>(0L, 0L)
+            : new Pair<Long, Long>(playerAccount.calculateBalance(), playerAccount.getPendingBalance());
+    }*/
+
+    /**
+     * Get the public wallet address allowing the player to
+     * deposit funds into their account.
+     * 
+     * @param player The player associated with the account.
+     * @return The deposit address associated with the account.
+     */
+    public String getPlayerDepositAddress(OfflinePlayer player)
+    {
+        DepositAccount playerAccount = accountRepository.getOrCreateUserAccount(player.getUniqueId());
+        return playerAccount == null ? "ERROR" : playerAccount.getDepositAddress();
     }
 
     /**
-     * Set the coin symbol, ex. VTC.
+     * Return any active withdraw request initiated by the user.
      * 
-     * @param symbol The coin symbol.
+     * @param player The player that initiated the request.
+     * @return Any active withdraw request initiated by the user.
      */
-    void setSymbol(String symbol)
+    public WithdrawRequest getPlayerWithdrawRequest(OfflinePlayer player)
     {
-        this.symbol = symbol;
+        DepositAccount playerAccount = accountRepository.getOrCreateUserAccount(player.getUniqueId());
+        return playerAccount == null ? null : playerAccount.getWithdrawRequest();
     }
 
     /**
-     * Set base coin unit name, ex. sat.
+     * Initiate a withdraw request by the user.
      * 
-     * @param baseUnit The base unit.
+     * @param player The player that initiated the request.
+     * @param destAddress The address to withdraw to.
+     * @param amount The amount to withdraw.
+     * @return The created withdraw request.
      */
-    void setBaseUnitSymbol(String baseUnitSymbol)
+    public WithdrawRequest initiatePlayerWithdrawRequest(OfflinePlayer player, String destAddress, long amount)
     {
-        this.baseUnitSymbol = baseUnitSymbol;
+        DepositAccount playerAccount = accountRepository.getOrCreateUserAccount(player.getUniqueId());
+        return withdrawHelper.initiateWithdraw(playerAccount, destAddress, amount);
     }
 
     /**
-     * Set the scale to represent coin values with.
+     * Completes any active withdraw request initiated by the user.
      * 
-     * @param scale The scale to use.
+     * @param player The player that initiated the request.
+     * @return The TXID of the withdraw transaction.
      */
-    void setScale(CoinScale scale)
+    public String completePlayerWithdrawRequest(OfflinePlayer player)
     {
-        this.scale = scale;
-    }
-
-    // Getters For Outside Usage:
-
-    /**
-     * Get the plugin associated with this instance.
-     * 
-     * @return A plugin reference.
-     */
-    public Plugin getPlugin()
-    {
-        return plugin;
+        DepositAccount playerAccount = accountRepository.getOrCreateUserAccount(player.getUniqueId());
+        return withdrawHelper.completeWithdraw(playerAccount.getWithdrawRequest());
     }
 
     /**
-     * Get the coin symbol, ex. VTC.
+     * Cancels any active withdraw request initiated by the user.
      * 
-     * @return The coin symbol.
+     * @param player The player that initiated the request.
      */
-    public String getSymbol()
+    public void cancelPlayerWithdrawRequest(OfflinePlayer player)
     {
-        return symbol;
-    }
-
-    /**
-     * Get a configured formatter to format and parse sat amounts.
-     * 
-     * @return A formatter for this Vertconomy instance.
-     */
-    public SatAmountFormat getFormatter()
-    {
-        return formatter;
+        DepositAccount playerAccount = accountRepository.getOrCreateUserAccount(player.getUniqueId());
+        withdrawHelper.cancelWithdraw(playerAccount.getWithdrawRequest());
     }
 
     /**
@@ -829,7 +336,7 @@ public class Vertconomy
      */
     public int getMinDepositConfirmations()
     {
-        return minDepositConfirmations;
+        return depositHelper.getMinDepositConfirmations();
     }
 
     /**
@@ -840,17 +347,16 @@ public class Vertconomy
      */
     public int getMinChangeConfirmations()
     {
-        return minChangeConfirmations;
+        return depositHelper.getMinChangeConfirmations();
     }
 
     /**
-     * Get the target block time to process a
-     * withdrawal.
+     * Get a configured formatter to format and parse sat amounts.
      * 
-     * @return The target block time.
+     * @return A formatter for this Vertconomy instance.
      */
-    public int getTargetBlockTime()
+    public SatAmountFormat getFormatter()
     {
-        return targetBlockTime;
+        return formatter;
     }
 }

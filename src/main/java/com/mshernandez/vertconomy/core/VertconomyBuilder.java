@@ -21,7 +21,7 @@ public class VertconomyBuilder
     private int targetBlockTime;
 
     private String symbol;
-    private String baseUnit;
+    private String baseUnitSymbol;
     private CoinScale scale;
 
     /**
@@ -29,8 +29,6 @@ public class VertconomyBuilder
      */
     public VertconomyBuilder()
     {
-        // Create New Instance
-        instance = new Vertconomy();
         // Default Values (Invalid)
         plugin = null;
         wallet = null;
@@ -38,7 +36,7 @@ public class VertconomyBuilder
         minChangeConfirmations = -1;
         targetBlockTime = -1;
         symbol = null;
-        baseUnit = null;
+        baseUnitSymbol = null;
         scale = null;
     }
 
@@ -53,16 +51,9 @@ public class VertconomyBuilder
         {
             return null;
         }
-        instance.setPlugin(plugin);
-        instance.setWallet(wallet);
-        instance.setMinChangeConfirmations(minChangeConfirmations);
-        instance.setMinDepositConfirmations(minDepositConfirmations);
-        instance.setTargetBlockTime(targetBlockTime);
-        instance.setSymbol(symbol);
-        instance.setBaseUnitSymbol(baseUnit);
-        instance.setScale(scale);
-        instance.initialize();
-        return instance;
+        return new Vertconomy(plugin, wallet, minDepositConfirmations,
+                              minChangeConfirmations, targetBlockTime,
+                              symbol, baseUnitSymbol, scale);
     }
 
     /**
@@ -79,7 +70,7 @@ public class VertconomyBuilder
             && minChangeConfirmations >= 0
             && targetBlockTime > 0
             && symbol != null
-            && baseUnit != null
+            && baseUnitSymbol != null
             && scale != null;
     }
 
@@ -163,9 +154,9 @@ public class VertconomyBuilder
      * @param baseUnit The base unit.
      * @return A reference to this builder for chaining methods.
      */
-    public VertconomyBuilder setBaseUnit(String baseUnit)
+    public VertconomyBuilder setBaseUnitSymbol(String baseUnitSymbol)
     {
-        this.baseUnit = baseUnit;
+        this.baseUnitSymbol = baseUnitSymbol;
         return this;
     }
 

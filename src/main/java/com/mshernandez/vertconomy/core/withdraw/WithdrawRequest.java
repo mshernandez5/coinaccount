@@ -1,13 +1,18 @@
-package com.mshernandez.vertconomy.database;
+package com.mshernandez.vertconomy.core.withdraw;
 
+import java.util.HashSet;
 import java.util.Set;
 
+import javax.persistence.Column;
 import javax.persistence.Entity;
-import javax.persistence.FetchType;
 import javax.persistence.Id;
 import javax.persistence.Lob;
 import javax.persistence.OneToMany;
 import javax.persistence.OneToOne;
+import javax.persistence.Table;
+
+import com.mshernandez.vertconomy.core.account.DepositAccount;
+import com.mshernandez.vertconomy.core.deposit.Deposit;
 
 /**
  * Stores information about a pending withdraw
@@ -15,23 +20,30 @@ import javax.persistence.OneToOne;
  * confirmation before execution.
  */
 @Entity
+@Table(name = "WITHDRAW_REQUEST")
 public class WithdrawRequest
 {
     @Id
+    @Column(name = "TXID")
     private String txid;
 
-    @OneToOne
+    @OneToOne(mappedBy = "withdrawRequest")
     private DepositAccount account;
 
-    @OneToMany(fetch = FetchType.EAGER)
+    @OneToMany(mappedBy = "withdrawLock")
     private Set<Deposit> inputs;
 
+    @Column(name = "WITHDRAW_AMOUNT")
     private long withdrawAmount;
+
+    @Column(name = "FEE_AMOUNT")
     private long feeAmount;
 
     @Lob
+    @Column(name = "TX_HEX")
     private String txHex;
 
+    @Column(name = "TIMESTAMP")
     private long timestamp;
 
     public WithdrawRequest(String txid, DepositAccount account, Set<Deposit> inputs,
@@ -39,7 +51,7 @@ public class WithdrawRequest
     {
         this.txid = txid;
         this.account = account;
-        this.inputs = inputs;
+        this.inputs = new HashSet<>(inputs);
         this.withdrawAmount = withdrawAmount;
         this.feeAmount = fees;
         this.txHex = txHex;
@@ -84,7 +96,19 @@ public class WithdrawRequest
      */
     public Set<Deposit> getInputs()
     {
-        return inputs;
+        return new HashSet<>(inputs);
+    }
+
+    /**
+     * Don't save the provided input, use
+     * only if the input provides no value
+     * left after withdrawal.
+     * 
+     * @param input The input to forget.
+     */
+    public void forgetInput(Deposit input)
+    {
+        inputs.remove(input);
     }
 
     /**
