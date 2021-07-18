@@ -7,7 +7,7 @@ website: https://github.com/mshernandez5/vertconomy
 
 # Loading
 main: com.mshernandez.vertconomy.App
-api-version: 1.16
+api-version: 1.17
 depend: [Vault]
 loadbefore: [Essentials]
 
@@ -24,7 +24,7 @@ commands:
     permission: vertconomy.deposit
   withdraw:
     description: Allows players to withdraw crypto from their vertconomy account.
-    usage: /withdraw (<amount> | all | confirm | cancel)
+    usage: /withdraw (<amount> | all) <address>
     permission: vertconomy.withdraw
   vertconomy:
     description: Show the status of the plugin and wallet connection.

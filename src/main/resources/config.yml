@@ -34,7 +34,7 @@ scale: base
 # Experimental Vault Integration - Risk Of Lost Funds
 vault-integration: false
 
-# Automatically Configure Essentials Economy Commands If Found
+# Automatically Configure Essentials Currency Formatting If Found
 configure-essentials: false
 
 ###################################
