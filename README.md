@@ -1,19 +1,21 @@
-# Vertconomy
+# ![Vertconomy Logo](logo.svg)
 Vertconomy brings Vertcoin into your server's economy with support for in-game deposits, withdrawals, and transfers.\
-Experimental Vault API integration enables limited support with existing economy plugins.\
 Vertconomy is configured to work with Vertcoin by default but should be compatible with most coins supporting standard bitcoind RPC calls.
 ## Why Vertcoin?
-[Vertcoin](https://vertcoin.org/) is committed to maintaining an ASIC-resistant algorithm, hard forking whenever necessary to continue doing so. Keeping dedicated mining hardware off the table makes it possible to mine with consumer-grade GPUs in normal gaming computers. With the [Vertcoin One Click Miner](https://github.com/vertcoin-project/one-click-miner-vnext/releases), people can easily get involved and start mining cryptocurrency without having to purchase any directly. You can even mine Vertcoin while playing Minecraft! Though this plugin is not exclusively compatible with Vertcoin, choosing most other coins would be asking players to purchase from an exchange to participate in the server economy.
+[Vertcoin](https://vertcoin.org/) is committed to maintaining an ASIC-resistant mining algorithm, forking whenever necessary to continue doing so. Keeping dedicated mining hardware off the table makes it possible to mine with consumer-grade GPUs in normal gaming computers with as little as 2GB VRAM. With the [Vertcoin One Click Miner](https://github.com/vertcoin-project/one-click-miner-vnext/releases), players can easily get involved and start mining cryptocurrency without having to purchase any directly. You can even mine while playing Minecraft! Though this plugin is not exclusively compatible with Vertcoin, there are few other coins that are as easily accessible without asking players to buy from an exchange.
 
 ## How does it work?
 Vertconomy interfaces with a user-provided wallet via standard [bitcoind RPC methods](https://developer.bitcoin.org/reference/rpc/), allowing a player to deposit and withdraw Vertcoin through the Minecraft plugin.
 
 All player balances are held as part of the same wallet with an embedded database keeping track of specific player balances for zero-fee transfers between players within the server.
 
-Minecraft [Vault API](https://github.com/MilkBowl/VaultAPI) integration enables Vertcoin support across a wide variety of existing plugins.
-
 ## Does it work with existing plugins?
-Vertconomy aims to provide at least limited compatibility with existing plugins designed to work with the Vault API. Unfortunately, Minecraft plugins are built on the (fair) assumption that in-game currency can be created out of thin air and sent back into the void at will. Vertconomy works around these assumptions by transforming the money void into a server-owned account and rejecting the creation of currency beyond that available as excess funds within the account. This general idea ensures that the existing currency owned by players must be bound to real wallet funds. Of course, a few more tricks go into the implementation as some external plugins internally interact with player balances in complicated ways. Due to the complexities of working with Vault plugins and relatively high risk of unintended behavior Vault support is disabled by default, but this can be changed in the plugin configuration.
+Vertconomy aims to provide at least limited functionality with existing plugins through the common Minecraft [Vault API](https://github.com/MilkBowl/VaultAPI).
+Unfortunately, by nature of the API it is impossible to create a proper implementation due to the (fair) assumption that in-game currency can be created out of thin air and sent back into the void at will.
+
+*So does it support Vault API plugins?* Well, I'd say it's more like Vertconomy "has the potential to work with a limited selection of Vault-compatible plugins through forbidden dark magic that comes with the risk of lost funds and may easily break with plugin updates" =)
+
+Due to the complexities of working with Vault plugins and relatively high risk of unintended behavior Vault support is disabled by default, but this can be changed in the plugin configuration.
 
 ## How can I use this plugin?
 You will need a dedicated Vertcoin wallet configured to listen for RPC connections. Do not use an existing Vertcoin wallet. The configuration file for Vertcoin wallet can be found at one of the following locations if the wallet configuration directory was not manually changed:
