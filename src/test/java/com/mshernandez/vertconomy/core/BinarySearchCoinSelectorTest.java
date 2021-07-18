@@ -5,6 +5,8 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.Set;
 
 import org.junit.jupiter.api.Test;
@@ -141,5 +143,30 @@ public class BinarySearchCoinSelectorTest
             sum += l;
         }
         assertEquals(sum, target);
+    }
+
+    @Test
+    public void setIterationShouldFollowSelectionOrder()
+    {
+        long target = 45L;
+        Set<Long> inputs = new HashSet<>();
+        inputs.add(10L);
+        inputs.add(50L);
+        inputs.add(40L);
+        inputs.add(1L);
+        inputs.add(4L);
+        Set<Long> expectedOrder = new LinkedHashSet<>();
+        expectedOrder.add(40L);
+        expectedOrder.add(4L);
+        expectedOrder.add(1L);
+        Set<Long> selected = coinSelector.selectInputs(evaluator, inputs, 0L, target);
+        Iterator<Long> expectedIterator = expectedOrder.iterator();
+        Iterator<Long> selectedIterator = selected.iterator();
+        while (expectedIterator.hasNext())
+        {
+            assert(selectedIterator.hasNext());
+            assertEquals(expectedIterator.next(), selectedIterator.next());
+        }
+        assert(!selectedIterator.hasNext());
     }
 }

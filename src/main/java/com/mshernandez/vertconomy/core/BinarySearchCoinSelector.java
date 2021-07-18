@@ -3,23 +3,39 @@ package com.mshernandez.vertconomy.core;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
-import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * Uses a binary search algorithm to find inputs closest to the
- * target amount, which is dynamically updated as inputs are selected.
- * If the next selected input is larger than the last, the previous
- * input is unselected and selection continues attempting to use only
- * the larger input.
+ * This coin selector uses a binary search algorithm
+ * to find inputs closest to the target amount, which
+ * is dynamically updated as inputs are selected.
+ * <p>
+ * If the next selected input is larger than the last,
+ * selection will rewind using the larger input in place
+ * of those before it since a better solution is possible.
+ * <p>
+ * This selector does not always return the optimal solution,
+ * but attempts to get close to it without attempting all possibilities.
+ * For example, given inputs (1,4,6) with target 5
+ * then (1,4) will be selected which is best.
+ * However, given inputs (2,3,6) with target 5
+ * the algorithm will give the unoptimal solution (6).
+ * <p>
+ * The returned set's iterator will follow the order of selection.
  */
 public class BinarySearchCoinSelector<T> implements CoinSelector<T>
 {
     /**
      * How far back the algorithm is willing to rewind
-     * its results if a better solution is available.
+     * its results if a better solution is possible.
+     * <p>
+     * Note that once a valid solution is found it will
+     * always be selected even if better solutions are
+     * available. Rewinding only affects
+     * incomplete solutions.
      * <p>
      * The complexity of the selection depends on this
      * factor. With n inputs the worst-case complexity
@@ -29,13 +45,13 @@ public class BinarySearchCoinSelector<T> implements CoinSelector<T>
      * -1 (default) indicates the algorithm will dynamically
      * select this parameter based on input size.
      * <p>
-     * -2 indicates the algorithm will obtain the best result
+     * -2 indicates the algorithm will always rewind results
      * despite increased cost. Using -1, m = n. The worst-case
      * complexity will be n^2*log(n) which is quite bad when
      * a large number of inputs are used.
      * <p>
      * 0 indicates the algorithm will never rewind results
-     * even if a better solution is available.
+     * even if a better solution is possible.
      * In this case, the worst-case complexity is O(n*log(n)).
      */
     private int maxRewindSetting;
@@ -100,7 +116,7 @@ public class BinarySearchCoinSelector<T> implements CoinSelector<T>
             .sorted(evaluator)
             .collect(Collectors.toCollection(ArrayList::new));
         // Store Selected Inputs & Where They Were Found
-        Deque<Pair<T, Integer>> selectedInputs = new ArrayDeque<>();
+        Deque<Pair<T, Integer>> selectedInputs = new ArrayDeque<>(sorted.size());
         // Keep Selecting Inputs Until Target Value Is Met
         while (target > 0L && !sorted.isEmpty())
         {
@@ -114,16 +130,16 @@ public class BinarySearchCoinSelector<T> implements CoinSelector<T>
             {
                 mid = (first + last) / 2;
                 long value = evaluator.evaluate(sorted.get(mid));
-                double difference = difference(value, target);
-                // Check If Any Smaller Deposits Closer To Target Amount
+                double difference = absDiff(value, target);
+                // Check If Any Smaller Deposits Closer Or Equally Close To Target Amount
                 if (mid - 1 >= first
-                    && difference(evaluator.evaluate(sorted.get(mid - 1)), target) < difference)
+                    && absDiff(evaluator.evaluate(sorted.get(mid - 1)), target) <= difference)
                 {
                     last = mid - 1;
                 }
                 // Check If Any Larger Deposits Closer To Target Amount
                 else if (mid + 1 <= last
-                    && difference(evaluator.evaluate(sorted.get(mid + 1)), target) < difference)
+                    && absDiff(evaluator.evaluate(sorted.get(mid + 1)), target) < difference)
                 {
                     first = mid + 1;
                 }
@@ -155,23 +171,24 @@ public class BinarySearchCoinSelector<T> implements CoinSelector<T>
         {
             return null;
         }
-        Set<T> result = new HashSet<>();
+        // Set Iterator Will Follow Order Of Selection
+        Set<T> result = new LinkedHashSet<>(selectedInputs.size());
         while (!selectedInputs.isEmpty())
         {
-            result.add(selectedInputs.pop().getKey());
+            result.add(selectedInputs.removeLast().getKey());
         }
         return result;
     }
 
     /**
-     * Calculate the percent difference between the two values.
+     * Calculate the absolute difference between the two values.
      * 
      * @param a The first value.
      * @param b The second value.
-     * @return The percent difference.
+     * @return The absolute difference difference.
      */
-    private double difference(long a, long b)
+    private double absDiff(long a, long b)
     {
-        return Math.abs(b - a) / ((a + b) / 2.0);
+        return Math.abs(a - b);
     }
 }
