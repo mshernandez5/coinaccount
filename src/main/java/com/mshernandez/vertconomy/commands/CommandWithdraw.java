@@ -5,7 +5,8 @@ import java.util.List;
 
 import com.mshernandez.vertconomy.core.InvalidSatAmountException;
 import com.mshernandez.vertconomy.core.Vertconomy;
-import com.mshernandez.vertconomy.core.withdraw.WithdrawRequest;
+import com.mshernandez.vertconomy.core.withdraw.WithdrawRequestResponse;
+import com.mshernandez.vertconomy.core.withdraw.WithdrawRequestResponseType;
 
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -53,9 +54,9 @@ public class CommandWithdraw implements CommandExecutor, TabCompleter
                 {
                     return false;
                 }
-                // Get Withdraw Request
-                WithdrawRequest request = vertconomy.getPlayerWithdrawRequest(player);
-                if (request == null)
+                // Broadcast TX
+                String txid = vertconomy.completePlayerWithdrawRequest(player);
+                if (txid == null)
                 {
                     BaseComponent[] component = new ComponentBuilder()
                         .append("No withdraw request was found.").color(ChatColor.DARK_RED)
@@ -65,37 +66,24 @@ public class CommandWithdraw implements CommandExecutor, TabCompleter
                 }
                 else
                 {
-                    // Broadcast TX
-                    String txid = vertconomy.completePlayerWithdrawRequest(player);
-                    if (txid == null)
-                    {
-                        BaseComponent[] component = new ComponentBuilder()
-                            .append("There was an error processing your withdraw request.").color(ChatColor.DARK_RED)
-                            .create();
-                        sender.spigot().sendMessage(component);
-                        return true;
-                    }
-                    else
-                    {
-                        // Copyable TXID
-                        TextComponent txidMsg = new TextComponent(txid);
-                        txidMsg.setClickEvent(new ClickEvent(ClickEvent.Action.COPY_TO_CLIPBOARD, txid));
-                        txidMsg.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, new Text("Click to copy TXID!")));
-                        // Build Message
-                        BaseComponent[] component = new ComponentBuilder()
-                            .append("\n")
-                            .append("Withdraw Request Completed:").color(ChatColor.AQUA).underlined(true)
-                            .append("\n\n").reset()
-                            .append("TXID: ").color(ChatColor.YELLOW)
-                            .append(txidMsg).color(ChatColor.GREEN).bold(true)
-                            .append("\n\n").reset()
-                            .append("Some of your remaining funds may be unavailable for withdraw until the transaction is confirmed.")
-                            .color(ChatColor.YELLOW)
-                            .append("\n")
-                            .create();
-                        sender.spigot().sendMessage(component);
-                        return true;
-                    }
+                    // Copyable TXID
+                    TextComponent txidMsg = new TextComponent(txid);
+                    txidMsg.setClickEvent(new ClickEvent(ClickEvent.Action.COPY_TO_CLIPBOARD, txid));
+                    txidMsg.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, new Text("Click to copy TXID!")));
+                    // Build Message
+                    BaseComponent[] component = new ComponentBuilder()
+                        .append("\n")
+                        .append("Withdraw Request Completed:").color(ChatColor.AQUA).underlined(true)
+                        .append("\n\n").reset()
+                        .append("TXID: ").color(ChatColor.YELLOW)
+                        .append(txidMsg).color(ChatColor.GREEN).bold(true)
+                        .append("\n\n").reset()
+                        .append("Some of your remaining funds may be unavailable for withdraw until the transaction is confirmed.")
+                        .color(ChatColor.YELLOW)
+                        .append("\n")
+                        .create();
+                    sender.spigot().sendMessage(component);
+                    return true;
                 }
             }
             else if (args[0].equals("cancel"))
@@ -105,21 +93,18 @@ public class CommandWithdraw implements CommandExecutor, TabCompleter
                 {
                     return false;
                 }
-                // Get Withdraw Request
-                WithdrawRequest request = vertconomy.getPlayerWithdrawRequest(player);
-                if (request == null)
+                if (vertconomy.cancelPlayerWithdrawRequest(player))
                 {
                     BaseComponent[] component = new ComponentBuilder()
-                        .append("No withdraw request was found.").color(ChatColor.DARK_RED)
+                        .append("The withdraw request has been canceled.").color(ChatColor.YELLOW)
                         .create();
                     sender.spigot().sendMessage(component);
                     return true;
                 }
                 else
                 {
-                    vertconomy.cancelPlayerWithdrawRequest(player);
                     BaseComponent[] component = new ComponentBuilder()
-                        .append("The withdraw request has been canceled.").color(ChatColor.YELLOW)
+                        .append("No withdraw request was found.").color(ChatColor.DARK_RED)
                         .create();
                     sender.spigot().sendMessage(component);
                     return true;
@@ -130,14 +115,6 @@ public class CommandWithdraw implements CommandExecutor, TabCompleter
                 if (args.length != 2)
                 {
                     return false;
-                }
-                if (vertconomy.getPlayerWithdrawRequest(player) != null)
-                {
-                    BaseComponent[] component = new ComponentBuilder()
-                        .append("A withdraw request already exists, please cancel it before making a new one!").color(ChatColor.DARK_RED)
-                        .create();
-                    sender.spigot().sendMessage(component);
-                    return true;
                 }
                 long satAmount = 0L;
                 if (args[0].equals("all"))
@@ -160,22 +137,36 @@ public class CommandWithdraw implements CommandExecutor, TabCompleter
                         sender.spigot().sendMessage(component);
                         return true;
                     }
-                    if (satAmount <= 0 || satAmount > vertconomy.getPlayerBalance(player))
+                    if (satAmount <= 0)
                     {
                         BaseComponent[] component = new ComponentBuilder()
-                            .append("You don't have the funds to withdraw ").color(ChatColor.DARK_RED)
-                            .append(vertconomy.getFormatter().format(satAmount)).color(ChatColor.RED)
+                            .append("You can't withdraw nothing!").color(ChatColor.DARK_RED)
                             .create();
                         sender.spigot().sendMessage(component);
                         return true;
                     }
                 }
                 // Withdraw Amount
-                WithdrawRequest request = vertconomy.initiatePlayerWithdrawRequest(player, args[1], satAmount);
-                if (request == null)
+                WithdrawRequestResponse request = vertconomy.initiatePlayerWithdrawRequest(player, args[1], satAmount);
+                if (request.getResponseType() != WithdrawRequestResponseType.SUCCESS)
                 {
+                    String errorMessage;
+                    switch (request.getResponseType())
+                    {
+                        case NOT_ENOUGH_WITHDRAWABLE_FUNDS:
+                            errorMessage = "You don't have enough withdrawable funds for " + vertconomy.getFormatter().format(satAmount) + "!";
+                            break;
+                        case CANNOT_AFFORD_FEES:
+                            errorMessage = "You cannot afford the fees to complete this withdrawal!";
+                            break;
+                        case REQUEST_ALREADY_EXISTS:
+                            errorMessage = "A withdraw request already exists, please cancel it before making a new one!";
+                            break;
+                        default:
+                            errorMessage = "An unknown error occured while attempting to make the withdrawal.";
+                    }
                     BaseComponent[] component = new ComponentBuilder()
-                        .append("Failed to withdraw the specified amount!").color(ChatColor.DARK_RED)
+                        .append(errorMessage).color(ChatColor.DARK_RED)
                         .create();
                     sender.spigot().sendMessage(component);
                     return true;

@@ -78,15 +78,20 @@ public class WithdrawHelper
      * @param amount The amount the player is attempting to withdraw, excluding fees. Use < 0 for all funds.
      * @return An object holding withdraw details including determined fees, or null if the withdraw request failed.
      */
-    public WithdrawRequest initiateWithdraw(DepositAccount account, String destAddress, long amount)
+    public WithdrawRequestResponse initiateWithdraw(DepositAccount account, String destAddress, long amount)
     {
+        // Make Sure No Existing Request Already Exists
+        if (account.getWithdrawRequest() != null)
+        {
+            return new WithdrawRequestResponse(WithdrawRequestResponseType.REQUEST_ALREADY_EXISTS);
+        }
         DepositAccount withdrawAccount = accountRepository.getOrCreateUserAccount(withdrawAccountUUID);
         boolean withdrawAll = amount < 0L;
-        long playerBalance = account.calculateBalance();
+        long playerBalance = account.calculateWithdrawableBalance();
         // Can't Withdraw If Player Does Not Have At Least Withdraw Amount
         if (!withdrawAll && playerBalance < amount)
         {
-            return null;
+            return new WithdrawRequestResponse(WithdrawRequestResponseType.NOT_ENOUGH_WITHDRAWABLE_FUNDS);
         }
         try
         {
@@ -107,7 +112,7 @@ public class WithdrawHelper
             Set<Deposit> inputDeposits = coinSelector.selectInputs(new DepositShareEvaluator(account), account.getDeposits(), inputFee, amount);
             if (inputDeposits == null)
             {
-                return null;
+                return new WithdrawRequestResponse(WithdrawRequestResponseType.CANNOT_AFFORD_FEES);
             }
             fees += inputDeposits.size() * inputFee;
             // TX Inputs
@@ -165,14 +170,14 @@ public class WithdrawHelper
             entityManager.merge(account);
             entityManager.merge(withdrawAccount);
             entityManager.getTransaction().commit();
-            return request;
+            return new WithdrawRequestResponse(request);
         }
         catch (Exception e)
         {
             logger.warning("Error Initiating Withdraw For Account: " + account.getAccountUUID());
             e.printStackTrace();
             entityManager.getTransaction().rollback();
-            return null;
+            return new WithdrawRequestResponse(WithdrawRequestResponseType.UNKNOWN_FAILURE);
         }
     }
 

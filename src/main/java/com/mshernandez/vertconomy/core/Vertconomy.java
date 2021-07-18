@@ -11,6 +11,7 @@ import com.mshernandez.vertconomy.core.deposit.DepositHelper;
 import com.mshernandez.vertconomy.core.transfer.TransferHelper;
 import com.mshernandez.vertconomy.core.withdraw.WithdrawHelper;
 import com.mshernandez.vertconomy.core.withdraw.WithdrawRequest;
+import com.mshernandez.vertconomy.core.withdraw.WithdrawRequestResponse;
 import com.mshernandez.vertconomy.wallet_interface.RPCWalletConnection;
 import com.mshernandez.vertconomy.wallet_interface.ResponseError;
 import com.mshernandez.vertconomy.wallet_interface.WalletRequestException;
@@ -266,15 +267,15 @@ public class Vertconomy
     }
 
     /**
-     * Return any active withdraw request initiated by the user.
+     * Checks whether the player has an active withdraw request.
      * 
-     * @param player The player that initiated the request.
-     * @return Any active withdraw request initiated by the user.
+     * @param player The player to check.
+     * @return True if an active withdraw request exists for the player.
      */
-    public WithdrawRequest getPlayerWithdrawRequest(OfflinePlayer player)
+    public boolean checkIfPlayerHasWithdrawRequest(OfflinePlayer player)
     {
         DepositAccount playerAccount = accountRepository.getOrCreateUserAccount(player.getUniqueId());
-        return playerAccount == null ? null : playerAccount.getWithdrawRequest();
+        return playerAccount == null ? false : true;
     }
 
     /**
@@ -282,10 +283,10 @@ public class Vertconomy
      * 
      * @param player The player that initiated the request.
      * @param destAddress The address to withdraw to.
-     * @param amount The amount to withdraw.
-     * @return The created withdraw request.
+     * @param amount The amount to withdraw, or -1L for all.
+     * @return A response object for the withdraw attempt.
      */
-    public WithdrawRequest initiatePlayerWithdrawRequest(OfflinePlayer player, String destAddress, long amount)
+    public WithdrawRequestResponse initiatePlayerWithdrawRequest(OfflinePlayer player, String destAddress, long amount)
     {
         DepositAccount playerAccount = accountRepository.getOrCreateUserAccount(player.getUniqueId());
         return withdrawHelper.initiateWithdraw(playerAccount, destAddress, amount);
@@ -295,23 +296,31 @@ public class Vertconomy
      * Completes any active withdraw request initiated by the user.
      * 
      * @param player The player that initiated the request.
-     * @return The TXID of the withdraw transaction.
+     * @return The TXID of the withdraw transaction, or null if no request was found.
      */
     public String completePlayerWithdrawRequest(OfflinePlayer player)
     {
         DepositAccount playerAccount = accountRepository.getOrCreateUserAccount(player.getUniqueId());
-        return withdrawHelper.completeWithdraw(playerAccount.getWithdrawRequest());
+        WithdrawRequest withdrawRequest = playerAccount.getWithdrawRequest();
+        return withdrawRequest == null ? null : withdrawHelper.completeWithdraw(withdrawRequest);
     }
 
     /**
      * Cancels any active withdraw request initiated by the user.
      * 
      * @param player The player that initiated the request.
+     * @return True if the request was found and canceled.
      */
-    public void cancelPlayerWithdrawRequest(OfflinePlayer player)
+    public boolean cancelPlayerWithdrawRequest(OfflinePlayer player)
     {
         DepositAccount playerAccount = accountRepository.getOrCreateUserAccount(player.getUniqueId());
-        withdrawHelper.cancelWithdraw(playerAccount.getWithdrawRequest());
+        WithdrawRequest withdrawRequest = playerAccount.getWithdrawRequest();
+        if (withdrawRequest == null)
+        {
+            return false;
+        }
+        withdrawHelper.cancelWithdraw(withdrawRequest);
+        return true;
     }
 
     /**
