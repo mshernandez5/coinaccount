@@ -49,7 +49,7 @@ public class WithdrawHelper
     private static final int P2PKH_INPUT_VSIZE = 149;
 
     /**
-     * Create a new withdraw manager instance.
+     * Create a new withdraw helper instance.
      * 
      * @param logger A logger to use.
      * @param wallet A connection to the wallet.

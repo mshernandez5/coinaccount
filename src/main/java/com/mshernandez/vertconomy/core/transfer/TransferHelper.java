@@ -1,10 +1,15 @@
 package com.mshernandez.vertconomy.core.transfer;
 
 import java.util.Iterator;
+import java.util.Set;
 import java.util.logging.Logger;
 
 import javax.persistence.EntityManager;
 
+import com.mshernandez.vertconomy.core.BinarySearchCoinSelector;
+import com.mshernandez.vertconomy.core.CoinSelector;
+import com.mshernandez.vertconomy.core.DepositShareEvaluator;
+import com.mshernandez.vertconomy.core.Evaluator;
 import com.mshernandez.vertconomy.core.account.Account;
 import com.mshernandez.vertconomy.core.deposit.Deposit;
 
@@ -19,8 +24,11 @@ public class TransferHelper
     // Persistence
     private EntityManager entityManager;
 
+    // Coin Selection For Transfers
+    private CoinSelector<Deposit> coinSelector;
+
     /**
-     * Create a new transfer manager instance.
+     * Create a new transfer helper instance.
      * 
      * @param logger A logger to use.
      * @param entityManager An entity manager for persistence.
@@ -29,6 +37,7 @@ public class TransferHelper
     {
         this.logger = logger;
         this.entityManager = entityManager;
+        coinSelector = new BinarySearchCoinSelector<>(5);
     }
 
     /**
@@ -51,8 +60,10 @@ public class TransferHelper
         try
         {
             entityManager.getTransaction().begin();
+            Evaluator<Deposit> evaluator = new DepositShareEvaluator(sender);
+            Set<Deposit> selected = coinSelector.selectInputs(evaluator, sender.getDeposits(), 0L, amount);
             long remainingOwed = amount;
-            Iterator<Deposit> it = sender.getDeposits().iterator();
+            Iterator<Deposit> it = selected.iterator();
             while (it.hasNext() && remainingOwed > 0L)
             {
                 Deposit deposit = it.next();

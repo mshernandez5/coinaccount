@@ -47,7 +47,7 @@ public class DepositHelper
     private int minChangeConfirmations;
 
     /**
-     * Create a new deposit manager instance.
+     * Create a new deposit helper instance.
      * 
      * @param wallet A connection to the wallet.
      * @param entityManager An entity manager for persistence.

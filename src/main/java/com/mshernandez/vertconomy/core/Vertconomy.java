@@ -173,15 +173,15 @@ public class Vertconomy
             plugin.getLogger().warning("Cannot Support Asynchronous Vault API Requests");
             return false;
         }
+        Account transferAccount = accountRepository.getOrCreateHoldingAccount(TRANSFER_ACCOUNT_UUID);
         DepositAccount sender = accountRepository.getOrCreateUserAccount(player.getUniqueId());
-        Account receiver = accountRepository.getOrCreateHoldingAccount(TRANSFER_ACCOUNT_UUID);
-        // Can't Have Fractions Of Satoshi, Celing Function To Next Satoshi
         long satAmount = formatter.absoluteAmount(amount);
+        // Note: Need To Allow 0 Value Withdraw To Support Many Plugins, ex. Essentials
         if (satAmount < 0L)
         {
             return false;
         }
-        return transferHelper.transferBalance(sender, receiver, satAmount);
+        return transferHelper.transferBalance(sender, transferAccount, satAmount);
     }
 
     /**
@@ -201,16 +201,16 @@ public class Vertconomy
             plugin.getLogger().warning("Cannot Support Asynchronous Vault API Requests");
             return false;
         }
+        Account transferAccount = accountRepository.getOrCreateHoldingAccount(TRANSFER_ACCOUNT_UUID);
         DepositAccount receiver = accountRepository.getOrCreateUserAccount(player.getUniqueId());
-        Account sender = accountRepository.getOrCreateHoldingAccount(TRANSFER_ACCOUNT_UUID);
-        // Can't Have Fractions Of Satoshi, Celing Function To Next Satoshi
         long satAmount = formatter.absoluteAmount(amount);
+        // Note: Need To Allow 0 Value Deposit To Support Many Plugins, ex. Essentials
         if (satAmount < 0L)
         {
             return false;
         }
-        satAmount = Math.min(satAmount, sender.calculateBalance()); // TODO: temporary
-        return transferHelper.transferBalance(sender, receiver, satAmount);
+        satAmount = Math.min(satAmount, transferAccount.calculateBalance()); // TODO: temporary
+        return transferHelper.transferBalance(transferAccount, receiver, satAmount);
     }
 
     /**
@@ -251,20 +251,6 @@ public class Vertconomy
         DepositAccount playerAccount = accountRepository.getOrCreateUserAccount(player.getUniqueId());
         return playerAccount == null ? 0L : playerAccount.getPendingBalance();
     }
-
-    /**
-     * Return both the usable and unconfirmed balances
-     * associated with a player's account.
-     * 
-     * @param player The player associated with the account.
-     * @return The usable and unconfirmed balances.
-     */
-    /*public Pair<Long, Long> getPlayerBalances(OfflinePlayer player)
-    {
-        DepositAccount playerAccount = accountRepository.getOrCreateUserAccount(player.getUniqueId());
-        return playerAccount == null ? new Pair<Long,Long>(0L, 0L)
-            : new Pair<Long, Long>(playerAccount.calculateBalance(), playerAccount.getPendingBalance());
-    }*/
 
     /**
      * Get the public wallet address allowing the player to

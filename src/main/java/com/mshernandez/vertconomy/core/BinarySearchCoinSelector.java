@@ -185,7 +185,7 @@ public class BinarySearchCoinSelector<T> implements CoinSelector<T>
      * 
      * @param a The first value.
      * @param b The second value.
-     * @return The absolute difference difference.
+     * @return The absolute difference.
      */
     private double absDiff(long a, long b)
     {
