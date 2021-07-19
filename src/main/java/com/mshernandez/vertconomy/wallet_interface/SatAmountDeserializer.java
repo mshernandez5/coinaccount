@@ -15,7 +15,7 @@ import com.google.gson.JsonParseException;
  * and less concern for accumulated floating-point errors.
  * <p>
  * Since sat amounts are used by multiple response
- * types, the SatoshiAmount wrapper is used instead
+ * types, the SatAmount wrapper is used instead
  * of implementing custom deserializers for every
  * class with one of these fields.
  */
@@ -23,7 +23,7 @@ public class SatAmountDeserializer implements JsonDeserializer<SatAmount>
 {
     @Override
     public SatAmount deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context)
-        throws JsonParseException 
+        throws JsonParseException
     {
         SatAmount satAmount = new SatAmount();
         satAmount.satAmount = Long.parseLong(json.getAsString().replace(".", ""));

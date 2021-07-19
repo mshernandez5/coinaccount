@@ -13,8 +13,7 @@ import com.mshernandez.vertconomy.core.withdraw.WithdrawHelper;
 import com.mshernandez.vertconomy.core.withdraw.WithdrawRequest;
 import com.mshernandez.vertconomy.core.withdraw.WithdrawRequestResponse;
 import com.mshernandez.vertconomy.wallet_interface.RPCWalletConnection;
-import com.mshernandez.vertconomy.wallet_interface.ResponseError;
-import com.mshernandez.vertconomy.wallet_interface.WalletRequestException;
+import com.mshernandez.vertconomy.wallet_interface.exceptions.WalletRequestException;
 
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
@@ -94,23 +93,21 @@ public class Vertconomy
     }
 
     /**
-     * Returns any wallet error, or null
-     * if there is no error.
+     * Returns true if Vertconomy can make
+     * successful requests to the wallet.
      * 
-     * @return Any wallet error, or null if none.
+     * @return True if a wallet connection can be reached.
      */
-    public ResponseError checkWalletConnection()
+    public boolean hasWalletConnection()
     {
         try
         {
-            return wallet.getWalletInfo();
+            wallet.getWalletInfo();
+            return true;
         }
         catch (WalletRequestException e)
         {
-            ResponseError error = new ResponseError();
-            error.code = -1;
-            error.message = e.getMessage();
-            return error;
+            return false;
         }
     }
 
@@ -125,10 +122,9 @@ public class Vertconomy
     public void checkForNewDeposits()
     {
         // Don't Attempt To Check For Deposits If Wallet Unreachable
-        ResponseError error = checkWalletConnection();
-        if (error != null)
+        if (!hasWalletConnection())
         {
-            plugin.getLogger().warning("Wallet Request Error, Can't Check For Deposits: " + error.message);
+            plugin.getLogger().warning("Wallet not currently available, cannot check for deposits!");
             return;
         }
         // Only Check Deposits For Online Players

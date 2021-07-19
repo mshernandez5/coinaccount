@@ -6,7 +6,7 @@ import java.util.logging.Logger;
 import javax.persistence.EntityManager;
 
 import com.mshernandez.vertconomy.wallet_interface.RPCWalletConnection;
-import com.mshernandez.vertconomy.wallet_interface.WalletRequestException;
+import com.mshernandez.vertconomy.wallet_interface.exceptions.WalletRequestException;
 
 public class AccountRepository
 {

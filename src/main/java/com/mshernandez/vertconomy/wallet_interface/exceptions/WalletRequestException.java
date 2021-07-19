@@ -1,4 +1,4 @@
-package com.mshernandez.vertconomy.wallet_interface;
+package com.mshernandez.vertconomy.wallet_interface.exceptions;
 
 public class WalletRequestException extends Exception
 {
@@ -7,7 +7,7 @@ public class WalletRequestException extends Exception
      */
     public WalletRequestException()
     {
-        super("Failed To Make A Wallet Request");
+        super("Failed to make a wallet request!");
     }
 
     /**

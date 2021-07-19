@@ -1,4 +1,4 @@
-package com.mshernandez.vertconomy.wallet_interface;
+package com.mshernandez.vertconomy.wallet_interface.exceptions;
 
 public class WalletAuthenticationException extends WalletRequestException
 {

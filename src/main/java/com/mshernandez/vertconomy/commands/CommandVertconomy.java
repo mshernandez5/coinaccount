@@ -1,7 +1,6 @@
 package com.mshernandez.vertconomy.commands;
 
 import com.mshernandez.vertconomy.core.Vertconomy;
-import com.mshernandez.vertconomy.wallet_interface.ResponseError;
 
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -38,25 +37,16 @@ public class CommandVertconomy implements CommandExecutor
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args)
     {
         // Wallet Connection Status Message
-        ResponseError walletError = vertconomy.checkWalletConnection();
         TextComponent statusMsg = new TextComponent();
-        if (walletError != null)
-        {
-            if (walletError.code == 0)
-            {
-                statusMsg.setText("Request Error");
-                statusMsg.setColor(ChatColor.DARK_RED);
-            }
-            else
-            {
-                statusMsg.setText("Wallet Unreachable / Not Ready");
-                statusMsg.setColor(ChatColor.YELLOW);
-            }
-        }
-        else
+        if (vertconomy.hasWalletConnection())
         {
             statusMsg.setText("Connected");
             statusMsg.setColor(ChatColor.GREEN);
+        }
+        else
+        {
+            statusMsg.setText("Wallet Unreachable / Not Ready");
+            statusMsg.setColor(ChatColor.YELLOW);
         }
         // Github Links
         TextComponent authorLinkMsg = new TextComponent("https://github.com/mshernandez5");
