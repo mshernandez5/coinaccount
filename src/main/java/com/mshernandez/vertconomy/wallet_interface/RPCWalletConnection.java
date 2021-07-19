@@ -131,7 +131,7 @@ public class RPCWalletConnection
             .setMethod("createrawtransaction")
             .setParams(params);
         WalletResponse<String> response = gson.fromJson(makeRequest(jsonRequest), new TypeToken<WalletResponse<String>>() {}.getType());
-        if (response.error != ResponseError.NO_ERROR)
+        if (response.error != null)
         {
             throw new RPCErrorResponseException(response.error);
         }
@@ -154,7 +154,7 @@ public class RPCWalletConnection
             .setMethod("getrawtransaction")
             .setParams(params);
         RawTransactionResponse response = gson.fromJson(makeRequest(jsonRequest), RawTransactionResponse.class);
-        if (response.error != ResponseError.NO_ERROR)
+        if (response.error != null)
         {
             throw new RPCErrorResponseException(response.error);
         }
@@ -177,7 +177,7 @@ public class RPCWalletConnection
             .setMethod("decoderawtransaction")
             .setParams(params);
         DecodeTransactionResponse response = gson.fromJson(makeRequest(jsonRequest), DecodeTransactionResponse.class);
-        if (response.error != ResponseError.NO_ERROR)
+        if (response.error != null)
         {
             throw new RPCErrorResponseException(response.error);
         }
@@ -202,7 +202,7 @@ public class RPCWalletConnection
             .setMethod("fundrawtransaction")
             .setParams(params);
         FundRawTransactionResponse response = gson.fromJson(makeRequest(jsonRequest), FundRawTransactionResponse.class);
-        if (response.error != ResponseError.NO_ERROR)
+        if (response.error != null)
         {
             throw new RPCErrorResponseException(response.error);
         }
@@ -225,7 +225,7 @@ public class RPCWalletConnection
             .setMethod("signrawtransactionwithwallet")
             .setParams(params);
         SignRawTransactionResponse response = gson.fromJson(makeRequest(jsonRequest), SignRawTransactionResponse.class);
-        if (response.error != ResponseError.NO_ERROR)
+        if (response.error != null)
         {
             throw new RPCErrorResponseException(response.error);
         }
@@ -248,7 +248,7 @@ public class RPCWalletConnection
             .setMethod("sendrawtransaction")
             .setParams(params);
         WalletResponse<String> response = gson.fromJson(makeRequest(jsonRequest), new TypeToken<WalletResponse<String>>() {}.getType());
-        if (response.error != ResponseError.NO_ERROR)
+        if (response.error != null)
         {
             throw new RPCErrorResponseException(response.error);
         }
@@ -270,7 +270,7 @@ public class RPCWalletConnection
             .setMethod("getwalletinfo")
             .setParams(params);
         WalletInfoResponse response = gson.fromJson(makeRequest(jsonRequest), WalletInfoResponse.class);
-        if (response.error != ResponseError.NO_ERROR)
+        if (response.error != null)
         {
             throw new RPCErrorResponseException(response.error);
         }
@@ -296,7 +296,7 @@ public class RPCWalletConnection
             .setMethod("getbalance")
             .setParams(params);
         SatResponse response = gson.fromJson(makeRequest(jsonRequest), SatResponse.class);
-        if (response.error != ResponseError.NO_ERROR)
+        if (response.error != null)
         {
             throw new RPCErrorResponseException(response.error);
         }
@@ -318,7 +318,7 @@ public class RPCWalletConnection
             .setMethod("listtransactions")
             .setParams(params);
         TransactionListResponse response = gson.fromJson(makeRequest(jsonRequest), TransactionListResponse.class);
-        if (response.error != ResponseError.NO_ERROR)
+        if (response.error != null)
         {
             throw new RPCErrorResponseException(response.error);
         }
@@ -342,7 +342,7 @@ public class RPCWalletConnection
             .setMethod("listtransactions")
             .setParams(params);
         TransactionListResponse response = gson.fromJson(makeRequest(jsonRequest), TransactionListResponse.class);
-        if (response.error != ResponseError.NO_ERROR)
+        if (response.error != null)
         {
             throw new RPCErrorResponseException(response.error);
         }
@@ -371,7 +371,7 @@ public class RPCWalletConnection
             .setMethod("listunspent")
             .setParams(params);
         UnspentOutputResponse response = gson.fromJson(makeRequest(jsonRequest), UnspentOutputResponse.class);
-        if (response.error != ResponseError.NO_ERROR)
+        if (response.error != null)
         {
             throw new RPCErrorResponseException(response.error);
         }
@@ -399,7 +399,7 @@ public class RPCWalletConnection
             .setMethod("listunspent")
             .setParams(params);
         UnspentOutputResponse response = gson.fromJson(makeRequest(jsonRequest), UnspentOutputResponse.class);
-        if (response.error != ResponseError.NO_ERROR)
+        if (response.error != null)
         {
             throw new RPCErrorResponseException(response.error);
         }
@@ -426,7 +426,7 @@ public class RPCWalletConnection
             .setMethod("getreceivedbyaddress")
             .setParams(params);
         SatResponse response = gson.fromJson(makeRequest(jsonRequest), SatResponse.class);
-        if (response.error != ResponseError.NO_ERROR)
+        if (response.error != null)
         {
             throw new RPCErrorResponseException(response.error);
         }
@@ -447,7 +447,7 @@ public class RPCWalletConnection
             .setMethod("getnewaddress")
             .setParams(params);
         WalletResponse<String> response = gson.fromJson(makeRequest(jsonRequest), new TypeToken<WalletResponse<String>>() {}.getType());
-        if (response.error != ResponseError.NO_ERROR)
+        if (response.error != null)
         {
             throw new RPCErrorResponseException(response.error);
         }
@@ -469,7 +469,7 @@ public class RPCWalletConnection
             .setMethod("getnewaddress")
             .setParams(params);
         WalletResponse<String> response = gson.fromJson(makeRequest(jsonRequest), new TypeToken<WalletResponse<String>>() {}.getType());
-        if (response.error != ResponseError.NO_ERROR)
+        if (response.error != null)
         {
             throw new RPCErrorResponseException(response.error);
         }
@@ -493,7 +493,7 @@ public class RPCWalletConnection
             .setMethod("estimatesmartfee")
             .setParams(params);
         SmartFeeResponse response = gson.fromJson(makeRequest(jsonRequest), SmartFeeResponse.class);
-        if (response.error != ResponseError.NO_ERROR)
+        if (response.error != null)
         {
             throw new RPCErrorResponseException(response.error);
         }

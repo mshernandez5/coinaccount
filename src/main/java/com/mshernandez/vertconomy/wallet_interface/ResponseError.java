@@ -11,9 +11,6 @@ import java.util.Map;
  */
 public enum ResponseError
 {
-    // Indicate Successful Response
-    NO_ERROR(0),
-    
     // General Errors
     RPC_MISC_ERROR(-1),
     RPC_FORBIDDEN_BY_SAFE_MODE(-2),

@@ -20,6 +20,7 @@ public class SerializationTests
     public void setup()
     {
         gson = new GsonBuilder()
+            .registerTypeAdapter(ResponseError.class, new ResponseErrorDeserializer())
             .registerTypeAdapter(SatAmount.class, new SatAmountSerializer())
             .registerTypeAdapter(SatAmount.class, new SatAmountDeserializer())
             .create();
@@ -72,5 +73,12 @@ public class SerializationTests
         assertEquals(expectedJson, serialized);
         SatAmount deserialized = gson.fromJson(serialized, SatAmount.class);
         assertEquals(amount, deserialized.satAmount);
+    }
+
+    @Test
+    public void deserializeErrorResponse()
+    {
+        ResponseError error = gson.fromJson("{\"code\": -5, \"message\": \"Invalid address!\"}", ResponseError.class);
+        assertEquals(ResponseError.RPC_INVALID_ADDRESS_OR_KEY, error);
     }
 }

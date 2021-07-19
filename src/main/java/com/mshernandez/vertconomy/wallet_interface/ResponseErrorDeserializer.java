@@ -13,6 +13,6 @@ public class ResponseErrorDeserializer implements JsonDeserializer<ResponseError
     public ResponseError deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context)
         throws JsonParseException
     {
-        return json.isJsonNull() ? ResponseError.NO_ERROR : ResponseError.find(json.getAsInt());
+        return ResponseError.find(json.getAsJsonObject().get("code").getAsInt());
     }
 }
