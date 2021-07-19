@@ -91,12 +91,15 @@ public class RPCWalletConnection
                 case 200:
                     // All Good
                     break;
+                case 500:
+                    // Internal Server Error, Can Be Determined Later From Response
+                    break;
                 case 401:
                     // Authentication Issue
                     throw new WalletAuthenticationException(user);
                 default:
                     // Response Indicates Various/Other Issue
-                    throw new WalletRequestException("Invalid Response: " + jsonRequest.method);
+                    throw new WalletRequestException("HTTP Response Error " + response.statusCode() + ": " + jsonRequest.method);
             }
             return response.body();
         }
@@ -113,8 +116,10 @@ public class RPCWalletConnection
      * 
      * @return A hex-encoded raw transaction.
      * @throws WalletRequestException If the wallet could not be reached or execute the command.
+     * @throws RPCErrorResponseException If the received response indicates an error.
      */
-    public String createRawTransaction(List<RawTransactionInput> inputs, Map<String, Long> outputs) throws WalletRequestException
+    public String createRawTransaction(List<RawTransactionInput> inputs, Map<String, Long> outputs)
+        throws WalletRequestException, RPCErrorResponseException
     {
         JsonArray params = new JsonArray();
         params.add(gson.toJsonTree(inputs, new TypeToken<List<RawTransactionInput>>() {}.getType()));
@@ -144,8 +149,9 @@ public class RPCWalletConnection
      * @param txid The transaction ID.
      * @return Details about the raw transaction.
      * @throws WalletRequestException If the wallet could not be reached or execute the command.
+     * @throws RPCErrorResponseException If the received response indicates an error.
      */
-    public RawTransactionResponse.Result getRawTransaction(String txid) throws WalletRequestException
+    public RawTransactionResponse.Result getRawTransaction(String txid) throws WalletRequestException, RPCErrorResponseException
     {
         JsonArray params = new JsonArray();
         params.add(txid);
@@ -167,8 +173,10 @@ public class RPCWalletConnection
      * @param rawTransactionHex A hex-encoded raw transaction.
      * @return Details about the raw transaction.
      * @throws WalletRequestException If the wallet could not be reached or execute the command.
+     * @throws RPCErrorResponseException If the received response indicates an error.
      */
-    public DecodeTransactionResponse.Result decodeRawTransaction(String rawTransactionHex) throws WalletRequestException
+    public DecodeTransactionResponse.Result decodeRawTransaction(String rawTransactionHex)
+        throws WalletRequestException, RPCErrorResponseException
     {
         JsonArray params = new JsonArray();
         params.add(rawTransactionHex);
@@ -191,8 +199,10 @@ public class RPCWalletConnection
      * @param options Details on how to fund the raw transaction.
      * @return Details about the funded raw transaction.
      * @throws WalletRequestException If the wallet could not be reached or execute the command.
+     * @throws RPCErrorResponseException If the received response indicates an error.
      */
-    public FundRawTransactionResponse.Result fundRawTransaction(String rawTransactionHex, FundRawTransactionOptions options) throws WalletRequestException
+    public FundRawTransactionResponse.Result fundRawTransaction(String rawTransactionHex, FundRawTransactionOptions options)
+        throws WalletRequestException, RPCErrorResponseException
     {
         JsonArray params = new JsonArray();
         params.add(rawTransactionHex);
@@ -215,8 +225,10 @@ public class RPCWalletConnection
      * @param rawTransactionHex The hex string representing the raw transaction.
      * @return A response object holding the signed transaction hex string.
      * @throws WalletRequestException If the wallet could not be reached or execute the command.
+     * @throws RPCErrorResponseException If the received response indicates an error.
      */
-    public SignRawTransactionResponse.Result signRawTransactionWithWallet(String rawTransactionHex) throws WalletRequestException
+    public SignRawTransactionResponse.Result signRawTransactionWithWallet(String rawTransactionHex)
+        throws WalletRequestException, RPCErrorResponseException
     {
         JsonArray params = new JsonArray();
         params.add(rawTransactionHex);
@@ -238,8 +250,9 @@ public class RPCWalletConnection
      * @param rawTransactionHex The hex string representing the raw transaction.
      * @return The transaction hash (TXID) in hex.
      * @throws WalletRequestException If the wallet could not be reached or execute the command.
+     * @throws RPCErrorResponseException If the received response indicates an error.
      */
-    public String sendRawTransaction(String rawTransactionHex) throws WalletRequestException
+    public String sendRawTransaction(String rawTransactionHex) throws WalletRequestException, RPCErrorResponseException
     {
         JsonArray params = new JsonArray();
         params.add(rawTransactionHex);
@@ -261,8 +274,9 @@ public class RPCWalletConnection
      * 
      * @return A WalletInfoResponse holding wallet status information.
      * @throws WalletRequestException If the wallet could not be reached or execute the command.
+     * @throws RPCErrorResponseException If the received response indicates an error.
      */
-    public WalletInfoResponse getWalletInfo() throws WalletRequestException
+    public WalletInfoResponse getWalletInfo() throws WalletRequestException, RPCErrorResponseException
     {
         JsonArray params = new JsonArray();
         WalletRequest jsonRequest = new WalletRequest()
@@ -285,8 +299,9 @@ public class RPCWalletConnection
      * @param minConfirmations The minimum number of confirmations a transaction must have.
      * @return The balance of the wallet, in base units (ex. satoshis).
      * @throws WalletRequestException If the wallet could not be reached or execute the command.
+     * @throws RPCErrorResponseException If the received response indicates an error.
      */
-    public long getBalance(int minConfirmations) throws WalletRequestException
+    public long getBalance(int minConfirmations) throws WalletRequestException, RPCErrorResponseException
     {
         JsonArray params = new JsonArray();
         params.add("*");
@@ -309,8 +324,9 @@ public class RPCWalletConnection
      * @param label The address label.
      * @return A list of transaction information objects.
      * @throws WalletRequestException If the wallet could not be reached or execute the command.
+     * @throws RPCErrorResponseException If the received response indicates an error.
      */
-    public List<TransactionListResponse.Transaction> getTransactions() throws WalletRequestException
+    public List<TransactionListResponse.Transaction> getTransactions() throws WalletRequestException, RPCErrorResponseException
     {
         JsonArray params = new JsonArray();
         WalletRequest jsonRequest = new WalletRequest()
@@ -332,8 +348,9 @@ public class RPCWalletConnection
      * @param label The address label.
      * @return A list of transaction information objects.
      * @throws WalletRequestException If the wallet could not be reached or execute the command.
+     * @throws RPCErrorResponseException If the received response indicates an error.
      */
-    public List<TransactionListResponse.Transaction> getTransactions(String label) throws WalletRequestException
+    public List<TransactionListResponse.Transaction> getTransactions(String label) throws WalletRequestException, RPCErrorResponseException
     {
         JsonArray params = new JsonArray();
         params.add(label);
@@ -357,8 +374,9 @@ public class RPCWalletConnection
      * @param minConfirmations The minimum number of confirmations a transaction must have.
      * @return A list of unspent output information objects.
      * @throws WalletRequestException If the wallet could not be reached or execute the command.
+     * @throws RPCErrorResponseException If the received response indicates an error.
      */
-    public List<UnspentOutputResponse.UnspentOutput> getUnspentOutputs(String address) throws WalletRequestException
+    public List<UnspentOutputResponse.UnspentOutput> getUnspentOutputs(String address) throws WalletRequestException, RPCErrorResponseException
     {
         JsonArray params = new JsonArray();
         params.add(0);
@@ -385,8 +403,9 @@ public class RPCWalletConnection
      * @param label The address label.
      * @return A list of transaction information objects.
      * @throws WalletRequestException If the wallet could not be reached or execute the command.
+     * @throws RPCErrorResponseException If the received response indicates an error.
      */
-    public List<UnspentOutputResponse.UnspentOutput> getUnspentOutputs(String address, int minConfirmations) throws WalletRequestException
+    public List<UnspentOutputResponse.UnspentOutput> getUnspentOutputs(String address, int minConfirmations) throws WalletRequestException, RPCErrorResponseException
     {
         JsonArray params = new JsonArray();
         params.add(minConfirmations);
@@ -415,8 +434,9 @@ public class RPCWalletConnection
      * @param minConfirmations The minimum number of confirmations a transaction must have.
      * @return The balance of the wallet, in base units (ex. satoshis).
      * @throws WalletRequestException If the wallet could not be reached or execute the command.
+     * @throws RPCErrorResponseException If the received response indicates an error.
      */
-    public long getReceivedByAddress(String address, int minConfirmations) throws WalletRequestException
+    public long getReceivedByAddress(String address, int minConfirmations) throws WalletRequestException, RPCErrorResponseException
     {
         JsonArray params = new JsonArray();
         params.add(address);
@@ -438,8 +458,9 @@ public class RPCWalletConnection
      * 
      * @return A new wallet address.
      * @throws WalletRequestException If the wallet could not be reached or execute the command.
+     * @throws RPCErrorResponseException If the received response indicates an error.
      */
-    public String getNewAddress() throws WalletRequestException
+    public String getNewAddress() throws WalletRequestException, RPCErrorResponseException
     {
         JsonArray params = new JsonArray();
         WalletRequest jsonRequest = new WalletRequest()
@@ -459,8 +480,9 @@ public class RPCWalletConnection
      * 
      * @return A new wallet address.
      * @throws WalletRequestException If the wallet could not be reached or execute the command.
+     * @throws RPCErrorResponseException If the received response indicates an error.
      */
-    public String getNewAddress(String label) throws WalletRequestException
+    public String getNewAddress(String label) throws WalletRequestException, RPCErrorResponseException
     {
         JsonArray params = new JsonArray();
         params.add(label);
@@ -483,8 +505,9 @@ public class RPCWalletConnection
      * @param confirmationTarget The target number of block for confirmation.
      * @return The approximate TX fee in sats per vbyte.
      * @throws WalletRequestException If the wallet could not be reached or execute the command.
+     * @throws RPCErrorResponseException If the received response indicates an error.
      */
-    public double estimateSmartFee(int confirmationTarget) throws WalletRequestException
+    public double estimateSmartFee(int confirmationTarget) throws WalletRequestException, RPCErrorResponseException
     {
         JsonArray params = new JsonArray();
         params.add(confirmationTarget);

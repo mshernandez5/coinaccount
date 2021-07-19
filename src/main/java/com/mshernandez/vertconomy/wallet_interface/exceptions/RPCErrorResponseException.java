@@ -15,6 +15,7 @@ public class RPCErrorResponseException extends WalletRequestException
         super("The wallet response returned error code "
               + error.code() + ": "
               + error.name());
+        this.error = error;
     }
 
     public ResponseError getError()

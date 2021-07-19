@@ -176,7 +176,6 @@ public class WithdrawHelper
         }
         catch (RPCErrorResponseException e)
         {
-            entityManager.getTransaction().rollback();
             if (e.getError() == ResponseError.RPC_INVALID_ADDRESS_OR_KEY)
             {
                 return new WithdrawRequestResponse(WithdrawRequestResponseType.INVALID_ADDRESS);
