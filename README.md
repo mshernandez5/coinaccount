@@ -1,4 +1,5 @@
-# ![Vertconomy Logo](logo.svg)
+# <img src="logo.svg" alt="Vertconomy Logo" height="75px">
+
 Vertconomy brings Vertcoin into your server's economy with support for in-game deposits, withdrawals, and transfers.\
 Vertconomy is configured to work with Vertcoin by default but should be compatible with most coins supporting standard bitcoind RPC calls.
 ## Why Vertcoin?
