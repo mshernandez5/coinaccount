@@ -162,6 +162,9 @@ public class CommandWithdraw implements CommandExecutor, TabCompleter
                         case REQUEST_ALREADY_EXISTS:
                             errorMessage = "A withdraw request already exists, please cancel it before making a new one!";
                             break;
+                        case INVALID_ADDRESS:
+                            errorMessage = "Invalid withdraw address!";
+                            break;
                         default:
                             errorMessage = "An unknown error occured while attempting to make the withdrawal.";
                     }

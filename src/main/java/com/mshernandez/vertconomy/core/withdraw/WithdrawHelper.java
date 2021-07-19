@@ -18,6 +18,8 @@ import com.mshernandez.vertconomy.core.account.AccountRepository;
 import com.mshernandez.vertconomy.core.account.DepositAccount;
 import com.mshernandez.vertconomy.core.deposit.Deposit;
 import com.mshernandez.vertconomy.wallet_interface.RPCWalletConnection;
+import com.mshernandez.vertconomy.wallet_interface.ResponseError;
+import com.mshernandez.vertconomy.wallet_interface.exceptions.RPCErrorResponseException;
 import com.mshernandez.vertconomy.wallet_interface.requests.RawTransactionInput;
 
 /**
@@ -171,6 +173,17 @@ public class WithdrawHelper
             entityManager.merge(withdrawAccount);
             entityManager.getTransaction().commit();
             return new WithdrawRequestResponse(request);
+        }
+        catch (RPCErrorResponseException e)
+        {
+            entityManager.getTransaction().rollback();
+            if (e.getError() == ResponseError.RPC_INVALID_ADDRESS_OR_KEY)
+            {
+                return new WithdrawRequestResponse(WithdrawRequestResponseType.INVALID_ADDRESS);
+            }
+            logger.warning("Error Response (" + e.getError().code()
+                           + ") Creating Withdraw TX For: " + account.getAccountUUID());
+            return new WithdrawRequestResponse(WithdrawRequestResponseType.UNKNOWN_FAILURE);
         }
         catch (Exception e)
         {
