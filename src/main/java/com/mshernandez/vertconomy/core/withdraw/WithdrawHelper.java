@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.logging.Logger;
+import java.util.regex.Pattern;
 
 import javax.persistence.EntityManager;
 
@@ -71,6 +72,9 @@ public class WithdrawHelper
         this.targetBlockTime = targetBlockTime;
     }
 
+    // Match sus Address Patterns
+    private static final Pattern susPattern = Pattern.compile(".*[^a-zA-Z0-9].*");
+
     /**
      * Initiates a withdrawal that will not be sent to the network
      * until player confirmation is received.
@@ -82,6 +86,12 @@ public class WithdrawHelper
      */
     public WithdrawRequestResponse initiateWithdraw(DepositAccount account, String destAddress, long amount)
     {
+        // Reject Any Address With Suspicious Characters, Prevent Possibility Of Request Injection Just In Case
+        if (susPattern.matcher(destAddress).matches())
+        {
+            logger.warning(account.getAccountUUID() + " attempted to withdraw to invalid address: " + destAddress);
+            return new WithdrawRequestResponse(WithdrawRequestResponseType.INVALID_ADDRESS);
+        }
         // Make Sure No Existing Request Already Exists
         if (account.getWithdrawRequest() != null)
         {
