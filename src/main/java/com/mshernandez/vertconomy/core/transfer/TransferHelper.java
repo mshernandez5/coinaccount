@@ -27,6 +27,9 @@ public class TransferHelper
     // Coin Selection For Transfers
     private CoinSelector<Deposit> coinSelector;
 
+    // Rewind Parameter, See BinarySearchCoinSelector Documentation
+    private static int COIN_SELECTOR_MAX_REWIND = 5;
+
     /**
      * Create a new transfer helper instance.
      * 
@@ -37,7 +40,7 @@ public class TransferHelper
     {
         this.logger = logger;
         this.entityManager = entityManager;
-        coinSelector = new BinarySearchCoinSelector<>(5);
+        coinSelector = new BinarySearchCoinSelector<>(COIN_SELECTOR_MAX_REWIND);
     }
 
     /**
