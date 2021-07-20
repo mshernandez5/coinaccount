@@ -13,6 +13,7 @@ import com.mshernandez.vertconomy.core.account.AccountRepository;
 import com.mshernandez.vertconomy.core.account.DepositAccount;
 import com.mshernandez.vertconomy.core.withdraw.WithdrawRequest;
 import com.mshernandez.vertconomy.wallet_interface.RPCWalletConnection;
+import com.mshernandez.vertconomy.wallet_interface.exceptions.WalletRequestException;
 import com.mshernandez.vertconomy.wallet_interface.responses.UnspentOutputResponse;
 import com.mshernandez.vertconomy.wallet_interface.responses.UnspentOutputResponse.UnspentOutput;
 
@@ -81,51 +82,51 @@ public class DepositHelper
         // Keep Track Of New Balances & Pending Unconfirmed Balances
         long addedBalance = 0L;
         long unconfirmedBalance = 0L;
+        // Get Wallet Transactions For Addresses Associated With Account
+        List<UnspentOutputResponse.UnspentOutput> unspentOutputs = null;
         try
         {
-            entityManager.getTransaction().begin();
-            // Get Wallet Transactions For Addresses Associated With Account
-            List<UnspentOutputResponse.UnspentOutput> unspentOutputs = wallet.getUnspentOutputs(account.getDepositAddress());
-            // Remember Which Transactions Have Already Been Accounted For
-            Set<String> oldTXIDs = account.getProcessedDepositIDs();
-            Set<String> unspentTXIDs = new HashSet<>();
-            // Check For New Unspent Outputs Deposited To Account
-            for (UnspentOutput output : unspentOutputs)
-            {
-                if (output.confirmations >= minDepositConfirmations
-                    && output.spendable && output.safe && output.solvable)
-                {
-                    if (!oldTXIDs.contains(output.txid))
-                    {
-                        long depositAmount = output.amount.satAmount;
-                        // New Deposit Transaction Initially 100% Owned By Depositing Account
-                        Deposit deposit = new Deposit(output.txid, output.vout, depositAmount);
-                        entityManager.persist(deposit);
-                        // Associate With Account
-                        deposit.setShare(account, depositAmount);
-                        addedBalance += depositAmount;
-                    }
-                    unspentTXIDs.add(output.txid);
-                }
-                else
-                {
-                    unconfirmedBalance += output.amount.satAmount;
-                }
-            }
-            oldTXIDs.clear();
-            oldTXIDs.addAll(unspentTXIDs);
-            account.setProcessedDepositIDs(oldTXIDs);
-            account.setPendingBalance(unconfirmedBalance);
-            entityManager.merge(account);
-            entityManager.getTransaction().commit();
+            unspentOutputs = wallet.getUnspentOutputs(account.getDepositAddress());
         }
-        catch (Exception e)
+        catch (WalletRequestException e)
         {
             logger.warning("Failed To Register New Deposits For Account: " + account.getAccountUUID());
             e.printStackTrace();
-            entityManager.getTransaction().rollback();
             return 0L;
         }
+        // Remember Which Transactions Have Already Been Accounted For
+        Set<String> oldTXIDs = account.getProcessedDepositIDs();
+        Set<String> unspentTXIDs = new HashSet<>();
+        // Associate New Unspent Outputs With Account
+        entityManager.getTransaction().begin();
+        for (UnspentOutput output : unspentOutputs)
+        {
+            if (output.confirmations >= minDepositConfirmations
+                && output.spendable && output.safe && output.solvable)
+            {
+                if (!oldTXIDs.contains(output.txid))
+                {
+                    long depositAmount = output.amount.satAmount;
+                    // New Deposit Transaction Initially 100% Owned By Depositing Account
+                    Deposit deposit = new Deposit(output.txid, output.vout, depositAmount);
+                    entityManager.persist(deposit);
+                    // Associate With Account
+                    deposit.setShare(account, depositAmount);
+                    addedBalance += depositAmount;
+                }
+                unspentTXIDs.add(output.txid);
+            }
+            else
+            {
+                unconfirmedBalance += output.amount.satAmount;
+            }
+        }
+        oldTXIDs.clear();
+        oldTXIDs.addAll(unspentTXIDs);
+        account.setProcessedDepositIDs(oldTXIDs);
+        account.setPendingBalance(unconfirmedBalance);
+        entityManager.merge(account);
+        entityManager.getTransaction().commit();
         return addedBalance;
     }
 
@@ -137,67 +138,68 @@ public class DepositHelper
     public void registerChangeDeposits()
     {
         DepositAccount withdrawAccount = accountRepository.getOrCreateUserAccount(withdrawAccountUUID);
+        // Get Wallet Transactions For Addresses Associated With Account
+        List<UnspentOutputResponse.UnspentOutput> unspentOutputs = null;
         try
         {
-            entityManager.getTransaction().begin();
-            // Get Wallet Transactions For Addresses Associated With Account
-            List<UnspentOutputResponse.UnspentOutput> unspentOutputs = wallet.getUnspentOutputs(withdrawAccount.getDepositAddress());
-            // Remember Which Transactions Have Already Been Accounted For
-            Set<String> oldTXIDs = withdrawAccount.getProcessedDepositIDs();
-            Set<String> unspentTXIDs = new HashSet<>();
-            // Check For New Unspent Outputs Deposited To Account
-            for (UnspentOutput output : unspentOutputs)
-            {
-                if (output.confirmations >= minChangeConfirmations
-                    && output.spendable && output.safe && output.solvable)
-                {
-                    if (!oldTXIDs.contains(output.txid))
-                    {
-                        // Look For Withdraw Request The Transaction Was Created From
-                        WithdrawRequest withdrawRequest = entityManager.find(WithdrawRequest.class, output.txid);
-                        if (withdrawRequest != null)
-                        {
-                            // Create Change Deposit
-                            Deposit deposit = new Deposit(output.txid, output.vout, output.amount.satAmount);
-                            // Lookup Inputs To Change Deposit, Distribute Unused Balances
-                            Set<Deposit> inputs = withdrawRequest.getInputs();
-                            for (Deposit inputDeposit : inputs)
-                            {
-                                for (Account owner : inputDeposit.getOwners())
-                                {
-                                    if (!owner.equals(withdrawAccount))
-                                    {
-                                        deposit.setShare(owner, deposit.getShare(owner) + inputDeposit.getShare(owner));
-                                    }
-                                    owner.removeDeposit(inputDeposit);
-                                }
-                                entityManager.remove(inputDeposit);
-                            }
-                            entityManager.persist(deposit);
-                            // Persist Account Changes
-                            for (Account owner : deposit.getOwners())
-                            {
-                                entityManager.merge(owner);
-                            }
-                            // Remove Fully Completed Withdraw Request
-                            entityManager.remove(withdrawRequest);
-                        }
-                    }
-                    unspentTXIDs.add(output.txid);
-                }
-            }
-            oldTXIDs.clear();
-            oldTXIDs.addAll(unspentTXIDs);
-            withdrawAccount.setProcessedDepositIDs(oldTXIDs);
-            entityManager.merge(withdrawAccount);
-            entityManager.getTransaction().commit();
+            unspentOutputs = wallet.getUnspentOutputs(withdrawAccount.getDepositAddress());
         }
         catch (Exception e)
         {
             logger.warning("Failed to register change deposits!");
             e.printStackTrace();
-            entityManager.getTransaction().rollback();
+            return;
         }
+        // Remember Which Transactions Have Already Been Accounted For
+        Set<String> oldTXIDs = withdrawAccount.getProcessedDepositIDs();
+        Set<String> unspentTXIDs = new HashSet<>();
+        // Associate Change UTXOs Back To Original Owners
+        entityManager.getTransaction().begin();
+        for (UnspentOutput output : unspentOutputs)
+        {
+            if (output.confirmations >= minChangeConfirmations
+                && output.spendable && output.safe && output.solvable)
+            {
+                if (!oldTXIDs.contains(output.txid))
+                {
+                    // Look For Withdraw Request The Transaction Was Created From
+                    WithdrawRequest withdrawRequest = entityManager.find(WithdrawRequest.class, output.txid);
+                    if (withdrawRequest != null)
+                    {
+                        // Create Change Deposit
+                        Deposit deposit = new Deposit(output.txid, output.vout, output.amount.satAmount);
+                        // Lookup Inputs To Change Deposit, Distribute Unused Balances
+                        Set<Deposit> inputs = withdrawRequest.getInputs();
+                        for (Deposit inputDeposit : inputs)
+                        {
+                            for (Account owner : inputDeposit.getOwners())
+                            {
+                                if (!owner.equals(withdrawAccount))
+                                {
+                                    deposit.setShare(owner, deposit.getShare(owner) + inputDeposit.getShare(owner));
+                                }
+                                owner.removeDeposit(inputDeposit);
+                            }
+                            entityManager.remove(inputDeposit);
+                        }
+                        entityManager.persist(deposit);
+                        // Persist Account Changes
+                        for (Account owner : deposit.getOwners())
+                        {
+                            entityManager.merge(owner);
+                        }
+                        // Remove Fully Completed Withdraw Request
+                        entityManager.remove(withdrawRequest);
+                    }
+                }
+                unspentTXIDs.add(output.txid);
+            }
+        }
+        oldTXIDs.clear();
+        oldTXIDs.addAll(unspentTXIDs);
+        withdrawAccount.setProcessedDepositIDs(oldTXIDs);
+        entityManager.merge(withdrawAccount);
+        entityManager.getTransaction().commit();
     }
 
     /**

@@ -21,6 +21,7 @@ import com.mshernandez.vertconomy.core.deposit.Deposit;
 import com.mshernandez.vertconomy.wallet_interface.RPCWalletConnection;
 import com.mshernandez.vertconomy.wallet_interface.ResponseError;
 import com.mshernandez.vertconomy.wallet_interface.exceptions.RPCErrorResponseException;
+import com.mshernandez.vertconomy.wallet_interface.exceptions.WalletRequestException;
 import com.mshernandez.vertconomy.wallet_interface.requests.RawTransactionInput;
 
 /**
@@ -105,6 +106,8 @@ public class WithdrawHelper
         {
             return new WithdrawRequestResponse(WithdrawRequestResponseType.NOT_ENOUGH_WITHDRAWABLE_FUNDS);
         }
+        // Form Withdraw Request
+        WithdrawRequest request = null;
         try
         {
             // Account For Fees
@@ -152,37 +155,7 @@ public class WithdrawHelper
             String withdrawTxid = wallet.decodeRawTransaction(txHex).txid;
             // Save Records
             long timestamp = System.currentTimeMillis();
-            WithdrawRequest request = new WithdrawRequest(withdrawTxid, account, inputDeposits, withdrawAmount, fees, txHex, timestamp);
-            // Save Request & Lock Input Deposits
-            entityManager.getTransaction().begin();
-            entityManager.persist(request);
-            long remainingHoldAmount = withdrawAmount + fees;
-            for (Deposit inputDeposit : inputDeposits)
-            {
-                if (remainingHoldAmount != 0)
-                {
-                    long depositValue = inputDeposit.getShare(account);
-                    if (depositValue <= remainingHoldAmount)
-                    {
-                        inputDeposit.setShare(account, 0L);
-                        inputDeposit.setShare(withdrawAccount, depositValue);
-                        remainingHoldAmount -= depositValue;
-                    }
-                    else
-                    {
-                        inputDeposit.setShare(account, depositValue - remainingHoldAmount);
-                        inputDeposit.setShare(withdrawAccount, remainingHoldAmount);
-                        remainingHoldAmount = 0L;
-                    }
-                }
-                inputDeposit.setWithdrawLock(request);
-                entityManager.merge(inputDeposit);
-            }
-            account.setWithdrawRequest(request);
-            entityManager.merge(account);
-            entityManager.merge(withdrawAccount);
-            entityManager.getTransaction().commit();
-            return new WithdrawRequestResponse(request);
+            request = new WithdrawRequest(withdrawTxid, account, inputDeposits, withdrawAmount, fees, txHex, timestamp);
         }
         catch (RPCErrorResponseException e)
         {
@@ -194,13 +167,42 @@ public class WithdrawHelper
                            + ") Creating Withdraw TX For: " + account.getAccountUUID());
             return new WithdrawRequestResponse(WithdrawRequestResponseType.UNKNOWN_FAILURE);
         }
-        catch (Exception e)
+        catch (WalletRequestException e)
         {
             logger.warning("Error Initiating Withdraw For Account: " + account.getAccountUUID());
             e.printStackTrace();
-            entityManager.getTransaction().rollback();
             return new WithdrawRequestResponse(WithdrawRequestResponseType.UNKNOWN_FAILURE);
         }
+        // Persist Request & Lock Input Deposits
+        entityManager.getTransaction().begin();
+        entityManager.persist(request);
+        long remainingHoldAmount = request.getWithdrawAmount() + request.getFeeAmount();
+        for (Deposit inputDeposit : request.getInputs())
+        {
+            if (remainingHoldAmount != 0)
+            {
+                long depositValue = inputDeposit.getShare(account);
+                if (depositValue <= remainingHoldAmount)
+                {
+                    inputDeposit.setShare(account, 0L);
+                    inputDeposit.setShare(withdrawAccount, depositValue);
+                    remainingHoldAmount -= depositValue;
+                }
+                else
+                {
+                    inputDeposit.setShare(account, depositValue - remainingHoldAmount);
+                    inputDeposit.setShare(withdrawAccount, remainingHoldAmount);
+                    remainingHoldAmount = 0L;
+                }
+            }
+            inputDeposit.setWithdrawLock(request);
+            entityManager.merge(inputDeposit);
+        }
+        account.setWithdrawRequest(request);
+        entityManager.merge(account);
+        entityManager.merge(withdrawAccount);
+        entityManager.getTransaction().commit();
+        return new WithdrawRequestResponse(request);
     }
 
     /**
@@ -216,31 +218,22 @@ public class WithdrawHelper
     {
         DepositAccount initiatorAccount = withdrawRequest.getAccount();
         DepositAccount withdrawAccount = accountRepository.getOrCreateUserAccount(withdrawAccountUUID);
-        try
+        entityManager.getTransaction().begin();
+        Set<Deposit> lockedDeposits = withdrawRequest.getInputs();
+        for (Deposit lockedDeposit : lockedDeposits)
         {
-            entityManager.getTransaction().begin();
-            Set<Deposit> lockedDeposits = withdrawRequest.getInputs();
-            for (Deposit lockedDeposit : lockedDeposits)
-            {
-                long lockedAmount = lockedDeposit.getShare(withdrawAccount);
-                long updatedAmount = lockedDeposit.getShare(initiatorAccount) + lockedAmount;
-                lockedDeposit.setShare(initiatorAccount, updatedAmount);
-                lockedDeposit.setShare(withdrawAccount, 0L);
-                lockedDeposit.setWithdrawLock(null);
-                lockedDeposit = entityManager.merge(lockedDeposit);
-            }
-            initiatorAccount.setWithdrawRequest(null);
-            entityManager.merge(initiatorAccount);
-            entityManager.merge(withdrawAccount);
-            entityManager.remove(withdrawRequest);
-            entityManager.getTransaction().commit();
+            long lockedAmount = lockedDeposit.getShare(withdrawAccount);
+            long updatedAmount = lockedDeposit.getShare(initiatorAccount) + lockedAmount;
+            lockedDeposit.setShare(initiatorAccount, updatedAmount);
+            lockedDeposit.setShare(withdrawAccount, 0L);
+            lockedDeposit.setWithdrawLock(null);
+            lockedDeposit = entityManager.merge(lockedDeposit);
         }
-        catch (Exception e)
-        {
-            logger.info("Failed to cancel withdraw request!");
-            e.printStackTrace();
-            entityManager.getTransaction().rollback();
-        }
+        initiatorAccount.setWithdrawRequest(null);
+        entityManager.merge(initiatorAccount);
+        entityManager.merge(withdrawAccount);
+        entityManager.remove(withdrawRequest);
+        entityManager.getTransaction().commit();
     }
 
     /**
@@ -257,36 +250,8 @@ public class WithdrawHelper
         {
             // Send Transaction
             txid = wallet.sendRawTransaction(withdrawRequest.getTxHex());
-            // Clear Completed Request From Account
-            withdrawRequest.getAccount().setWithdrawRequest(null);
-            // If No Change Will Be Received From TX, Request Can Be Removed Immediately
-            boolean change = false;
-            Set<Deposit> inputs = withdrawRequest.getInputs();
-            for (Deposit input : inputs)
-            {
-                // Only Remember Deposits Contributing To Change
-                if (input.getShare(withdrawAccount) == input.getTotal())
-                {
-                    input.setShare(withdrawAccount, 0L);
-                    withdrawRequest.forgetInput(input);
-                    entityManager.remove(input);
-                }
-                else
-                {
-                    change = true;
-                }
-            }
-            if (!change)
-            {
-                withdrawAccount.setWithdrawRequest(null);
-                entityManager.remove(withdrawRequest);
-            }
-            else
-            {
-                entityManager.merge(withdrawAccount);
-            }
         }
-        catch (Exception e)
+        catch (WalletRequestException e)
         {
             logger.warning("Error While Completing Withdraw For Account: "
                            + withdrawRequest.getAccount().getAccountUUID());
@@ -295,6 +260,35 @@ public class WithdrawHelper
             {
                 txid = "ERROR";
             }
+            return txid;
+        }
+        // Clear Completed Request From Account
+        withdrawRequest.getAccount().setWithdrawRequest(null);
+        // If No Change Will Be Received From TX, Request Can Be Removed Immediately
+        boolean change = false;
+        Set<Deposit> inputs = withdrawRequest.getInputs();
+        for (Deposit input : inputs)
+        {
+            // Only Remember Deposits Contributing To Change
+            if (input.getShare(withdrawAccount) == input.getTotal())
+            {
+                input.setShare(withdrawAccount, 0L);
+                withdrawRequest.forgetInput(input);
+                entityManager.remove(input);
+            }
+            else
+            {
+                change = true;
+            }
+        }
+        if (!change)
+        {
+            withdrawAccount.setWithdrawRequest(null);
+            entityManager.remove(withdrawRequest);
+        }
+        else
+        {
+            entityManager.merge(withdrawAccount);
         }
         return txid;
     }

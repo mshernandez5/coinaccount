@@ -46,19 +46,20 @@ public class AccountRepository
         if (account == null)
         {
             logger.info("Creating New Account For User: " + accountUUID);
+            String depositAddress = null;
             try
             {
-                String depositAddress = wallet.getNewAddress(accountUUID.toString());
-                account = new DepositAccount(accountUUID, depositAddress);
-                entityManager.getTransaction().begin();
-                entityManager.persist(account);
-                entityManager.getTransaction().commit();
+                depositAddress = wallet.getNewAddress(accountUUID.toString());
             }
             catch (WalletRequestException e)
             {
                 logger.warning("Failed To Get/Create Account: " + e.getMessage());
                 return null;
             }
+            account = new DepositAccount(accountUUID, depositAddress);
+            entityManager.getTransaction().begin();
+            entityManager.persist(account);
+            entityManager.getTransaction().commit();
         }
         return account;
     }

@@ -57,40 +57,32 @@ public class TransferHelper
             logger.info(sender + " can't send " + amount + " to " + receiver);
             return false;
         }
-        try
+        entityManager.getTransaction().begin();
+        Evaluator<Deposit> evaluator = new DepositShareEvaluator(sender);
+        Set<Deposit> selected = coinSelector.selectInputs(evaluator, sender.getDeposits(), 0L, amount);
+        long remainingOwed = amount;
+        Iterator<Deposit> it = selected.iterator();
+        while (it.hasNext() && remainingOwed > 0L)
         {
-            entityManager.getTransaction().begin();
-            Evaluator<Deposit> evaluator = new DepositShareEvaluator(sender);
-            Set<Deposit> selected = coinSelector.selectInputs(evaluator, sender.getDeposits(), 0L, amount);
-            long remainingOwed = amount;
-            Iterator<Deposit> it = selected.iterator();
-            while (it.hasNext() && remainingOwed > 0L)
+            Deposit deposit = it.next();
+            long senderShare = deposit.getShare(sender);
+            long takenAmount;
+            if (senderShare <= remainingOwed)
             {
-                Deposit deposit = it.next();
-                long senderShare = deposit.getShare(sender);
-                long takenAmount;
-                if (senderShare <= remainingOwed)
-                {
-                    deposit.setShare(sender, 0L);
-                    deposit.setShare(receiver, deposit.getShare(receiver) + senderShare);
-                    takenAmount = senderShare;
-                }
-                else
-                {
-                    deposit.setShare(sender, senderShare - remainingOwed);
-                    deposit.setShare(receiver, deposit.getShare(receiver) + remainingOwed);
-                    takenAmount = remainingOwed;
-                }
-                remainingOwed -= takenAmount;
+                deposit.setShare(sender, 0L);
+                deposit.setShare(receiver, deposit.getShare(receiver) + senderShare);
+                takenAmount = senderShare;
             }
-            entityManager.getTransaction().commit();
-            logger.info(sender + " successfully sent " + amount + " to " + receiver);
+            else
+            {
+                deposit.setShare(sender, senderShare - remainingOwed);
+                deposit.setShare(receiver, deposit.getShare(receiver) + remainingOwed);
+                takenAmount = remainingOwed;
+            }
+            remainingOwed -= takenAmount;
         }
-        catch (Exception e)
-        {
-            logger.info(sender + " failed to send " + amount + " to " + receiver);
-            entityManager.getTransaction().rollback();
-        }
+        entityManager.getTransaction().commit();
+        logger.info(sender + " successfully sent " + amount + " to " + receiver);
         return true;
     }
 }
