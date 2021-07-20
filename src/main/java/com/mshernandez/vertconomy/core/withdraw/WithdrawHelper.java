@@ -74,7 +74,7 @@ public class WithdrawHelper
     }
 
     // Match sus Address Patterns
-    private static final Pattern susPattern = Pattern.compile(".*[^a-zA-Z0-9].*");
+    private static final Pattern SUS_PATTERN = Pattern.compile(".*[^a-zA-Z0-9].*");
 
     /**
      * Initiates a withdrawal that will not be sent to the network
@@ -88,7 +88,7 @@ public class WithdrawHelper
     public WithdrawRequestResponse initiateWithdraw(DepositAccount account, String destAddress, long amount)
     {
         // Reject Any Address With Suspicious Characters, Prevent Possibility Of Request Injection Just In Case
-        if (susPattern.matcher(destAddress).matches())
+        if (SUS_PATTERN.matcher(destAddress).matches())
         {
             logger.warning(account.getAccountUUID() + " attempted to withdraw to invalid address: " + destAddress);
             return new WithdrawRequestResponse(WithdrawRequestResponseType.INVALID_ADDRESS);
