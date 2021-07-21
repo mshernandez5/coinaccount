@@ -18,13 +18,13 @@ import org.junit.jupiter.api.Test;
 public class BinarySearchCoinSelectorTest
 {
     private CoinSelector<Long> coinSelector = new BinarySearchCoinSelector<>();
-    private Evaluator<Long> evaluator = new LongEvaluator();
+    private CoinEvaluator<Long> evaluator = new LongEvaluator();
 
     @Test
     public void emptyInputsShouldReturnNull()
     {
         Set<Long> inputs = new HashSet<>();
-        Set<Long> selected = coinSelector.selectInputs(evaluator, inputs, 0L, 5L);
+        Set<Long> selected = coinSelector.selectInputs(evaluator, inputs, 5L);
         assertNull(selected);
     }
 
@@ -33,7 +33,7 @@ public class BinarySearchCoinSelectorTest
     {
         Set<Long> inputs = new HashSet<>();
         inputs.add(5L);
-        Set<Long> selected = coinSelector.selectInputs(evaluator, inputs, 0L, 5L);
+        Set<Long> selected = coinSelector.selectInputs(evaluator, inputs, 5L);
         assertNotNull(selected);
         assertEquals(inputs, selected);
     }
@@ -43,7 +43,7 @@ public class BinarySearchCoinSelectorTest
     {
         Set<Long> inputs = new HashSet<>();
         inputs.add(5L);
-        Set<Long> selected = coinSelector.selectInputs(evaluator, inputs, 0L, 2L);
+        Set<Long> selected = coinSelector.selectInputs(evaluator, inputs, 2L);
         assertNotNull(selected);
         assertEquals(inputs, selected);
     }
@@ -53,7 +53,7 @@ public class BinarySearchCoinSelectorTest
     {
         Set<Long> inputs = new HashSet<>();
         inputs.add(5L);
-        Set<Long> selected = coinSelector.selectInputs(evaluator, inputs, 0L, 8L);
+        Set<Long> selected = coinSelector.selectInputs(evaluator, inputs, 8L);
         assertNull(selected);
     }
 
@@ -63,7 +63,7 @@ public class BinarySearchCoinSelectorTest
         Set<Long> inputs = new HashSet<>();
         inputs.add(5L);
         inputs.add(10L);
-        Set<Long> selected = coinSelector.selectInputs(evaluator, inputs, 0L, 15L);
+        Set<Long> selected = coinSelector.selectInputs(evaluator, inputs, 15L);
         assertNotNull(selected);
         assertEquals(inputs, selected);
     }
@@ -76,7 +76,7 @@ public class BinarySearchCoinSelectorTest
         inputs.add(10L);
         Set<Long> expected = new HashSet<>();
         expected.add(10L);
-        Set<Long> selected = coinSelector.selectInputs(evaluator, inputs, 0L, 10L);
+        Set<Long> selected = coinSelector.selectInputs(evaluator, inputs, 10L);
         assertNotNull(selected);
         assertEquals(expected, selected);
     }
@@ -87,7 +87,7 @@ public class BinarySearchCoinSelectorTest
         Set<Long> inputs = new HashSet<>();
         inputs.add(5L);
         inputs.add(-10L);
-        Set<Long> selected = coinSelector.selectInputs(evaluator, inputs, 0L, 10L);
+        Set<Long> selected = coinSelector.selectInputs(evaluator, inputs, 10L);
         assertNull(selected);
     }
 
@@ -105,7 +105,7 @@ public class BinarySearchCoinSelectorTest
         expected.add(40L);
         expected.add(20L);
         expected.add(5L);
-        Set<Long> selected = coinSelector.selectInputs(evaluator, inputs, 0L, 65L);
+        Set<Long> selected = coinSelector.selectInputs(evaluator, inputs, 65L);
         assertNotNull(selected);
         assertEquals(expected, selected);
     }
@@ -121,7 +121,7 @@ public class BinarySearchCoinSelectorTest
         inputs.add(100L);
         Set<Long> expected = new HashSet<>();
         expected.add(70L);
-        Set<Long> selected = coinSelector.selectInputs(evaluator, inputs, 0L, 45L);
+        Set<Long> selected = coinSelector.selectInputs(evaluator, inputs, 45L);
         assertNotNull(selected);
         assertEquals(expected, selected);
     }
@@ -135,7 +135,7 @@ public class BinarySearchCoinSelectorTest
             inputs.add(l);
         }
         long target = 281625L;
-        Set<Long> selected = coinSelector.selectInputs(evaluator, inputs, 0L, target);
+        Set<Long> selected = coinSelector.selectInputs(evaluator, inputs, target);
         assertNotNull(selected);
         long sum = 0L;
         for (long l : selected)
@@ -159,7 +159,7 @@ public class BinarySearchCoinSelectorTest
         expectedOrder.add(40L);
         expectedOrder.add(4L);
         expectedOrder.add(1L);
-        Set<Long> selected = coinSelector.selectInputs(evaluator, inputs, 0L, target);
+        Set<Long> selected = coinSelector.selectInputs(evaluator, inputs, target);
         Iterator<Long> expectedIterator = expectedOrder.iterator();
         Iterator<Long> selectedIterator = selected.iterator();
         while (expectedIterator.hasNext())

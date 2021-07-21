@@ -131,7 +131,7 @@ public class WithdrawService
             {
                 coinSelector = new BinarySearchCoinSelector<>();
             }
-            Set<Deposit> inputDeposits = coinSelector.selectInputs(new DepositShareEvaluator(initiator), initiator.getDeposits(), inputFee, amount);
+            Set<Deposit> inputDeposits = coinSelector.selectInputs(new DepositShareEvaluator(initiator, inputFee), initiator.getDeposits(), amount);
             if (inputDeposits == null)
             {
                 return new WithdrawRequestResponse(WithdrawRequestResponseType.CANNOT_AFFORD_FEES);

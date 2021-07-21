@@ -10,12 +10,12 @@ import java.util.Set;
 public class MaxAmountCoinSelector<T> implements CoinSelector<T>
 {
     @Override
-    public Set<T> selectInputs(Evaluator<T> evaluator, Set<T> inputs, long cost, long target)
+    public Set<T> selectInputs(CoinEvaluator<T> evaluator, Set<T> inputs, long target)
     {
         Set<T> selectedInputs = new HashSet<>();
         for (T input : inputs)
         {
-            if (evaluator.isValid(input) && evaluator.evaluate(input) > cost)
+            if (evaluator.isValid(input) && evaluator.costAdjustedValue(input) > 0L)
             {
                 selectedInputs.add(input);
             }

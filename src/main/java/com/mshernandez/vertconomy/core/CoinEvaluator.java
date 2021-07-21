@@ -6,7 +6,7 @@ import java.util.Comparator;
  * An extension of Comparator that can also
  * evaluate objects into discrete values.
  */
-public interface Evaluator<T> extends Comparator<T>
+public interface CoinEvaluator<T> extends Comparator<T>
 {
     /**
      * Whether an object is valid for evaluation
@@ -18,6 +18,14 @@ public interface Evaluator<T> extends Comparator<T>
     boolean isValid(T obj);
 
     /**
+     * Determine the cost of selecting this particular input.
+     * 
+     * @param obj The object.
+     * @return The cost for selecting the object.
+     */
+    long cost(T obj);
+
+    /**
      * Evaluate an object into a discrete value
      * suitable for comparisons.
      * 
@@ -25,4 +33,16 @@ public interface Evaluator<T> extends Comparator<T>
      * @return A value for the object suitable for comparison.
      */
     long evaluate(T obj);
+
+    /**
+     * Get the net value of the object considering
+     * costs.
+     * 
+     * @param obj The object to evaluate.
+     * @return The adjusted value.
+     */
+    default long costAdjustedValue(T obj)
+    {
+        return evaluate(obj) - cost(obj);
+    }
 }

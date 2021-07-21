@@ -12,7 +12,7 @@ import com.google.inject.persist.Transactional;
 import com.mshernandez.vertconomy.core.BinarySearchCoinSelector;
 import com.mshernandez.vertconomy.core.CoinSelector;
 import com.mshernandez.vertconomy.core.DepositShareEvaluator;
-import com.mshernandez.vertconomy.core.Evaluator;
+import com.mshernandez.vertconomy.core.CoinEvaluator;
 import com.mshernandez.vertconomy.core.entity.Account;
 import com.mshernandez.vertconomy.core.entity.AccountDao;
 import com.mshernandez.vertconomy.core.entity.Deposit;
@@ -72,8 +72,8 @@ public class TransferService
             logger.info(sender + " can't send " + amount + " to " + receiver);
             return false;
         }
-        Evaluator<Deposit> evaluator = new DepositShareEvaluator(sender);
-        Set<Deposit> selected = coinSelector.selectInputs(evaluator, sender.getDeposits(), 0L, amount);
+        CoinEvaluator<Deposit> evaluator = new DepositShareEvaluator(sender, true, 0L);
+        Set<Deposit> selected = coinSelector.selectInputs(evaluator, sender.getDeposits(), amount);
         long remainingOwed = amount;
         Iterator<Deposit> it = selected.iterator();
         while (it.hasNext() && remainingOwed > 0L)

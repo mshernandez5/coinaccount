@@ -80,7 +80,7 @@ public class BinarySearchCoinSelector<T> implements CoinSelector<T>
     }
 
     @Override
-    public Set<T> selectInputs(Evaluator<T> evaluator, Set<T> inputs, long cost, long target)
+    public Set<T> selectInputs(CoinEvaluator<T> evaluator, Set<T> inputs, long target)
     {
         // Get Actual Max Stack Depth Based On Setting
         int maxRewind;
@@ -121,7 +121,7 @@ public class BinarySearchCoinSelector<T> implements CoinSelector<T>
         while (target > 0L && !sorted.isEmpty())
         {
             // Every Selected Input Adds Fees To The Target Amount
-            target += cost;
+            //target += evaluator.cost(obj);
             // Binary Search For Next Input Closest To Current Target Amount
             int first = 0,
                 last = sorted.size() - 1,
@@ -129,17 +129,17 @@ public class BinarySearchCoinSelector<T> implements CoinSelector<T>
             while (first <= last)
             {
                 mid = (first + last) / 2;
-                long value = evaluator.evaluate(sorted.get(mid));
+                long value = evaluator.costAdjustedValue(sorted.get(mid));
                 double difference = absDiff(value, target);
                 // Check If Any Smaller Deposits Closer Or Equally Close To Target Amount
                 if (mid - 1 >= first
-                    && absDiff(evaluator.evaluate(sorted.get(mid - 1)), target) <= difference)
+                    && absDiff(evaluator.costAdjustedValue(sorted.get(mid - 1)), target) <= difference)
                 {
                     last = mid - 1;
                 }
                 // Check If Any Larger Deposits Closer To Target Amount
                 else if (mid + 1 <= last
-                    && absDiff(evaluator.evaluate(sorted.get(mid + 1)), target) < difference)
+                    && absDiff(evaluator.costAdjustedValue(sorted.get(mid + 1)), target) < difference)
                 {
                     first = mid + 1;
                 }
@@ -155,9 +155,8 @@ public class BinarySearchCoinSelector<T> implements CoinSelector<T>
                         && value > evaluator.evaluate(lastSelected.getKey()))
                     {
                         numRewinds++;
+                        target += evaluator.costAdjustedValue(lastSelected.getKey());
                         sorted.add(lastSelected.getVal(), selectedInputs.pop().getKey());
-                        target += evaluator.evaluate(lastSelected.getKey());
-                        target -= cost;
                     }
                     selectedInputs.push(new Pair<>(selected, sorted.indexOf(selected)));
                     sorted.remove(selected);

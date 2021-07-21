@@ -12,13 +12,13 @@ import org.junit.jupiter.api.Test;
 public class MaxAmountCoinSelectorTest
 {
     private CoinSelector<Long> coinSelector = new MaxAmountCoinSelector<>();
-    private Evaluator<Long> evaluator = new LongEvaluator();
+    private CoinEvaluator<Long> evaluator = new LongEvaluator();
 
     @Test
     public void emptyInputsShouldReturnNull()
     {
         Set<Long> inputs = new HashSet<>();
-        Set<Long> selected = coinSelector.selectInputs(evaluator, inputs, 0L, 0L);
+        Set<Long> selected = coinSelector.selectInputs(evaluator, inputs, 0L);
         assertNull(selected);
     }
 
@@ -27,7 +27,7 @@ public class MaxAmountCoinSelectorTest
     {
         Set<Long> inputs = new HashSet<>();
         inputs.add(5L);
-        Set<Long> selected = coinSelector.selectInputs(evaluator, inputs, 0L, 0L);
+        Set<Long> selected = coinSelector.selectInputs(evaluator, inputs, 0L);
         assertNotNull(selected);
         assertEquals(inputs, selected);
     }
@@ -42,7 +42,7 @@ public class MaxAmountCoinSelectorTest
         inputs.add(10L);
         inputs.add(20L);
         inputs.add(40L);
-        Set<Long> selected = coinSelector.selectInputs(evaluator, inputs, 0L, 0L);
+        Set<Long> selected = coinSelector.selectInputs(evaluator, inputs, 0L);
         assertNotNull(selected);
         assertEquals(inputs, selected);
     }
@@ -55,7 +55,7 @@ public class MaxAmountCoinSelectorTest
         inputs.add(10L);
         Set<Long> expected = new HashSet<>();
         expected.add(10L);
-        Set<Long> selected = coinSelector.selectInputs(evaluator, inputs, 0L, 0L);
+        Set<Long> selected = coinSelector.selectInputs(evaluator, inputs, 0L);
         assertNotNull(selected);
         assertEquals(expected, selected);
     }
@@ -74,7 +74,8 @@ public class MaxAmountCoinSelectorTest
         {
             expected.add(l);
         }
-        Set<Long> selected = coinSelector.selectInputs(evaluator, inputs, fee, 0L);
+        CoinEvaluator<Long> evaluatorSimulatingFees = new LongEvaluator(fee);
+        Set<Long> selected = coinSelector.selectInputs(evaluatorSimulatingFees, inputs, 0L);
         assertNotNull(selected);
         assertEquals(expected, selected);
     }

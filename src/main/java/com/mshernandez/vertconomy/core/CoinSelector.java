@@ -13,9 +13,8 @@ public interface CoinSelector<T>
      * 
      * @param evaluator An evaluator to compare inputs and determine their values.
      * @param inputs The inputs to select from to meet the target amount.
-     * @param cost The added cost of selecting an additional input.
      * @param target The target amount to select, excluding the cost of selecting additional inputs.
      * @return A set of inputs that can meet the target amount in addition to the cost of their selection. Returns null if no such set could be formed.
      */
-    Set<T> selectInputs(Evaluator<T> evaluator, Set<T> inputs, long cost, long target);
+    Set<T> selectInputs(CoinEvaluator<T> evaluator, Set<T> inputs, long target);
 }
