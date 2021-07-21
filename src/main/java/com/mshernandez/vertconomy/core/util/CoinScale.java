@@ -1,4 +1,4 @@
-package com.mshernandez.vertconomy.core;
+package com.mshernandez.vertconomy.core.util;
 
 /**
  * Defines valid coin scales that may be used

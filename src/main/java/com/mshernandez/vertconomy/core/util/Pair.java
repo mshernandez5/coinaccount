@@ -1,4 +1,4 @@
-package com.mshernandez.vertconomy.core;
+package com.mshernandez.vertconomy.core.util;
 
 /**
  * A simple Pair that can hold two

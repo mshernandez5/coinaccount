@@ -1,4 +1,4 @@
-package com.mshernandez.vertconomy.core;
+package com.mshernandez.vertconomy.core.util;
 
 /**
  * Evaluate wrapped Long values for testing purposes.

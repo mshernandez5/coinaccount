@@ -2,6 +2,8 @@ package com.mshernandez.vertconomy.core;
 
 import java.util.UUID;
 
+import com.mshernandez.vertconomy.core.util.CoinScale;
+
 public class VertconomyConfiguration
 {
     // JPA Unit Name

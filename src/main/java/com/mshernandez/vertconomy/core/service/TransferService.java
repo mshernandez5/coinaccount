@@ -9,14 +9,14 @@ import javax.inject.Inject;
 import javax.inject.Singleton;
 
 import com.google.inject.persist.Transactional;
-import com.mshernandez.vertconomy.core.BinarySearchCoinSelector;
-import com.mshernandez.vertconomy.core.CoinSelector;
-import com.mshernandez.vertconomy.core.DepositShareEvaluator;
-import com.mshernandez.vertconomy.core.CoinEvaluator;
 import com.mshernandez.vertconomy.core.entity.Account;
 import com.mshernandez.vertconomy.core.entity.AccountDao;
 import com.mshernandez.vertconomy.core.entity.Deposit;
 import com.mshernandez.vertconomy.core.entity.DepositDao;
+import com.mshernandez.vertconomy.core.util.BinarySearchCoinSelector;
+import com.mshernandez.vertconomy.core.util.CoinEvaluator;
+import com.mshernandez.vertconomy.core.util.CoinSelector;
+import com.mshernandez.vertconomy.core.util.DepositShareEvaluator;
 
 /**
  * Helps transfer balances internally between accounts.

@@ -12,6 +12,7 @@ import com.mshernandez.vertconomy.core.service.DepositService;
 import com.mshernandez.vertconomy.core.service.TransferService;
 import com.mshernandez.vertconomy.core.service.WithdrawRequestResponse;
 import com.mshernandez.vertconomy.core.service.WithdrawService;
+import com.mshernandez.vertconomy.core.util.SatAmountFormat;
 import com.mshernandez.vertconomy.wallet_interface.RPCWalletConnection;
 import com.mshernandez.vertconomy.wallet_interface.exceptions.WalletRequestException;
 

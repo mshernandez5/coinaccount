@@ -4,7 +4,7 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.google.inject.persist.jpa.JpaPersistModule;
-
+import com.mshernandez.vertconomy.core.util.CoinScale;
 import com.mshernandez.vertconomy.wallet_interface.RPCWalletConnection;
 
 /**

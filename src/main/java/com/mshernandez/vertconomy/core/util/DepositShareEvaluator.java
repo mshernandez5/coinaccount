@@ -1,4 +1,4 @@
-package com.mshernandez.vertconomy.core;
+package com.mshernandez.vertconomy.core.util;
 
 import com.mshernandez.vertconomy.core.entity.Account;
 import com.mshernandez.vertconomy.core.entity.Deposit;

@@ -1,4 +1,4 @@
-package com.mshernandez.vertconomy.core;
+package com.mshernandez.vertconomy.core.util;
 
 import java.util.HashSet;
 import java.util.Set;

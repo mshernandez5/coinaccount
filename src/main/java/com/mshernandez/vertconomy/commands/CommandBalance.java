@@ -3,8 +3,8 @@ package com.mshernandez.vertconomy.commands;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.mshernandez.vertconomy.core.SatAmountFormat;
 import com.mshernandez.vertconomy.core.Vertconomy;
+import com.mshernandez.vertconomy.core.util.SatAmountFormat;
 
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
