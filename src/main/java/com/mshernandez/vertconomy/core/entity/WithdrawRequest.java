@@ -24,11 +24,8 @@ public class WithdrawRequest
     @Column(name = "TXID")
     private String txid;
 
-    @OneToOne(mappedBy = "withdrawRequest")
-    private Account account;
-
-    @OneToMany(mappedBy = "withdrawLock")
-    private Set<Deposit> inputs;
+    @Column(name = "COMPLETE")
+    private boolean complete;
 
     @Column(name = "WITHDRAW_AMOUNT")
     private long withdrawAmount;
@@ -43,6 +40,23 @@ public class WithdrawRequest
     @Column(name = "TIMESTAMP")
     private long timestamp;
 
+    @OneToOne(mappedBy = "withdrawRequest")
+    private Account account;
+
+    @OneToMany(mappedBy = "withdrawLock")
+    private Set<Deposit> inputs;
+
+    /**
+     * Create a new withdraw request.
+     * 
+     * @param txid The TXID of the withdraw transaction.
+     * @param account The account initiating the request.
+     * @param inputs The deposits contributing to the withdrawal.
+     * @param withdrawAmount The amount being withdrawn excluding fees.
+     * @param fees The fees being paid to withdraw.
+     * @param txHex The signed, hex-encoded transaction.
+     * @param timestamp A timestamp of when the request was made.
+     */
     public WithdrawRequest(String txid, Account account, Set<Deposit> inputs,
                            long withdrawAmount, long fees, String txHex, long timestamp)
     {
@@ -72,6 +86,69 @@ public class WithdrawRequest
     public String getTxid()
     {
         return txid;
+    }
+
+    /**
+     * Whether this request has been completed or
+     * is pending.
+     * 
+     * @return True if the request has been completed.
+     */
+    public boolean isComplete()
+    {
+        return complete;
+    }
+
+    /**
+     * Get the amount of cost contributed by the TX fee.
+     * 
+     * @return The TX fee to be payed.
+     */
+    public long getFeeAmount()
+    {
+        return feeAmount;
+    }
+
+    /**
+     * Get the amount to be received by the user.
+     * 
+     * @return The actual amount to be received.
+     */
+    public long getWithdrawAmount()
+    {
+        return withdrawAmount;
+    }
+
+    /**
+     * Get the total withdrawal cost, including TX fee.
+     * 
+     * @return The total withdrawal cost, including TX fee.
+     */
+    public long getTotalCost()
+    {
+        return withdrawAmount + feeAmount;
+    }
+
+    /**
+     * Get the unsigned hex-encoded transaction
+     * waiting to be signed and sent to the network.
+     * 
+     * @return The unsigned hex-encoded transaction.
+     */
+    public String getTxHex()
+    {
+        return txHex;
+    }
+
+    /**
+     * Get the system time (millis) when this withdraw
+     * was initiated.
+     * 
+     * @return A timestamp of when this withdraw was initiated.
+     */
+    public long getTimestamp()
+    {
+        return timestamp;
     }
 
     /**
@@ -106,57 +183,5 @@ public class WithdrawRequest
     public void forgetInput(Deposit input)
     {
         inputs.remove(input);
-    }
-
-    /**
-     * Get the total withdrawal cost, including TX fee.
-     * 
-     * @return The total withdrawal cost, including TX fee.
-     */
-    public long getTotalCost()
-    {
-        return withdrawAmount + feeAmount;
-    }
-
-    /**
-     * Get the amount of cost contributed by the TX fee.
-     * 
-     * @return The TX fee to be payed.
-     */
-    public long getFeeAmount()
-    {
-        return feeAmount;
-    }
-
-    /**
-     * Get the amount to be received by the user.
-     * 
-     * @return The actual amount to be received.
-     */
-    public long getWithdrawAmount()
-    {
-        return withdrawAmount;
-    }
-
-    /**
-     * Get the unsigned hex-encoded transaction
-     * waiting to be signed and sent to the network.
-     * 
-     * @return The unsigned hex-encoded transaction.
-     */
-    public String getTxHex()
-    {
-        return txHex;
-    }
-
-    /**
-     * Get the system time (millis) when this withdraw
-     * was initiated.
-     * 
-     * @return A timestamp of when this withdraw was initiated.
-     */
-    public long getTimestamp()
-    {
-        return timestamp;
     }
 }

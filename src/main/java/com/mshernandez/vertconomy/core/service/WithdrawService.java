@@ -224,7 +224,7 @@ public class WithdrawService
     public boolean cancelWithdraw(String withdrawTxid)
     {
         WithdrawRequest withdrawRequest = withdrawRequestDao.find(withdrawTxid);
-        if (withdrawRequest == null)
+        if (withdrawRequest == null || withdrawRequest.isComplete())
         {
             return false;
         }
