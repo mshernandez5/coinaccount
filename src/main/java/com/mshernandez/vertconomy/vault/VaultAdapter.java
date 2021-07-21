@@ -1,6 +1,8 @@
-package com.mshernandez.vertconomy.core;
+package com.mshernandez.vertconomy.vault;
 
 import java.util.List;
+
+import com.mshernandez.vertconomy.core.Vertconomy;
 
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;

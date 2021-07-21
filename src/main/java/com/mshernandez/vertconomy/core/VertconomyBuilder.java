@@ -1,8 +1,11 @@
 package com.mshernandez.vertconomy.core;
 
-import com.mshernandez.vertconomy.wallet_interface.RPCWalletConnection;
+import com.google.inject.Guice;
+import com.google.inject.Injector;
+import com.google.inject.Module;
+import com.google.inject.persist.jpa.JpaPersistModule;
 
-import org.bukkit.plugin.Plugin;
+import com.mshernandez.vertconomy.wallet_interface.RPCWalletConnection;
 
 /**
  * Builds new instances of Vertconomy.
@@ -13,8 +16,6 @@ public class VertconomyBuilder
     Vertconomy instance;
 
     // The properties needed to create the instance.
-    private Plugin plugin;
-    
     private RPCWalletConnection wallet;
     private int minDepositConfirmations;
     private int minChangeConfirmations;
@@ -30,7 +31,6 @@ public class VertconomyBuilder
     public VertconomyBuilder()
     {
         // Default Values (Invalid)
-        plugin = null;
         wallet = null;
         minDepositConfirmations = -1;
         minChangeConfirmations = -1;
@@ -51,9 +51,20 @@ public class VertconomyBuilder
         {
             return null;
         }
-        return new Vertconomy(plugin, wallet, minDepositConfirmations,
-                              minChangeConfirmations, targetBlockTime,
-                              symbol, baseUnitSymbol, scale);
+        // Create Configuration Object
+        VertconomyConfiguration config = new VertconomyConfiguration(minDepositConfirmations,
+                                                                     minChangeConfirmations,
+                                                                     targetBlockTime,
+                                                                     symbol,
+                                                                     baseUnitSymbol, scale);
+        // Setup Dependency Injection
+        Module jpaModule = new JpaPersistModule(VertconomyConfiguration.JPA_UNIT_NAME);
+        Module vertconomyModule = new VertconomyInjectorModule(wallet, config);
+        Injector injector = Guice.createInjector(jpaModule, vertconomyModule);
+        // Configure Class Loader To Make Embedded JPA Configuration Available
+        Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
+        // Get Vertconomy Instance
+        return injector.getInstance(Vertconomy.class);
     }
 
     /**
@@ -64,26 +75,13 @@ public class VertconomyBuilder
      */
     private boolean validate()
     {
-        return plugin != null
-            && wallet != null
+        return wallet != null
             && minDepositConfirmations >= 0
             && minChangeConfirmations >= 0
             && targetBlockTime > 0
             && symbol != null
             && baseUnitSymbol != null
             && scale != null;
-    }
-
-    /**
-     * Set the plugin associated with this instance.
-     * 
-     * @param plugin The plugin associated with this instance.
-     * @return A reference to this builder for chaining methods.
-     */
-    public VertconomyBuilder setPlugin(Plugin plugin)
-    {
-        this.plugin = plugin;
-        return this;
     }
 
     /**

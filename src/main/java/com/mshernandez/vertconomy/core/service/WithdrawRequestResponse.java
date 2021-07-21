@@ -1,4 +1,6 @@
-package com.mshernandez.vertconomy.core.withdraw;
+package com.mshernandez.vertconomy.core.service;
+
+import com.mshernandez.vertconomy.core.entity.WithdrawRequest;
 
 /**
  * Carries response information for user requests to

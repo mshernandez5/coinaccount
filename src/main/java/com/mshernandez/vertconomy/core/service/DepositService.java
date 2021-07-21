@@ -1,4 +1,4 @@
-package com.mshernandez.vertconomy.core.deposit;
+package com.mshernandez.vertconomy.core.service;
 
 import java.util.HashSet;
 import java.util.List;
@@ -6,12 +6,17 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.logging.Logger;
 
-import javax.persistence.EntityManager;
+import javax.inject.Inject;
+import javax.inject.Singleton;
 
-import com.mshernandez.vertconomy.core.account.Account;
-import com.mshernandez.vertconomy.core.account.AccountRepository;
-import com.mshernandez.vertconomy.core.account.DepositAccount;
-import com.mshernandez.vertconomy.core.withdraw.WithdrawRequest;
+import com.google.inject.persist.Transactional;
+import com.mshernandez.vertconomy.core.VertconomyConfiguration;
+import com.mshernandez.vertconomy.core.entity.Account;
+import com.mshernandez.vertconomy.core.entity.Deposit;
+import com.mshernandez.vertconomy.core.entity.DepositDao;
+import com.mshernandez.vertconomy.core.entity.JPAAccountDao;
+import com.mshernandez.vertconomy.core.entity.WithdrawRequest;
+import com.mshernandez.vertconomy.core.entity.WithdrawRequestDao;
 import com.mshernandez.vertconomy.wallet_interface.RPCWalletConnection;
 import com.mshernandez.vertconomy.wallet_interface.exceptions.WalletRequestException;
 import com.mshernandez.vertconomy.wallet_interface.responses.UnspentOutputResponse;
@@ -24,49 +29,42 @@ import com.mshernandez.vertconomy.wallet_interface.responses.UnspentOutputRespon
  * This includes both deposits made by users and
  * change UTXOs resulting from withdraw transactions.
  */
-public class DepositHelper
+@Singleton
+public class DepositService
 {
-    // Logger
-    private Logger logger;
+    private final Logger logger;
 
-    // Wallet Access
-    private RPCWalletConnection wallet;
+    private final RPCWalletConnection wallet;
 
-    // Persistence
-    private EntityManager entityManager;
+    private final JPAAccountDao accountDao;
 
-    // Account Repository
-    private AccountRepository accountRepository;
+    private final DepositDao depositDao;
 
-    // Withdraw Account
-    private UUID withdrawAccountUUID;
-    
-    // Minimum Confirmations To Accept User Deposit
-    private int minDepositConfirmations;
+    private final WithdrawRequestDao withdrawRequestDao;
 
-    // Minimum Confirmations To Process Withdraw Change
-    private int minChangeConfirmations;
+    private final VertconomyConfiguration config;
 
     /**
-     * Create a new deposit helper instance.
+     * Create a new deposit service instance.
      * 
-     * @param wallet A connection to the wallet.
-     * @param entityManager An entity manager for persistence.
-     * @param withdrawAccount The server withdraw account.
-     * @param minDepositConfirmations The minimum number of confirmations to accept user deposits.
-     * @param minChangeConfirmations The minimum number of confirmations to process withdraw change.
+     * @param logger A logger for this service to use.
+     * @param wallet A wallet connection.
+     * @param accountDao An account DAO.
+     * @param depositDao A deposit DAO.
+     * @param withdrawRequestDao A withdraw request DAO.
+     * @param config A Vertconomy configuration object.
      */
-    public DepositHelper(Logger logger, RPCWalletConnection wallet, EntityManager entityManager,
-                         AccountRepository accountRepository, UUID withdrawAccountUUID,
-                         int minDepositConfirmations, int minChangeConfirmations)
+    @Inject
+    public DepositService(Logger logger, RPCWalletConnection wallet,
+                         JPAAccountDao accountDao, DepositDao depositDao,
+                         WithdrawRequestDao withdrawRequestDao, VertconomyConfiguration config)
     {
         this.logger = logger;
         this.wallet = wallet;
-        this.entityManager = entityManager;
-        this.accountRepository = accountRepository;
-        this.withdrawAccountUUID = withdrawAccountUUID;
-        this.minDepositConfirmations = minDepositConfirmations;
-        this.minChangeConfirmations = minChangeConfirmations;
+        this.accountDao = accountDao;
+        this.depositDao = depositDao;
+        this.withdrawRequestDao = withdrawRequestDao;
+        this.config = config;
     }
 
     /**
@@ -77,8 +75,10 @@ public class DepositHelper
      * @param account The account to check for new deposits.
      * @return Balance gained from newly registered deposits.
      */
-    public long registerNewDeposits(DepositAccount account)
+    @Transactional
+    public long registerNewDeposits(UUID accountId)
     {
+        Account account = accountDao.findOrCreate(accountId);
         // Keep Track Of New Balances & Pending Unconfirmed Balances
         long addedBalance = 0L;
         long unconfirmedBalance = 0L;
@@ -98,10 +98,9 @@ public class DepositHelper
         Set<String> oldTXIDs = account.getProcessedDepositIDs();
         Set<String> unspentTXIDs = new HashSet<>();
         // Associate New Unspent Outputs With Account
-        entityManager.getTransaction().begin();
         for (UnspentOutput output : unspentOutputs)
         {
-            if (output.confirmations >= minDepositConfirmations
+            if (output.confirmations >= config.getMinDepositConfirmations()
                 && output.spendable && output.safe && output.solvable)
             {
                 if (!oldTXIDs.contains(output.txid))
@@ -109,7 +108,7 @@ public class DepositHelper
                     long depositAmount = output.amount.satAmount;
                     // New Deposit Transaction Initially 100% Owned By Depositing Account
                     Deposit deposit = new Deposit(output.txid, output.vout, depositAmount);
-                    entityManager.persist(deposit);
+                    depositDao.persist(deposit);
                     // Associate With Account
                     deposit.setShare(account, depositAmount);
                     addedBalance += depositAmount;
@@ -125,8 +124,7 @@ public class DepositHelper
         oldTXIDs.addAll(unspentTXIDs);
         account.setProcessedDepositIDs(oldTXIDs);
         account.setPendingBalance(unconfirmedBalance);
-        entityManager.merge(account);
-        entityManager.getTransaction().commit();
+        accountDao.update(account);
         return addedBalance;
     }
 
@@ -135,9 +133,10 @@ public class DepositHelper
      * <p>
      * Associate and distribute change among the proper owners.
      */
+    @Transactional
     public void registerChangeDeposits()
     {
-        DepositAccount withdrawAccount = accountRepository.getOrCreateUserAccount(withdrawAccountUUID);
+        Account withdrawAccount = accountDao.findOrCreate(VertconomyConfiguration.WITHDRAW_ACCOUNT_UUID);
         // Get Wallet Transactions For Addresses Associated With Account
         List<UnspentOutputResponse.UnspentOutput> unspentOutputs = null;
         try
@@ -154,16 +153,15 @@ public class DepositHelper
         Set<String> oldTXIDs = withdrawAccount.getProcessedDepositIDs();
         Set<String> unspentTXIDs = new HashSet<>();
         // Associate Change UTXOs Back To Original Owners
-        entityManager.getTransaction().begin();
         for (UnspentOutput output : unspentOutputs)
         {
-            if (output.confirmations >= minChangeConfirmations
+            if (output.confirmations >= config.getMinChangeConfirmations()
                 && output.spendable && output.safe && output.solvable)
             {
                 if (!oldTXIDs.contains(output.txid))
                 {
                     // Look For Withdraw Request The Transaction Was Created From
-                    WithdrawRequest withdrawRequest = entityManager.find(WithdrawRequest.class, output.txid);
+                    WithdrawRequest withdrawRequest = withdrawRequestDao.find(output.txid);
                     if (withdrawRequest != null)
                     {
                         // Create Change Deposit
@@ -180,16 +178,16 @@ public class DepositHelper
                                 }
                                 owner.removeDeposit(inputDeposit);
                             }
-                            entityManager.remove(inputDeposit);
+                            depositDao.remove(inputDeposit);
                         }
-                        entityManager.persist(deposit);
+                        depositDao.persist(deposit);
                         // Persist Account Changes
                         for (Account owner : deposit.getOwners())
                         {
-                            entityManager.merge(owner);
+                            accountDao.update(owner);
                         }
                         // Remove Fully Completed Withdraw Request
-                        entityManager.remove(withdrawRequest);
+                        withdrawRequestDao.remove(withdrawRequest);
                     }
                 }
                 unspentTXIDs.add(output.txid);
@@ -198,29 +196,6 @@ public class DepositHelper
         oldTXIDs.clear();
         oldTXIDs.addAll(unspentTXIDs);
         withdrawAccount.setProcessedDepositIDs(oldTXIDs);
-        entityManager.merge(withdrawAccount);
-        entityManager.getTransaction().commit();
-    }
-
-    /**
-     * Get the minimum number of confirmations required
-     * for Vertconomy to consider a deposit valid.
-     * 
-     * @return The minimum number of confirmations to consider a deposit valid.
-     */
-    public int getMinDepositConfirmations()
-    {
-        return minDepositConfirmations;
-    }
-
-    /**
-     * Get the minimum number of confirmations required
-     * for Vertconomy to consider change UTXOs valid.
-     * 
-     * @return The minimum number of confirmations to use change.
-     */
-    public int getMinChangeConfirmations()
-    {
-        return minChangeConfirmations;
+        accountDao.update(withdrawAccount);
     }
 }

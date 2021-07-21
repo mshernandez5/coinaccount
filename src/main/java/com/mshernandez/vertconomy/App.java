@@ -11,11 +11,10 @@ import com.mshernandez.vertconomy.commands.CommandDeposit;
 import com.mshernandez.vertconomy.commands.CommandVertconomy;
 import com.mshernandez.vertconomy.commands.CommandWithdraw;
 import com.mshernandez.vertconomy.core.CoinScale;
-import com.mshernandez.vertconomy.core.JPAUtil;
-import com.mshernandez.vertconomy.core.VaultAdapter;
 import com.mshernandez.vertconomy.core.Vertconomy;
 import com.mshernandez.vertconomy.core.VertconomyBuilder;
 import com.mshernandez.vertconomy.tasks.CheckDepositTask;
+import com.mshernandez.vertconomy.vault.VaultAdapter;
 import com.mshernandez.vertconomy.wallet_interface.RPCWalletConnection;
 
 import org.bukkit.Bukkit;
@@ -39,6 +38,7 @@ public class App extends JavaPlugin
     // Periodically Check For New Deposits
     private BukkitTask depositCheckTask;
 
+    // Save References To Close On Plugin Disable
     private static Server webServer = null;
 
     @Override
@@ -112,10 +112,6 @@ public class App extends JavaPlugin
             }
         }
 
-        // Configure Database Connection
-        Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
-        JPAUtil.configure();
-
         // Start H2 Web Console If Enabled; Option Will Likely Be Removed In Future
         if (configuration.getBoolean("enable-h2-console", false))
         {
@@ -133,7 +129,6 @@ public class App extends JavaPlugin
 
         // Create Vertconomy Instance With Loaded Values
         Vertconomy vertconomy = new VertconomyBuilder()
-            .setPlugin(this)
             .setWallet(wallet)
             .setMinDepositConfirmations(minDepositConfirmations)
             .setMinChangeConfirmations(minChangeConfirmations)
@@ -175,16 +170,17 @@ public class App extends JavaPlugin
         // End Running Tasks
         depositCheckTask.cancel();
         // Close H2 Web Console
-        try
+        if (webServer != null)
         {
-            webServer.stop();
-            webServer = null;
+            try
+            {
+                webServer.stop();
+                webServer = null;
+            }
+            catch (RuntimeException e)
+            {
+                getLogger().warning(e.getMessage());
+            }
         }
-        catch (RuntimeException e)
-        {
-            getLogger().warning(e.getMessage());
-        }
-        // Close Database Connection
-        JPAUtil.reset();
     }
 }

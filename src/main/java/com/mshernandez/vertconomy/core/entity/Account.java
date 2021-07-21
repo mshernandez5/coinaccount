@@ -1,6 +1,7 @@
-package com.mshernandez.vertconomy.core.account;
+package com.mshernandez.vertconomy.core.entity;
 
 import java.util.HashSet;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 
@@ -8,19 +9,36 @@ import javax.persistence.CollectionTable;
 import javax.persistence.Column;
 import javax.persistence.ElementCollection;
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.Id;
 import javax.persistence.JoinColumn;
+import javax.persistence.ManyToMany;
 import javax.persistence.OneToOne;
-
-import com.mshernandez.vertconomy.core.withdraw.WithdrawRequest;
+import javax.persistence.Table;
 
 /**
- * A class to represent an account capable of
- * interacting with external wallets in addition
- * to in-game funds.
+ * A class to represent an account,
+ * compatible with Hibernate for persistence in a
+ * relational database.
  */
 @Entity
-public class DepositAccount extends Account
+@Table(name = "ACCOUNT")
+public class Account
 {
+    @Id
+    @Column(name = "ID")
+    private UUID id;
+
+    /**
+     * The set of deposits actively contributing
+     * to the account balance.
+     * 
+     * These will always be used when fetching an
+     * account so they are automatically fetched.
+     */
+    @ManyToMany(fetch = FetchType.EAGER)
+    private Set<Deposit> balances;
+
     /**
      * A wallet address assigned to this account
      * to receive user deposits.
@@ -67,27 +85,121 @@ public class DepositAccount extends Account
     private Set<String> processedDepositIDs;
 
     /**
+     * Creates a new account capable of holding
+     * in-game funds but cannot deposit from or
+     * withdraw to an external wallet.
+     * 
+     * @param id The player UUID to associate with the account.
+     */
+    public Account(UUID id)
+    {
+        this.id = id;
+        balances = new HashSet<>();
+        depositAddress = "";
+        returnAddress = "";
+        processedDepositIDs = new HashSet<>();
+    }
+
+    /**
      * Creates a new user account.
      * There should only be one account per user.
      * 
-     * @param accountUUID The player UUID to associate with the account.
-     * @param returnAddress A wallet refund address, required.
+     * @param id The player UUID to associate with the account.
+     * @param depositAddress A wallet deposit address for this account.
      */
-    public DepositAccount(UUID accountUUID, String depositAddress)
+    public Account(UUID id, String depositAddress)
     {
-        super(accountUUID);
+        this.id = id;
+        balances = new HashSet<>();
         this.depositAddress = depositAddress;
         returnAddress = "";
         processedDepositIDs = new HashSet<>();
     }
 
     /**
-     * Needed for Hibernate to instantiate the class,
-     * not for manual use.
+     * Required for Hibernate to instantiate
+     * class instances.
      */
-    DepositAccount()
+    Account()
     {
-        super();
+        // Required For Hibernate
+    }
+
+    /**
+     * The UUID associated with this account.
+     * 
+     * @return The UUID associated with this account.
+     */
+    public UUID getAccountUUID()
+    {
+        return id;
+    }
+
+    /**
+     * Associate a deposit with this account.
+     * 
+     * @param deposit The deposit to associate with this account.
+     */
+    public void associateDeposit(Deposit deposit)
+    {
+        balances.add(deposit);
+    }
+
+    /**
+     * Remove a deposit from this account.
+     * 
+     * @param deposit The deposit to remove from this account.
+     */
+    public void removeDeposit(Deposit deposit)
+    {
+        balances.remove(deposit);
+    }
+
+    /**
+     * Returns a reference to the set of deposits
+     * this account is associated with.
+     * 
+     * @return The deposits this account is associated with.
+     */
+    public Set<Deposit> getDeposits()
+    {
+        return balances;
+    }
+
+    /**
+     * Calculate the usable account balance.
+     * Usable balances can be transferred
+     * between accounts but in some situations
+     * may not be withdrawn for a period of time.
+     * 
+     * @return The total balance of this account.
+     */
+    public long calculateBalance()
+    {
+        long balance = 0L;
+        for (Deposit deposit : balances)
+        {
+            balance += deposit.getShare(this);
+        }
+        return balance;
+    }
+
+    /**
+     * Calculate the withdrawable account balance.
+     * 
+     * @return The total balance of this account.
+     */
+    public long calculateWithdrawableBalance()
+    {
+        long balance = 0L;
+        for (Deposit deposit : balances)
+        {
+            if (!deposit.hasWithdrawLock())
+            {
+                balance += deposit.getShare(this);
+            }
+        }
+        return balance;
     }
 
     /**
@@ -192,5 +304,27 @@ public class DepositAccount extends Account
     public void setProcessedDepositIDs(Set<String> newIds)
     {
         processedDepositIDs = new HashSet<>(newIds);
+    }
+
+    @Override
+    public int hashCode()
+    {
+        return Objects.hash(id);
+    }
+
+    @Override
+    public boolean equals(Object other)
+    {
+        if (!(other instanceof Account))
+        {
+            return false;
+        }
+        return id.equals(((Account) other).id);
+    }
+
+    @Override
+    public String toString()
+    {
+        return String.format("Account: %s, Balance: %d", id.toString(), calculateBalance());
     }
 }

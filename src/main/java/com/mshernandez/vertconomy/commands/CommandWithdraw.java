@@ -5,8 +5,8 @@ import java.util.List;
 
 import com.mshernandez.vertconomy.core.InvalidSatAmountException;
 import com.mshernandez.vertconomy.core.Vertconomy;
-import com.mshernandez.vertconomy.core.withdraw.WithdrawRequestResponse;
-import com.mshernandez.vertconomy.core.withdraw.WithdrawRequestResponseType;
+import com.mshernandez.vertconomy.core.service.WithdrawRequestResponse;
+import com.mshernandez.vertconomy.core.service.WithdrawRequestResponseType;
 
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;

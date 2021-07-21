@@ -1,4 +1,4 @@
-package com.mshernandez.vertconomy.core.withdraw;
+package com.mshernandez.vertconomy.core.entity;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -10,9 +10,6 @@ import javax.persistence.Lob;
 import javax.persistence.OneToMany;
 import javax.persistence.OneToOne;
 import javax.persistence.Table;
-
-import com.mshernandez.vertconomy.core.account.DepositAccount;
-import com.mshernandez.vertconomy.core.deposit.Deposit;
 
 /**
  * Stores information about a pending withdraw
@@ -28,7 +25,7 @@ public class WithdrawRequest
     private String txid;
 
     @OneToOne(mappedBy = "withdrawRequest")
-    private DepositAccount account;
+    private Account account;
 
     @OneToMany(mappedBy = "withdrawLock")
     private Set<Deposit> inputs;
@@ -46,7 +43,7 @@ public class WithdrawRequest
     @Column(name = "TIMESTAMP")
     private long timestamp;
 
-    public WithdrawRequest(String txid, DepositAccount account, Set<Deposit> inputs,
+    public WithdrawRequest(String txid, Account account, Set<Deposit> inputs,
                            long withdrawAmount, long fees, String txHex, long timestamp)
     {
         this.txid = txid;
@@ -83,7 +80,7 @@ public class WithdrawRequest
      * 
      * @return The account associated with the withdrawal request.
      */
-    public DepositAccount getAccount()
+    public Account getAccount()
     {
         return account;
     }

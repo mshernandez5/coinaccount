@@ -1,4 +1,4 @@
-package com.mshernandez.vertconomy.core.deposit;
+package com.mshernandez.vertconomy.core.entity;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -16,9 +16,6 @@ import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.MapKeyJoinColumn;
 import javax.persistence.Table;
-
-import com.mshernandez.vertconomy.core.account.Account;
-import com.mshernandez.vertconomy.core.withdraw.WithdrawRequest;
 
 /**
  * Saves details of a deposit transaction

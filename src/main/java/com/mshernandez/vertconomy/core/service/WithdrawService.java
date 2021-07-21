@@ -1,4 +1,4 @@
-package com.mshernandez.vertconomy.core.withdraw;
+package com.mshernandez.vertconomy.core.service;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -9,15 +9,21 @@ import java.util.UUID;
 import java.util.logging.Logger;
 import java.util.regex.Pattern;
 
-import javax.persistence.EntityManager;
+import javax.inject.Inject;
+import javax.inject.Singleton;
 
+import com.google.inject.persist.Transactional;
 import com.mshernandez.vertconomy.core.BinarySearchCoinSelector;
 import com.mshernandez.vertconomy.core.CoinSelector;
 import com.mshernandez.vertconomy.core.MaxAmountCoinSelector;
+import com.mshernandez.vertconomy.core.VertconomyConfiguration;
 import com.mshernandez.vertconomy.core.DepositShareEvaluator;
-import com.mshernandez.vertconomy.core.account.AccountRepository;
-import com.mshernandez.vertconomy.core.account.DepositAccount;
-import com.mshernandez.vertconomy.core.deposit.Deposit;
+import com.mshernandez.vertconomy.core.entity.Account;
+import com.mshernandez.vertconomy.core.entity.AccountDao;
+import com.mshernandez.vertconomy.core.entity.Deposit;
+import com.mshernandez.vertconomy.core.entity.DepositDao;
+import com.mshernandez.vertconomy.core.entity.WithdrawRequest;
+import com.mshernandez.vertconomy.core.entity.WithdrawRequestDao;
 import com.mshernandez.vertconomy.wallet_interface.RPCWalletConnection;
 import com.mshernandez.vertconomy.wallet_interface.ResponseError;
 import com.mshernandez.vertconomy.wallet_interface.exceptions.RPCErrorResponseException;
@@ -27,50 +33,48 @@ import com.mshernandez.vertconomy.wallet_interface.requests.RawTransactionInput;
 /**
  * Helps initiate, cancel, and complete withdraw requests.
  */
-public class WithdrawHelper
+@Singleton
+public class WithdrawService
 {
-    // Logger
-    private Logger logger;
+    private final Logger logger;
 
-    // Wallet Access
-    RPCWalletConnection wallet;
+    private final RPCWalletConnection wallet;
 
-    // Persistence
-    private EntityManager entityManager;
+    private final AccountDao accountDao;
 
-    // Account Repository
-    private AccountRepository accountRepository;
+    private final DepositDao depositDao;
 
-    // Withdraw Account
-    private UUID withdrawAccountUUID;
+    private final WithdrawRequestDao withdrawRequestDao;
 
-    // Settings
-    private int targetBlockTime;
+    private final VertconomyConfiguration config;
 
     // Base Size + 2 Outputs (Destination & Change)
     private static final int BASE_WITHDRAW_TX_SIZE = 10 + (34 * 2);
+
     // Additional Size For Each Input (Including +1 Uncertainty Assuming Worst Case)
     private static final int P2PKH_INPUT_VSIZE = 149;
 
     /**
-     * Create a new withdraw helper instance.
+     * Create a new withdraw service instance.
      * 
-     * @param logger A logger to use.
-     * @param wallet A connection to the wallet.
-     * @param entityManager An entity manager for persistence.
-     * @param withdrawAccount The server withdraw account.
-     * @param targetBlockTime The target block time to confirm withdrawals.
+     * @param logger A logger for this server to use.
+     * @param wallet A wallet connection.
+     * @param accountDao An account DAO.
+     * @param depositDao A deposit DAO.
+     * @param withdrawRequestDao A withdraw request DAO.
+     * @param config A Vertconomy configuration object.
      */
-    public WithdrawHelper(Logger logger, RPCWalletConnection wallet,
-                          EntityManager entityManager, AccountRepository accountRepository,
-                          UUID withdrawAccountUUID, int targetBlockTime)
+    @Inject
+    public WithdrawService(Logger logger, RPCWalletConnection wallet, AccountDao accountDao,
+                           DepositDao depositDao, WithdrawRequestDao withdrawRequestDao,
+                           VertconomyConfiguration config)
     {
         this.logger = logger;
         this.wallet = wallet;
-        this.entityManager = entityManager;
-        this.accountRepository = accountRepository;
-        this.withdrawAccountUUID = withdrawAccountUUID;
-        this.targetBlockTime = targetBlockTime;
+        this.accountDao = accountDao;
+        this.depositDao = depositDao;
+        this.withdrawRequestDao = withdrawRequestDao;
+        this.config = config;
     }
 
     // Match sus Address Patterns
@@ -85,22 +89,25 @@ public class WithdrawHelper
      * @param amount The amount the player is attempting to withdraw, excluding fees. Use < 0 for all funds.
      * @return An object holding withdraw details including determined fees, or null if the withdraw request failed.
      */
-    public WithdrawRequestResponse initiateWithdraw(DepositAccount account, String destAddress, long amount)
+    @Transactional
+    public WithdrawRequestResponse initiateWithdraw(UUID initiatorId, String destAddress, long amount)
     {
+        Account initiator = accountDao.findOrCreate(initiatorId);
         // Reject Any Address With Suspicious Characters, Prevent Possibility Of Request Injection Just In Case
         if (SUS_PATTERN.matcher(destAddress).matches())
         {
-            logger.warning(account.getAccountUUID() + " attempted to withdraw to invalid address: " + destAddress);
+            logger.warning(initiator.getAccountUUID() + " attempted to withdraw to invalid address: " + destAddress);
             return new WithdrawRequestResponse(WithdrawRequestResponseType.INVALID_ADDRESS);
         }
         // Make Sure No Existing Request Already Exists
-        if (account.getWithdrawRequest() != null)
+        if (initiator.getWithdrawRequest() != null)
         {
             return new WithdrawRequestResponse(WithdrawRequestResponseType.REQUEST_ALREADY_EXISTS);
         }
-        DepositAccount withdrawAccount = accountRepository.getOrCreateUserAccount(withdrawAccountUUID);
+        // Begin Withdraw
+        Account withdrawAccount = accountDao.findOrCreate(VertconomyConfiguration.WITHDRAW_ACCOUNT_UUID);
         boolean withdrawAll = amount < 0L;
-        long playerBalance = account.calculateWithdrawableBalance();
+        long playerBalance = initiator.calculateWithdrawableBalance();
         // Can't Withdraw If Player Does Not Have At Least Withdraw Amount
         if (!withdrawAll && playerBalance < amount)
         {
@@ -111,7 +118,7 @@ public class WithdrawHelper
         try
         {
             // Account For Fees
-            double feeRate = wallet.estimateSmartFee(targetBlockTime);
+            double feeRate = wallet.estimateSmartFee(config.getTargetBlockTime());
             long inputFee = (long) Math.ceil(P2PKH_INPUT_VSIZE * feeRate);
             // Attempt To Grab Inputs For Transaction
             long fees = (long) Math.ceil(BASE_WITHDRAW_TX_SIZE * feeRate);
@@ -124,7 +131,7 @@ public class WithdrawHelper
             {
                 coinSelector = new BinarySearchCoinSelector<>();
             }
-            Set<Deposit> inputDeposits = coinSelector.selectInputs(new DepositShareEvaluator(account), account.getDeposits(), inputFee, amount);
+            Set<Deposit> inputDeposits = coinSelector.selectInputs(new DepositShareEvaluator(initiator), initiator.getDeposits(), inputFee, amount);
             if (inputDeposits == null)
             {
                 return new WithdrawRequestResponse(WithdrawRequestResponseType.CANNOT_AFFORD_FEES);
@@ -138,7 +145,7 @@ public class WithdrawHelper
             {
                 txInputs.add(new RawTransactionInput(inputDeposit.getTXID(), inputDeposit.getVout()));
                 totalInputValue += inputDeposit.getTotal();
-                totalOwnedValue += inputDeposit.getShare(account);
+                totalOwnedValue += inputDeposit.getShare(initiator);
             }
             // TX Outputs
             long withdrawAmount = withdrawAll ? (totalOwnedValue - fees) : amount;
@@ -155,7 +162,7 @@ public class WithdrawHelper
             String withdrawTxid = wallet.decodeRawTransaction(txHex).txid;
             // Save Records
             long timestamp = System.currentTimeMillis();
-            request = new WithdrawRequest(withdrawTxid, account, inputDeposits, withdrawAmount, fees, txHex, timestamp);
+            request = new WithdrawRequest(withdrawTxid, initiator, inputDeposits, withdrawAmount, fees, txHex, timestamp);
         }
         catch (RPCErrorResponseException e)
         {
@@ -164,44 +171,42 @@ public class WithdrawHelper
                 return new WithdrawRequestResponse(WithdrawRequestResponseType.INVALID_ADDRESS);
             }
             logger.warning("Error Response (" + e.getError().code()
-                           + ") Creating Withdraw TX For: " + account.getAccountUUID());
+                           + ") Creating Withdraw TX For: " + initiator.getAccountUUID());
             return new WithdrawRequestResponse(WithdrawRequestResponseType.UNKNOWN_FAILURE);
         }
         catch (WalletRequestException e)
         {
-            logger.warning("Error Initiating Withdraw For Account: " + account.getAccountUUID());
+            logger.warning("Error Initiating Withdraw For Account: " + initiator.getAccountUUID());
             e.printStackTrace();
             return new WithdrawRequestResponse(WithdrawRequestResponseType.UNKNOWN_FAILURE);
         }
         // Persist Request & Lock Input Deposits
-        entityManager.getTransaction().begin();
-        entityManager.persist(request);
+        withdrawRequestDao.persist(request);
         long remainingHoldAmount = request.getWithdrawAmount() + request.getFeeAmount();
         for (Deposit inputDeposit : request.getInputs())
         {
             if (remainingHoldAmount != 0)
             {
-                long depositValue = inputDeposit.getShare(account);
+                long depositValue = inputDeposit.getShare(initiator);
                 if (depositValue <= remainingHoldAmount)
                 {
-                    inputDeposit.setShare(account, 0L);
+                    inputDeposit.setShare(initiator, 0L);
                     inputDeposit.setShare(withdrawAccount, depositValue);
                     remainingHoldAmount -= depositValue;
                 }
                 else
                 {
-                    inputDeposit.setShare(account, depositValue - remainingHoldAmount);
+                    inputDeposit.setShare(initiator, depositValue - remainingHoldAmount);
                     inputDeposit.setShare(withdrawAccount, remainingHoldAmount);
                     remainingHoldAmount = 0L;
                 }
             }
             inputDeposit.setWithdrawLock(request);
-            entityManager.merge(inputDeposit);
+            depositDao.update(inputDeposit);
         }
-        account.setWithdrawRequest(request);
-        entityManager.merge(account);
-        entityManager.merge(withdrawAccount);
-        entityManager.getTransaction().commit();
+        initiator.setWithdrawRequest(request);
+        accountDao.update(initiator);
+        accountDao.update(withdrawAccount);
         return new WithdrawRequestResponse(request);
     }
 
@@ -212,13 +217,19 @@ public class WithdrawHelper
      * <p>
      * SHOULD NOT BE USED ON A COMPLETED WITHDRAW REQUEST!
      * 
-     * @param withdrawRequest The withdraw request to cancel.
+     * @param withdrawTxid The TXID of the withdraw request.
+     * @return True if the request was found and canceled.
      */
-    public void cancelWithdraw(WithdrawRequest withdrawRequest)
+    @Transactional
+    public boolean cancelWithdraw(String withdrawTxid)
     {
-        DepositAccount initiatorAccount = withdrawRequest.getAccount();
-        DepositAccount withdrawAccount = accountRepository.getOrCreateUserAccount(withdrawAccountUUID);
-        entityManager.getTransaction().begin();
+        WithdrawRequest withdrawRequest = withdrawRequestDao.find(withdrawTxid);
+        if (withdrawRequest == null)
+        {
+            return false;
+        }
+        Account initiatorAccount = withdrawRequest.getAccount();
+        Account withdrawAccount = accountDao.findOrCreate(VertconomyConfiguration.WITHDRAW_ACCOUNT_UUID);
         Set<Deposit> lockedDeposits = withdrawRequest.getInputs();
         for (Deposit lockedDeposit : lockedDeposits)
         {
@@ -227,24 +238,44 @@ public class WithdrawHelper
             lockedDeposit.setShare(initiatorAccount, updatedAmount);
             lockedDeposit.setShare(withdrawAccount, 0L);
             lockedDeposit.setWithdrawLock(null);
-            lockedDeposit = entityManager.merge(lockedDeposit);
+            depositDao.update(lockedDeposit);
         }
         initiatorAccount.setWithdrawRequest(null);
-        entityManager.merge(initiatorAccount);
-        entityManager.merge(withdrawAccount);
-        entityManager.remove(withdrawRequest);
-        entityManager.getTransaction().commit();
+        accountDao.update(initiatorAccount);
+        accountDao.update(withdrawAccount);
+        withdrawRequestDao.remove(withdrawRequest);
+        return true;
+    }
+
+    /**
+     * Cancel the given withdraw request, restoring
+     * reserved funds to the owner and unlocking the
+     * deposits involved for future withdrawals.
+     * 
+     * @param initiatorId The UUID of the initiating account.
+     * @return True if the request was found and canceled.
+     */
+    public boolean cancelWithdraw(UUID initiatorId)
+    {
+        Account initiator = accountDao.findOrCreate(initiatorId);
+        if (initiator == null || initiator.getWithdrawRequest() == null)
+        {
+            return false;
+        }
+        return cancelWithdraw(initiator.getWithdrawRequest().getTxid());
     }
 
     /**
      * Signs & sends a pending withdraw transaction out to the network.
      * 
-     * @param withdrawRequest The withdraw request made by the user.
+     * @param withdrawTxid The TXID of the withdraw request.
      * @return The TXID of the sent transaction, or null if there was an issue.
      */
-    public String completeWithdraw(WithdrawRequest withdrawRequest)
+    @Transactional
+    public String completeWithdraw(String withdrawTxid)
     {
-        DepositAccount withdrawAccount = accountRepository.getOrCreateUserAccount(withdrawAccountUUID);
+        WithdrawRequest withdrawRequest = withdrawRequestDao.find(withdrawTxid);
+        Account withdrawAccount = accountDao.findOrCreate(VertconomyConfiguration.WITHDRAW_ACCOUNT_UUID);
         String txid = null;
         try
         {
@@ -263,7 +294,8 @@ public class WithdrawHelper
             return txid;
         }
         // Clear Completed Request From Account
-        withdrawRequest.getAccount().setWithdrawRequest(null);
+        Account initiator = withdrawRequest.getAccount();
+        initiator.setWithdrawRequest(null);
         // If No Change Will Be Received From TX, Request Can Be Removed Immediately
         boolean change = false;
         Set<Deposit> inputs = withdrawRequest.getInputs();
@@ -274,7 +306,7 @@ public class WithdrawHelper
             {
                 input.setShare(withdrawAccount, 0L);
                 withdrawRequest.forgetInput(input);
-                entityManager.remove(input);
+                depositDao.remove(input);
             }
             else
             {
@@ -283,13 +315,26 @@ public class WithdrawHelper
         }
         if (!change)
         {
-            withdrawAccount.setWithdrawRequest(null);
-            entityManager.remove(withdrawRequest);
+            withdrawRequestDao.remove(withdrawRequest);
         }
-        else
-        {
-            entityManager.merge(withdrawAccount);
-        }
+        accountDao.update(withdrawAccount);
+        accountDao.update(initiator);
         return txid;
+    }
+
+    /**
+     * Signs & sends a pending withdraw transaction out to the network.
+     * 
+     * @param initiatorId The UUID of the initiating account.
+     * @return The TXID of the sent transaction, or null if there was an issue.
+     */
+    public String completeWithdraw(UUID initiatorId)
+    {
+        Account initiator = accountDao.findOrCreate(initiatorId);
+        if (initiator == null || initiator.getWithdrawRequest() == null)
+        {
+            return null;
+        }
+        return completeWithdraw(initiator.getWithdrawRequest().getTxid());
     }
 }

@@ -14,7 +14,7 @@
 
   <groupId>com.mshernandez.vertconomy</groupId>
   <artifactId>vertconomy</artifactId>
-  <version>0.0.1-beta</version>
+  <version>0.0.1-snapshot</version>
 
   <name>vertconomy</name>
   <!-- Project Github -->
@@ -77,6 +77,18 @@
       <groupId>org.hibernate.javax.persistence</groupId>
       <artifactId>hibernate-jpa-2.1-api</artifactId>
       <version>1.0.2.Final</version>
+    </dependency>
+
+    <!-- Dependency Injection -->
+    <dependency>
+        <groupId>com.google.inject</groupId>
+        <artifactId>guice</artifactId>
+        <version>5.0.1</version>
+    </dependency>
+    <dependency>
+        <groupId>com.google.inject.extensions</groupId>
+        <artifactId>guice-persist</artifactId>
+        <version>5.0.1</version>
     </dependency>
 
     <!-- GSON - JSON Parsing -->

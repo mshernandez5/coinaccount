@@ -1,4 +1,4 @@
-package com.mshernandez.vertconomy.core.withdraw;
+package com.mshernandez.vertconomy.core.service;
 
 public enum WithdrawRequestResponseType
 {

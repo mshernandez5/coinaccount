@@ -1,24 +1,23 @@
 package com.mshernandez.vertconomy.core;
 
-import java.util.UUID;
+import java.util.logging.Logger;
 
-import javax.persistence.EntityManager;
+import javax.inject.Inject;
+import javax.inject.Singleton;
 
-import com.mshernandez.vertconomy.core.account.Account;
-import com.mshernandez.vertconomy.core.account.AccountRepository;
-import com.mshernandez.vertconomy.core.account.DepositAccount;
-import com.mshernandez.vertconomy.core.deposit.DepositHelper;
-import com.mshernandez.vertconomy.core.transfer.TransferHelper;
-import com.mshernandez.vertconomy.core.withdraw.WithdrawHelper;
-import com.mshernandez.vertconomy.core.withdraw.WithdrawRequest;
-import com.mshernandez.vertconomy.core.withdraw.WithdrawRequestResponse;
+import com.google.inject.persist.PersistService;
+import com.mshernandez.vertconomy.core.entity.Account;
+import com.mshernandez.vertconomy.core.entity.AccountDao;
+import com.mshernandez.vertconomy.core.service.DepositService;
+import com.mshernandez.vertconomy.core.service.TransferService;
+import com.mshernandez.vertconomy.core.service.WithdrawRequestResponse;
+import com.mshernandez.vertconomy.core.service.WithdrawService;
 import com.mshernandez.vertconomy.wallet_interface.RPCWalletConnection;
 import com.mshernandez.vertconomy.wallet_interface.exceptions.WalletRequestException;
 
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
-import org.bukkit.plugin.Plugin;
 
 import net.md_5.bungee.api.ChatColor;
 import net.md_5.bungee.api.chat.BaseComponent;
@@ -28,68 +27,48 @@ import net.md_5.bungee.api.chat.ComponentBuilder;
  * The core of the plugin, the duct tape
  * bonding Minecraft and Vertcoin together.
  * <p>
- * Delegates most responsibilities to helper
- * objects.
+ * Makes requests to internal service objects
+ * based on calls from in-game commands, tasks.
  */
+@Singleton
 public class Vertconomy
 {
-    // Account For Balances Owned By The Server Operators
-    private static final UUID SERVER_ACCOUNT_UUID = UUID.fromString("a8a73687-8f8b-4199-8078-36e676f32d8f");
+    private final Logger logger;
 
-    // Account Allowing Intermediate Transfers For Vault Compatibility
-    private static final UUID TRANSFER_ACCOUNT_UUID = UUID.fromString("ced87bc1-4730-41e1-955b-c4c45b4e9ccf");
+    private final RPCWalletConnection wallet;
 
-    // Account To Hold Funds For Pending Withdrawals & Receive Change Transactions
-    private static final UUID WITHDRAW_ACCOUNT_UUID = UUID.fromString("884b2231-6c7a-4db5-b022-1cc5aeb949a8");
+    private final VertconomyConfiguration config;
 
-    // Plugin
-    private Plugin plugin;
+    private final SatAmountFormat formatter;
 
-    // Database Persistence
-    EntityManager entityManager;
-    
-    // RPC Wallet API - Connection To The Wallet
-    private RPCWalletConnection wallet;
+    private final AccountDao accountDao;
 
-    // Sat Amount Formatter - Utilities To Format & Parse Sat Amounts
-    private SatAmountFormat formatter;
+    private final DepositService depositService;
 
-    // Account Repository - Lookup & Create Accounts
-    private AccountRepository accountRepository;
+    private final WithdrawService withdrawService;
 
-    // Deposit Helper - Processes UTXOs Into Deposits
-    private DepositHelper depositHelper;
-
-    // Withdraw Helper - Helps Withdraw Deposit Balances
-    private WithdrawHelper withdrawHelper;
-
-    // Transfer Helper - Helps Transfer Balances Between Accounts
-    private TransferHelper transferHelper;
+    private final TransferService transferService;
 
     /**
      * Please use <code>VertconomyBuilder</code> to create Vertconomy instances.
      * <p>
      * Create an instance of Vertconomy.
      */
-    Vertconomy(Plugin plugin, RPCWalletConnection wallet,
-               int minDepositConfirmations, int minChangeConfirmations, int targetBlockTime,
-               String symbol, String baseUnitSymbol, CoinScale scale)
+    @Inject
+    Vertconomy(Logger logger, RPCWalletConnection wallet, VertconomyConfiguration config,
+               SatAmountFormat formatter, AccountDao accountDao, DepositService depositService,
+               WithdrawService withdrawService, TransferService transferService,
+               PersistService persistService)
     {
-        // Store Properties
-        this.plugin = plugin;
+        this.logger = logger;
         this.wallet = wallet;
-        // Get Entity Manager For Persistence
-        entityManager = JPAUtil.getEntityManager();
-        // Initialize Account Repository
-        accountRepository = new AccountRepository(plugin.getLogger(), wallet, entityManager);
-        // Initialize Helper Objects
-        depositHelper = new DepositHelper(plugin.getLogger(), wallet, entityManager,accountRepository,
-                                          WITHDRAW_ACCOUNT_UUID, minDepositConfirmations,
-                                          minChangeConfirmations);
-        withdrawHelper = new WithdrawHelper(plugin.getLogger(), wallet, entityManager, accountRepository,
-                                            WITHDRAW_ACCOUNT_UUID, targetBlockTime);
-        transferHelper = new TransferHelper(plugin.getLogger(), entityManager);
-        formatter = new SatAmountFormat(scale, symbol, baseUnitSymbol);
+        this.config = config;
+        this.formatter = formatter;
+        this.accountDao = accountDao;
+        this.depositService = depositService;
+        this.withdrawService = withdrawService;
+        this.transferService = transferService;
+        persistService.start();
     }
 
     /**
@@ -124,14 +103,13 @@ public class Vertconomy
         // Don't Attempt To Check For Deposits If Wallet Unreachable
         if (!hasWalletConnection())
         {
-            plugin.getLogger().warning("Wallet not currently available, cannot check for deposits!");
+            logger.warning("Wallet not currently available, cannot check for deposits!");
             return;
         }
         // Only Check Deposits For Online Players
         for (Player player : Bukkit.getOnlinePlayers())
         {
-            DepositAccount account = accountRepository.getOrCreateUserAccount(player.getUniqueId());
-            long addedBalance = depositHelper.registerNewDeposits(account);
+            long addedBalance = depositService.registerNewDeposits(player.getUniqueId());
             if (addedBalance != 0L)
             {
                 BaseComponent[] component = new ComponentBuilder()
@@ -142,7 +120,7 @@ public class Vertconomy
             }
         }
         // Check For Change Deposits
-        depositHelper.registerChangeDeposits();
+        depositService.registerChangeDeposits();
     }
 
     /**
@@ -167,18 +145,16 @@ public class Vertconomy
     {
         if (!Bukkit.isPrimaryThread())
         {
-            plugin.getLogger().warning("Cannot Support Asynchronous Vault API Requests");
+            logger.warning("Cannot Support Asynchronous Vault API Requests");
             return false;
         }
-        Account transferAccount = accountRepository.getOrCreateHoldingAccount(TRANSFER_ACCOUNT_UUID);
-        DepositAccount sender = accountRepository.getOrCreateUserAccount(player.getUniqueId());
         long satAmount = formatter.absoluteAmount(amount);
         // Note: Need To Allow 0 Value Withdraw To Support Many Plugins, ex. Essentials
         if (satAmount < 0L)
         {
             return false;
         }
-        return transferHelper.transferBalance(sender, transferAccount, satAmount);
+        return transferService.transferBalance(player.getUniqueId(), VertconomyConfiguration.TRANSFER_ACCOUNT_UUID, satAmount);
     }
 
     /**
@@ -195,11 +171,10 @@ public class Vertconomy
     {
         if (!Bukkit.isPrimaryThread())
         {
-            plugin.getLogger().warning("Cannot Support Asynchronous Vault API Requests");
+            logger.warning("Cannot Support Asynchronous Vault API Requests");
             return false;
         }
-        Account transferAccount = accountRepository.getOrCreateHoldingAccount(TRANSFER_ACCOUNT_UUID);
-        DepositAccount receiver = accountRepository.getOrCreateUserAccount(player.getUniqueId());
+        Account transferAccount = accountDao.findOrCreate(VertconomyConfiguration.TRANSFER_ACCOUNT_UUID);
         long satAmount = formatter.absoluteAmount(amount);
         // Note: Need To Allow 0 Value Deposit To Support Many Plugins, ex. Essentials
         if (satAmount < 0L)
@@ -207,7 +182,7 @@ public class Vertconomy
             return false;
         }
         satAmount = Math.min(satAmount, transferAccount.calculateBalance()); // TODO: temporary
-        return transferHelper.transferBalance(transferAccount, receiver, satAmount);
+        return transferService.transferBalance(VertconomyConfiguration.TRANSFER_ACCOUNT_UUID, player.getUniqueId(), satAmount);
     }
 
     /**
@@ -219,7 +194,7 @@ public class Vertconomy
      */
     public long getPlayerBalance(OfflinePlayer player)
     {
-        DepositAccount playerAccount = accountRepository.getOrCreateUserAccount(player.getUniqueId());
+        Account playerAccount = accountDao.findOrCreate(player.getUniqueId());
         return playerAccount == null ? 0L : playerAccount.calculateBalance();
     }
 
@@ -232,7 +207,7 @@ public class Vertconomy
      */
     public long getPlayerWithdrawableBalance(OfflinePlayer player)
     {
-        DepositAccount playerAccount = accountRepository.getOrCreateUserAccount(player.getUniqueId());
+        Account playerAccount = accountDao.findOrCreate(player.getUniqueId());
         return playerAccount == null ? 0L : playerAccount.calculateWithdrawableBalance();
     }
 
@@ -245,7 +220,7 @@ public class Vertconomy
      */
     public long getPlayerUnconfirmedBalance(OfflinePlayer player)
     {
-        DepositAccount playerAccount = accountRepository.getOrCreateUserAccount(player.getUniqueId());
+        Account playerAccount = accountDao.findOrCreate(player.getUniqueId());
         return playerAccount == null ? 0L : playerAccount.getPendingBalance();
     }
 
@@ -258,7 +233,7 @@ public class Vertconomy
      */
     public String getPlayerDepositAddress(OfflinePlayer player)
     {
-        DepositAccount playerAccount = accountRepository.getOrCreateUserAccount(player.getUniqueId());
+        Account playerAccount = accountDao.findOrCreate(player.getUniqueId());
         return playerAccount == null ? "ERROR" : playerAccount.getDepositAddress();
     }
 
@@ -270,7 +245,7 @@ public class Vertconomy
      */
     public boolean checkIfPlayerHasWithdrawRequest(OfflinePlayer player)
     {
-        DepositAccount playerAccount = accountRepository.getOrCreateUserAccount(player.getUniqueId());
+        Account playerAccount = accountDao.findOrCreate(player.getUniqueId());
         return playerAccount == null ? false : true;
     }
 
@@ -284,8 +259,7 @@ public class Vertconomy
      */
     public WithdrawRequestResponse initiatePlayerWithdrawRequest(OfflinePlayer player, String destAddress, long amount)
     {
-        DepositAccount playerAccount = accountRepository.getOrCreateUserAccount(player.getUniqueId());
-        return withdrawHelper.initiateWithdraw(playerAccount, destAddress, amount);
+        return withdrawService.initiateWithdraw(player.getUniqueId(), destAddress, amount);
     }
 
     /**
@@ -296,9 +270,7 @@ public class Vertconomy
      */
     public String completePlayerWithdrawRequest(OfflinePlayer player)
     {
-        DepositAccount playerAccount = accountRepository.getOrCreateUserAccount(player.getUniqueId());
-        WithdrawRequest withdrawRequest = playerAccount.getWithdrawRequest();
-        return withdrawRequest == null ? null : withdrawHelper.completeWithdraw(withdrawRequest);
+        return withdrawService.completeWithdraw(player.getUniqueId());
     }
 
     /**
@@ -309,14 +281,7 @@ public class Vertconomy
      */
     public boolean cancelPlayerWithdrawRequest(OfflinePlayer player)
     {
-        DepositAccount playerAccount = accountRepository.getOrCreateUserAccount(player.getUniqueId());
-        WithdrawRequest withdrawRequest = playerAccount.getWithdrawRequest();
-        if (withdrawRequest == null)
-        {
-            return false;
-        }
-        withdrawHelper.cancelWithdraw(withdrawRequest);
-        return true;
+        return withdrawService.cancelWithdraw(player.getUniqueId());
     }
 
     /**
@@ -327,7 +292,7 @@ public class Vertconomy
      */
     public int getMinDepositConfirmations()
     {
-        return depositHelper.getMinDepositConfirmations();
+        return config.getMinDepositConfirmations();
     }
 
     /**
@@ -338,7 +303,7 @@ public class Vertconomy
      */
     public int getMinChangeConfirmations()
     {
-        return depositHelper.getMinChangeConfirmations();
+        return config.getMinChangeConfirmations();
     }
 
     /**

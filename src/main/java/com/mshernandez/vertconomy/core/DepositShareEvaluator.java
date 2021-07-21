@@ -1,7 +1,7 @@
 package com.mshernandez.vertconomy.core;
 
-import com.mshernandez.vertconomy.core.account.Account;
-import com.mshernandez.vertconomy.core.deposit.Deposit;
+import com.mshernandez.vertconomy.core.entity.Account;
+import com.mshernandez.vertconomy.core.entity.Deposit;
 
 public class DepositShareEvaluator implements Evaluator<Deposit>
 {
