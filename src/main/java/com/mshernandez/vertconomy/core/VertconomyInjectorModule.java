@@ -51,6 +51,6 @@ public class VertconomyInjectorModule extends AbstractModule
         bind(WithdrawService.class);
 
         // Vertconomy
-        bind(Vertconomy.class);
+        bind(Vertconomy.class).to(VertconomyImpl.class);
     }
 }

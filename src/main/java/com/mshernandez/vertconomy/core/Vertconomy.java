@@ -1,28 +1,9 @@
 package com.mshernandez.vertconomy.core;
 
-import java.util.logging.Logger;
-
-import javax.inject.Inject;
-import javax.inject.Singleton;
-
-import com.google.inject.persist.PersistService;
-import com.mshernandez.vertconomy.core.entity.Account;
-import com.mshernandez.vertconomy.core.entity.AccountDao;
-import com.mshernandez.vertconomy.core.service.DepositService;
-import com.mshernandez.vertconomy.core.service.TransferService;
 import com.mshernandez.vertconomy.core.service.WithdrawRequestResponse;
-import com.mshernandez.vertconomy.core.service.WithdrawService;
 import com.mshernandez.vertconomy.core.util.SatAmountFormat;
-import com.mshernandez.vertconomy.wallet_interface.RPCWalletConnection;
-import com.mshernandez.vertconomy.wallet_interface.exceptions.WalletRequestException;
 
-import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
-import org.bukkit.entity.Player;
-
-import net.md_5.bungee.api.ChatColor;
-import net.md_5.bungee.api.chat.BaseComponent;
-import net.md_5.bungee.api.chat.ComponentBuilder;
 
 /**
  * The core of the plugin, the duct tape
@@ -31,65 +12,15 @@ import net.md_5.bungee.api.chat.ComponentBuilder;
  * Makes requests to internal service objects
  * based on calls from in-game commands, tasks.
  */
-@Singleton
-public class Vertconomy
+public interface Vertconomy
 {
-    private final Logger logger;
-
-    private final RPCWalletConnection wallet;
-
-    private final VertconomyConfiguration config;
-
-    private final SatAmountFormat formatter;
-
-    private final AccountDao accountDao;
-
-    private final DepositService depositService;
-
-    private final WithdrawService withdrawService;
-
-    private final TransferService transferService;
-
-    /**
-     * Please use <code>VertconomyBuilder</code> to create Vertconomy instances.
-     * <p>
-     * Create an instance of Vertconomy.
-     */
-    @Inject
-    Vertconomy(Logger logger, RPCWalletConnection wallet, VertconomyConfiguration config,
-               SatAmountFormat formatter, AccountDao accountDao, DepositService depositService,
-               WithdrawService withdrawService, TransferService transferService,
-               PersistService persistService)
-    {
-        this.logger = logger;
-        this.wallet = wallet;
-        this.config = config;
-        this.formatter = formatter;
-        this.accountDao = accountDao;
-        this.depositService = depositService;
-        this.withdrawService = withdrawService;
-        this.transferService = transferService;
-        persistService.start();
-    }
-
     /**
      * Returns true if Vertconomy can make
      * successful requests to the wallet.
      * 
      * @return True if a wallet connection can be reached.
      */
-    public boolean hasWalletConnection()
-    {
-        try
-        {
-            wallet.getWalletInfo();
-            return true;
-        }
-        catch (WalletRequestException e)
-        {
-            return false;
-        }
-    }
+    public boolean hasWalletConnection();
 
     /**
      * Check for any new unprocessed UTXOs.
@@ -99,30 +30,7 @@ public class Vertconomy
      * Processes both user deposits and withdraw
      * transaction change.
      */
-    public void checkForNewDeposits()
-    {
-        // Don't Attempt To Check For Deposits If Wallet Unreachable
-        if (!hasWalletConnection())
-        {
-            logger.warning("Wallet not currently available, cannot check for deposits!");
-            return;
-        }
-        // Only Check Deposits For Online Players
-        for (Player player : Bukkit.getOnlinePlayers())
-        {
-            long addedBalance = depositService.registerNewDeposits(player.getUniqueId());
-            if (addedBalance != 0L)
-            {
-                BaseComponent[] component = new ComponentBuilder()
-                    .append("[Vertconomy] Processed Deposits: ").color(ChatColor.BLUE)
-                    .append(formatter.format(addedBalance)).color(ChatColor.GREEN)
-                    .create();
-                player.spigot().sendMessage(component);
-            }
-        }
-        // Check For Change Deposits
-        depositService.registerChangeDeposits();
-    }
+    public void checkForNewDeposits();
 
     /**
      * Vault API Compatibility Use ONLY
@@ -142,21 +50,7 @@ public class Vertconomy
      * @param amount The amount to send to the transfer fund.
      * @return True if the transfer was successful.
      */
-    public boolean moveToTransferFund(OfflinePlayer player, double amount)
-    {
-        if (!Bukkit.isPrimaryThread())
-        {
-            logger.warning("Cannot Support Asynchronous Vault API Requests");
-            return false;
-        }
-        long satAmount = formatter.absoluteAmount(amount);
-        // Note: Need To Allow 0 Value Withdraw To Support Many Plugins, ex. Essentials
-        if (satAmount < 0L)
-        {
-            return false;
-        }
-        return transferService.transferBalance(player.getUniqueId(), VertconomyConfiguration.TRANSFER_ACCOUNT_UUID, satAmount);
-    }
+    public boolean moveToTransferFund(OfflinePlayer player, double amount);
 
     /**
      * Vault API Compatibility Use ONLY
@@ -168,23 +62,7 @@ public class Vertconomy
      * @param amount The amount to take from the transfer fund.
      * @return True if the transfer was successful.
      */
-    public boolean takeFromTransferFund(OfflinePlayer player, double amount)
-    {
-        if (!Bukkit.isPrimaryThread())
-        {
-            logger.warning("Cannot Support Asynchronous Vault API Requests");
-            return false;
-        }
-        Account transferAccount = accountDao.findOrCreate(VertconomyConfiguration.TRANSFER_ACCOUNT_UUID);
-        long satAmount = formatter.absoluteAmount(amount);
-        // Note: Need To Allow 0 Value Deposit To Support Many Plugins, ex. Essentials
-        if (satAmount < 0L)
-        {
-            return false;
-        }
-        satAmount = Math.min(satAmount, transferAccount.calculateBalance()); // TODO: temporary
-        return transferService.transferBalance(VertconomyConfiguration.TRANSFER_ACCOUNT_UUID, player.getUniqueId(), satAmount);
-    }
+    public boolean takeFromTransferFund(OfflinePlayer player, double amount);
 
     /**
      * Return the useable balance held by the player's
@@ -193,11 +71,7 @@ public class Vertconomy
      * @param player The player associated with the account.
      * @return The balance associated with the account.
      */
-    public long getPlayerBalance(OfflinePlayer player)
-    {
-        Account playerAccount = accountDao.findOrCreate(player.getUniqueId());
-        return playerAccount == null ? 0L : playerAccount.calculateBalance();
-    }
+    public long getPlayerBalance(OfflinePlayer player);
 
     /**
      * Return the withdrawable balance held by the player's
@@ -206,11 +80,7 @@ public class Vertconomy
      * @param player The player associated with the account.
      * @return The withdrawable balance associated with the account.
      */
-    public long getPlayerWithdrawableBalance(OfflinePlayer player)
-    {
-        Account playerAccount = accountDao.findOrCreate(player.getUniqueId());
-        return playerAccount == null ? 0L : playerAccount.calculateWithdrawableBalance();
-    }
+    public long getPlayerWithdrawableBalance(OfflinePlayer player);
 
     /**
      * Return the total unconfirmed balances associated
@@ -219,11 +89,7 @@ public class Vertconomy
      * @param player The player associated with the account.
      * @return Unconfirmed deposit balances for the account.
      */
-    public long getPlayerUnconfirmedBalance(OfflinePlayer player)
-    {
-        Account playerAccount = accountDao.findOrCreate(player.getUniqueId());
-        return playerAccount == null ? 0L : playerAccount.getPendingBalance();
-    }
+    public long getPlayerUnconfirmedBalance(OfflinePlayer player);
 
     /**
      * Get the public wallet address allowing the player to
@@ -232,11 +98,7 @@ public class Vertconomy
      * @param player The player associated with the account.
      * @return The deposit address associated with the account.
      */
-    public String getPlayerDepositAddress(OfflinePlayer player)
-    {
-        Account playerAccount = accountDao.findOrCreate(player.getUniqueId());
-        return playerAccount == null ? "ERROR" : playerAccount.getDepositAddress();
-    }
+    public String getPlayerDepositAddress(OfflinePlayer player);
 
     /**
      * Checks whether the player has an active withdraw request.
@@ -244,11 +106,7 @@ public class Vertconomy
      * @param player The player to check.
      * @return True if an active withdraw request exists for the player.
      */
-    public boolean checkIfPlayerHasWithdrawRequest(OfflinePlayer player)
-    {
-        Account playerAccount = accountDao.findOrCreate(player.getUniqueId());
-        return playerAccount == null ? false : true;
-    }
+    public boolean checkIfPlayerHasWithdrawRequest(OfflinePlayer player);
 
     /**
      * Initiate a withdraw request by the user.
@@ -258,10 +116,7 @@ public class Vertconomy
      * @param amount The amount to withdraw, or -1L for all.
      * @return A response object for the withdraw attempt.
      */
-    public WithdrawRequestResponse initiatePlayerWithdrawRequest(OfflinePlayer player, String destAddress, long amount)
-    {
-        return withdrawService.initiateWithdraw(player.getUniqueId(), destAddress, amount);
-    }
+    public WithdrawRequestResponse initiatePlayerWithdrawRequest(OfflinePlayer player, String destAddress, long amount);
 
     /**
      * Completes any active withdraw request initiated by the user.
@@ -269,10 +124,7 @@ public class Vertconomy
      * @param player The player that initiated the request.
      * @return The TXID of the withdraw transaction, or null if no request was found.
      */
-    public String completePlayerWithdrawRequest(OfflinePlayer player)
-    {
-        return withdrawService.completeWithdraw(player.getUniqueId());
-    }
+    public String completePlayerWithdrawRequest(OfflinePlayer player);
 
     /**
      * Cancels any active withdraw request initiated by the user.
@@ -280,10 +132,7 @@ public class Vertconomy
      * @param player The player that initiated the request.
      * @return True if the request was found and canceled.
      */
-    public boolean cancelPlayerWithdrawRequest(OfflinePlayer player)
-    {
-        return withdrawService.cancelWithdraw(player.getUniqueId());
-    }
+    public boolean cancelPlayerWithdrawRequest(OfflinePlayer player);
 
     /**
      * Get the minimum number of confirmations required
@@ -291,10 +140,7 @@ public class Vertconomy
      * 
      * @return The minimum number of confirmations to consider a deposit valid.
      */
-    public int getMinDepositConfirmations()
-    {
-        return config.getMinDepositConfirmations();
-    }
+    public int getMinDepositConfirmations();
 
     /**
      * Get the minimum number of confirmations required
@@ -302,18 +148,12 @@ public class Vertconomy
      * 
      * @return The minimum number of confirmations to use change.
      */
-    public int getMinChangeConfirmations()
-    {
-        return config.getMinChangeConfirmations();
-    }
+    public int getMinChangeConfirmations();
 
     /**
      * Get a configured formatter to format and parse sat amounts.
      * 
      * @return A formatter for this Vertconomy instance.
      */
-    public SatAmountFormat getFormatter()
-    {
-        return formatter;
-    }
+    public SatAmountFormat getFormatter();
 }
