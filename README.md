@@ -95,7 +95,9 @@ The authentication parameters should be changed to match the wallet configuratio
 
 With these configurations in place, the server should be ready to start with the Vault and Vertconomy JAR files placed in the server's `plugins` folder. Make sure the Vertcoin wallet is fully synced with the network and ready to use before starting the Minecraft server, it cannot return valid responses while loading.
 
-By default, Vertcoin balances will be represented in satoshi units; this can be changed in the plugin configuration. I would not recommend using full VTC units as this encourages larger in-game transactions and may make the game less enjoyable for those without large amounts of Vertcoin to experiment with.
+The process for setting up cryptocurrencies other than Vertcoin is virtually identical, just customize the currency representation to match the crypto you choose and be aware the default port for the daemon varies between coins.
+
+By default, Vertcoin balances will be represented in satoshi units; this can be changed in the plugin configuration. If your player base is new to cryptocurrency you may want to work on a smaller scale to make it easier for players to get involved.
 
 ## Warning
 This project is experimental and does not make any guarantees to the safety of the funds or wallets it interacts with. As the project does not rely on any centralized server, please understand that any coins deposited through the plugin are inherently in the hands of the Minecraft server owners. If you would not trust the server owners to hold your coins directly, you should not trust them to hold your coins through this plugin.
@@ -104,7 +106,7 @@ This project is experimental and does not make any guarantees to the safety of t
 Plugin written by [@mshernandez5](https://github.com/mshernandez5/) with special thanks to the projects making this one possible:
 * The Vertcoin, Bitcoin, and Litecoin Projects
 * Bukkit/Spigot, Vault API
-* Dependencies... H2, Hibernate, Gson, Junit
+* Dependencies... H2, Hibernate, Guice, Gson, Junit
 
 ## Donations
 This plugin took time and effort, consider donating if you like the results!
