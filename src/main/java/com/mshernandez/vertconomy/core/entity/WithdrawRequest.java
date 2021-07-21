@@ -10,6 +10,7 @@ import javax.persistence.Lob;
 import javax.persistence.OneToMany;
 import javax.persistence.OneToOne;
 import javax.persistence.Table;
+import javax.persistence.Version;
 
 /**
  * Stores information about a pending withdraw
@@ -47,6 +48,14 @@ public class WithdrawRequest
     private Set<Deposit> inputs;
 
     /**
+     * Used for optimistic locking to prevent concurrent
+     * modification of the same request.
+     */
+    @Version
+    @Column(name = "VERSION")
+    private long version;
+
+    /**
      * Create a new withdraw request.
      * 
      * @param txid The TXID of the withdraw transaction.
@@ -67,6 +76,7 @@ public class WithdrawRequest
         this.feeAmount = fees;
         this.txHex = txHex;
         this.timestamp = timestamp;
+        version = 0L;
     }
 
     /**

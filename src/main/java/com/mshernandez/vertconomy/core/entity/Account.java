@@ -15,6 +15,7 @@ import javax.persistence.JoinColumn;
 import javax.persistence.ManyToMany;
 import javax.persistence.OneToOne;
 import javax.persistence.Table;
+import javax.persistence.Version;
 
 /**
  * A class to represent an account,
@@ -85,6 +86,14 @@ public class Account
     private Set<String> processedDepositIDs;
 
     /**
+     * Used for optimistic locking to prevent concurrent
+     * modification of the same account.
+     */
+    @Version
+    @Column(name = "VERSION")
+    private long version;
+
+    /**
      * Creates a new account capable of holding
      * in-game funds but cannot deposit from or
      * withdraw to an external wallet.
@@ -98,6 +107,7 @@ public class Account
         depositAddress = "";
         returnAddress = "";
         processedDepositIDs = new HashSet<>();
+        version = 0L;
     }
 
     /**
@@ -114,6 +124,7 @@ public class Account
         this.depositAddress = depositAddress;
         returnAddress = "";
         processedDepositIDs = new HashSet<>();
+        version = 0L;
     }
 
     /**

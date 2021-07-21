@@ -16,6 +16,7 @@ import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.MapKeyJoinColumn;
 import javax.persistence.Table;
+import javax.persistence.Version;
 
 /**
  * Saves details of a deposit transaction
@@ -43,6 +44,10 @@ public class Deposit
     @Column(name = "VOUT")
     private int vout;
     
+    /**
+     * The total value of this deposit
+     * ignoring share distribution.
+     */
     @Column(name = "TOTAL")
     private long total;
 
@@ -75,6 +80,14 @@ public class Deposit
     private WithdrawRequest withdrawLock;
 
     /**
+     * Used for optimistic locking to prevent concurrent
+     * modification of the same deposit.
+     */
+    @Version
+    @Column(name = "VERSION")
+    private long version;
+
+    /**
      * Save transaction details for player deposits.
      * 
      * @param TXID The blockchain transaction ID.
@@ -88,6 +101,7 @@ public class Deposit
         this.total = total;
         this.shares = new HashMap<>();
         withdrawLock = null;
+        version = 0L;
     }
 
     /**
