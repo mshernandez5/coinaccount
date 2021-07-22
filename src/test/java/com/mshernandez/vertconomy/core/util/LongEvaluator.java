@@ -32,12 +32,6 @@ public class LongEvaluator implements CoinEvaluator<Long>
     }
 
     @Override
-    public int compare(Long a, Long b)
-    {
-        return a.compareTo(b);
-    }
-
-    @Override
     public boolean isValid(Long l)
     {
         return l > 0L;

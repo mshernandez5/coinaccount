@@ -45,4 +45,10 @@ public interface CoinEvaluator<T> extends Comparator<T>
     {
         return evaluate(obj) - cost(obj);
     }
+
+    @Override
+    default int compare(T a, T b)
+    {
+        return (int) (costAdjustedValue(a) - costAdjustedValue(b));
+    }
 }

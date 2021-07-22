@@ -38,12 +38,6 @@ public class DepositShareEvaluator implements CoinEvaluator<Deposit>
     }
 
     @Override
-    public int compare(Deposit a, Deposit b)
-    {
-        return (int) (costAdjustedValue(a) - costAdjustedValue(b));
-    }
-
-    @Override
     public boolean isValid(Deposit deposit)
     {
         return useLockedDeposits || !deposit.hasWithdrawLock();
