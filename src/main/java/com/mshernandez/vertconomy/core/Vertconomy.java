@@ -33,36 +33,38 @@ public interface Vertconomy
     public void checkForNewDeposits();
 
     /**
-     * Vault API Compatibility Use ONLY
-     * <p>
-     * Moves portions of a player's balance into
-     * a temporary transfer fund where it will be
-     * pending a move to another player's account
-     * or into the server account fund if unclaimed.
-     * <p>
-     * The temporary transfer fund gives a set amount
-     * of time for the funds to be reclaimed, which is
-     * required for plugins which intend to conduct transfers
-     * by burning sender balances and minting new currency
-     * for the receiver.
+     * Return the usable balance held by the server
+     * account.
      * 
-     * @param player The player to take funds from.
-     * @param amount The amount to send to the transfer fund.
-     * @return True if the transfer was successful.
+     * @return The balance associated with the server account.
      */
-    public boolean moveToTransferFund(OfflinePlayer player, double amount);
+    public long getServerBalance();
 
     /**
-     * Vault API Compatibility Use ONLY
-     * <p>
-     * Reclaim a balance from the temporary transfer
-     * fund.
+     * Return the withdrawable balance held by the server
+     * account.
      * 
-     * @param player The player to give the taken funds to.
-     * @param amount The amount to take from the transfer fund.
+     * @return The withdrawable balance associated with the server account.
+     */
+    public long getWithdrawableServerBalance();
+
+    /**
+     * Gives player funds to the server account.
+     * 
+     * @param player The player to take funds from.
+     * @param amount The amount, in sats, to send to the server account.
      * @return True if the transfer was successful.
      */
-    public boolean takeFromTransferFund(OfflinePlayer player, double amount);
+    public boolean moveToServer(OfflinePlayer player, long amount);
+
+    /**
+     * Gives server funds to the specified player.
+     * 
+     * @param player The player to give the taken funds to.
+     * @param amount The amount, in sats, to take from the server.
+     * @return True if the transfer was successful.
+     */
+    public boolean takeFromServer(OfflinePlayer player, long amount);
 
     /**
      * Return the useable balance held by the player's
@@ -90,6 +92,17 @@ public interface Vertconomy
      * @return Unconfirmed deposit balances for the account.
      */
     public long getPlayerUnconfirmedBalance(OfflinePlayer player);
+
+    /**
+     * Transfer the given amount from one player
+     * to another.
+     *  
+     * @param sender The player sending funds.
+     * @param receiver The player receiving funds.
+     * @param amount The amount to transfer.
+     * @return True if the transfer was successful.
+     */
+    public boolean transferPlayerBalance(OfflinePlayer sender, OfflinePlayer receiver, long amount);
 
     /**
      * Get the public wallet address allowing the player to

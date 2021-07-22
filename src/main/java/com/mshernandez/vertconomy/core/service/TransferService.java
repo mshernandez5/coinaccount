@@ -57,8 +57,8 @@ public class TransferService
      * internally redistributing ownership of the
      * underlying deposits.
      * 
-     * @param sender The sending account ID.
-     * @param receiver The receiving account ID.
+     * @param senderId The sending account ID.
+     * @param receiverId The receiving account ID.
      * @param amount The amount to transfer, in sats.
      * @return True if the transfer was successful.
      */
@@ -67,7 +67,7 @@ public class TransferService
     {
         Account sender = accountDao.findOrCreate(senderId);
         Account receiver = accountDao.findOrCreate(receiverId);
-        if (sender.calculateBalance() < amount)
+        if (amount <= 0 || sender.calculateBalance() < amount)
         {
             logger.info(sender + " can't send " + amount + " to " + receiver);
             return false;

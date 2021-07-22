@@ -72,12 +72,7 @@ public class VertconomyImpl implements Vertconomy
         persistService.start();
     }
 
-    /**
-     * Returns true if Vertconomy can make
-     * successful requests to the wallet.
-     * 
-     * @return True if a wallet connection can be reached.
-     */
+    @Override
     public boolean hasWalletConnection()
     {
         try
@@ -91,14 +86,7 @@ public class VertconomyImpl implements Vertconomy
         }
     }
 
-    /**
-     * Check for any new unprocessed UTXOs.
-     * Register new UTXOs and allocate their
-     * funds appropriately.
-     * <p>
-     * Processes both user deposits and withdraw
-     * transaction change.
-     */
+    @Override
     public void checkForNewDeposits()
     {
         // Don't Attempt To Check For Deposits If Wallet Unreachable
@@ -124,194 +112,104 @@ public class VertconomyImpl implements Vertconomy
         depositService.registerChangeDeposits();
     }
 
-    /**
-     * Vault API Compatibility Use ONLY
-     * <p>
-     * Moves portions of a player's balance into
-     * a temporary transfer fund where it will be
-     * pending a move to another player's account
-     * or into the server account fund if unclaimed.
-     * <p>
-     * The temporary transfer fund gives a set amount
-     * of time for the funds to be reclaimed, which is
-     * required for plugins which intend to conduct transfers
-     * by burning sender balances and minting new currency
-     * for the receiver.
-     * 
-     * @param player The player to take funds from.
-     * @param amount The amount to send to the transfer fund.
-     * @return True if the transfer was successful.
-     */
-    public boolean moveToTransferFund(OfflinePlayer player, double amount)
+    @Override
+    public long getServerBalance()
     {
-        if (!Bukkit.isPrimaryThread())
-        {
-            logger.warning("Cannot Support Asynchronous Vault API Requests");
-            return false;
-        }
-        long satAmount = formatter.absoluteAmount(amount);
-        // Note: Need To Allow 0 Value Withdraw To Support Many Plugins, ex. Essentials
-        if (satAmount < 0L)
-        {
-            return false;
-        }
-        return transferService.transferBalance(player.getUniqueId(), VertconomyConfiguration.TRANSFER_ACCOUNT_UUID, satAmount);
+        Account serverAccount = accountDao.findOrCreate(VertconomyConfiguration.SERVER_ACCOUNT_UUID);
+        return serverAccount.calculateBalance();
     }
 
-    /**
-     * Vault API Compatibility Use ONLY
-     * <p>
-     * Reclaim a balance from the temporary transfer
-     * fund.
-     * 
-     * @param player The player to give the taken funds to.
-     * @param amount The amount to take from the transfer fund.
-     * @return True if the transfer was successful.
-     */
-    public boolean takeFromTransferFund(OfflinePlayer player, double amount)
+    @Override
+    public long getWithdrawableServerBalance()
     {
-        if (!Bukkit.isPrimaryThread())
-        {
-            logger.warning("Cannot Support Asynchronous Vault API Requests");
-            return false;
-        }
-        Account transferAccount = accountDao.findOrCreate(VertconomyConfiguration.TRANSFER_ACCOUNT_UUID);
-        long satAmount = formatter.absoluteAmount(amount);
-        // Note: Need To Allow 0 Value Deposit To Support Many Plugins, ex. Essentials
-        if (satAmount < 0L)
-        {
-            return false;
-        }
-        satAmount = Math.min(satAmount, transferAccount.calculateBalance()); // TODO: temporary
-        return transferService.transferBalance(VertconomyConfiguration.TRANSFER_ACCOUNT_UUID, player.getUniqueId(), satAmount);
+        Account serverAccount = accountDao.findOrCreate(VertconomyConfiguration.SERVER_ACCOUNT_UUID);
+        return serverAccount.calculateWithdrawableBalance();
     }
 
-    /**
-     * Return the useable balance held by the player's
-     * account.
-     * 
-     * @param player The player associated with the account.
-     * @return The balance associated with the account.
-     */
+    @Override
+    public boolean moveToServer(OfflinePlayer player, long amount)
+    {
+        return transferService.transferBalance(player.getUniqueId(), VertconomyConfiguration.SERVER_ACCOUNT_UUID, amount);
+    }
+
+    @Override
+    public boolean takeFromServer(OfflinePlayer player, long amount)
+    {
+        return transferService.transferBalance(VertconomyConfiguration.SERVER_ACCOUNT_UUID, player.getUniqueId(), amount);
+    }
+
+    @Override
     public long getPlayerBalance(OfflinePlayer player)
     {
         Account playerAccount = accountDao.findOrCreate(player.getUniqueId());
         return playerAccount == null ? 0L : playerAccount.calculateBalance();
     }
 
-    /**
-     * Return the withdrawable balance held by the player's
-     * account.
-     * 
-     * @param player The player associated with the account.
-     * @return The withdrawable balance associated with the account.
-     */
+    @Override
     public long getPlayerWithdrawableBalance(OfflinePlayer player)
     {
         Account playerAccount = accountDao.findOrCreate(player.getUniqueId());
         return playerAccount == null ? 0L : playerAccount.calculateWithdrawableBalance();
     }
 
-    /**
-     * Return the total unconfirmed balances associated
-     * with the player's account.
-     * 
-     * @param player The player associated with the account.
-     * @return Unconfirmed deposit balances for the account.
-     */
+    @Override
     public long getPlayerUnconfirmedBalance(OfflinePlayer player)
     {
         Account playerAccount = accountDao.findOrCreate(player.getUniqueId());
         return playerAccount == null ? 0L : playerAccount.getPendingBalance();
     }
 
-    /**
-     * Get the public wallet address allowing the player to
-     * deposit funds into their account.
-     * 
-     * @param player The player associated with the account.
-     * @return The deposit address associated with the account.
-     */
+    @Override
+    public boolean transferPlayerBalance(OfflinePlayer sender, OfflinePlayer receiver, long amount)
+    {
+        return transferService.transferBalance(sender.getUniqueId(), receiver.getUniqueId(), amount);
+    }
+
+    @Override
     public String getPlayerDepositAddress(OfflinePlayer player)
     {
         Account playerAccount = accountDao.findOrCreate(player.getUniqueId());
         return playerAccount == null ? "ERROR" : playerAccount.getDepositAddress();
     }
 
-    /**
-     * Checks whether the player has an active withdraw request.
-     * 
-     * @param player The player to check.
-     * @return True if an active withdraw request exists for the player.
-     */
+    @Override
     public boolean checkIfPlayerHasWithdrawRequest(OfflinePlayer player)
     {
         Account playerAccount = accountDao.findOrCreate(player.getUniqueId());
         return playerAccount == null ? false : true;
     }
 
-    /**
-     * Initiate a withdraw request by the user.
-     * 
-     * @param player The player that initiated the request.
-     * @param destAddress The address to withdraw to.
-     * @param amount The amount to withdraw, or -1L for all.
-     * @return A response object for the withdraw attempt.
-     */
+    @Override
     public WithdrawRequestResponse initiatePlayerWithdrawRequest(OfflinePlayer player, String destAddress, long amount)
     {
         return withdrawService.initiateWithdraw(player.getUniqueId(), destAddress, amount);
     }
 
-    /**
-     * Completes any active withdraw request initiated by the user.
-     * 
-     * @param player The player that initiated the request.
-     * @return The TXID of the withdraw transaction, or null if no request was found.
-     */
+    @Override
     public String completePlayerWithdrawRequest(OfflinePlayer player)
     {
         return withdrawService.completeWithdraw(player.getUniqueId());
     }
 
-    /**
-     * Cancels any active withdraw request initiated by the user.
-     * 
-     * @param player The player that initiated the request.
-     * @return True if the request was found and canceled.
-     */
+    @Override
     public boolean cancelPlayerWithdrawRequest(OfflinePlayer player)
     {
         return withdrawService.cancelWithdraw(player.getUniqueId());
     }
 
-    /**
-     * Get the minimum number of confirmations required
-     * for Vertconomy to consider a deposit valid.
-     * 
-     * @return The minimum number of confirmations to consider a deposit valid.
-     */
+    @Override
     public int getMinDepositConfirmations()
     {
         return config.getMinDepositConfirmations();
     }
 
-    /**
-     * Get the minimum number of confirmations required
-     * for Vertconomy to consider change UTXOs valid.
-     * 
-     * @return The minimum number of confirmations to use change.
-     */
+    @Override
     public int getMinChangeConfirmations()
     {
         return config.getMinChangeConfirmations();
     }
 
-    /**
-     * Get a configured formatter to format and parse sat amounts.
-     * 
-     * @return A formatter for this Vertconomy instance.
-     */
+    @Override
     public SatAmountFormat getFormatter()
     {
         return formatter;

@@ -151,7 +151,7 @@ public class VaultAdapter implements Economy
     @Override
     public EconomyResponse withdrawPlayer(OfflinePlayer player, double amount)
     {
-        if (vertconomy.moveToTransferFund(player, amount))
+        if (vertconomy.moveToServer(player, vertconomy.getFormatter().absoluteAmount(amount)))
         {
             return new EconomyResponse(amount,
                 vertconomy.getPlayerBalance(player),
@@ -187,7 +187,7 @@ public class VaultAdapter implements Economy
     @Override
     public EconomyResponse depositPlayer(OfflinePlayer player, double amount)
     {
-        if (vertconomy.takeFromTransferFund(player, amount))
+        if (vertconomy.takeFromServer(player, vertconomy.getFormatter().absoluteAmount(amount)))
         {
             return new EconomyResponse(amount,
                 vertconomy.getPlayerBalance(player),
