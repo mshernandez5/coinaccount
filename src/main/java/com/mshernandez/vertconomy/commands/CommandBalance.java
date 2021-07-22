@@ -129,15 +129,26 @@ public class CommandBalance implements CommandExecutor, TabCompleter
         }
         else if (sender instanceof ConsoleCommandSender)
         {
-            BaseComponent[] component = new ComponentBuilder()
-                .append("Server-Owned Balance: ").color(ChatColor.RED)
-                .append("NOT YET SUPPORTED").color(ChatColor.GREEN)
-                .create();
-            sender.spigot().sendMessage(component);
+            // Get Balance
+            long serverBalance = vertconomy.getServerBalance();
+            ComponentBuilder cb = new ComponentBuilder()
+                .append("Server-Owned Balance: ").color(ChatColor.GOLD)
+                .append(formatter.format(vertconomy.getServerBalance())).color(ChatColor.GREEN);
+            // Show Withdrawable Portion Of Balance If Applicable
+            long withdrawableServerBalance = vertconomy.getWithdrawableServerBalance();
+            if (serverBalance != withdrawableServerBalance)
+            {
+                cb.append("\n").append("Notice: ").color(ChatColor.GRAY)
+                    .append(formatter.format(withdrawableServerBalance))
+                    .append(" may be withdrawn at this time. ");
+            }
+            // Send Message
+            sender.spigot().sendMessage(cb.create());
             return true;
         }
         else
         {
+            // Unknown Sender
             BaseComponent[] component = new ComponentBuilder()
                 .append("UNSUPPORTED").color(ChatColor.DARK_RED)
                 .create();
