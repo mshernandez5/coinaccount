@@ -100,7 +100,17 @@ The process for setting up cryptocurrencies other than Vertcoin is virtually ide
 By default, Vertcoin balances will be represented in satoshi units; this can be changed in the plugin configuration. If your player base is new to cryptocurrency you may want to work on a smaller scale to make it easier for players to get involved.
 
 ## Warning
-This project is experimental and does not make any guarantees to the safety of the funds or wallets it interacts with. As the project does not rely on any centralized server, please understand that any coins deposited through the plugin are inherently in the hands of the Minecraft server owners. If you would not trust the server owners to hold your coins directly, you should not trust them to hold your coins through this plugin.
+This project is experimental and does not guarantee the safety of any funds or wallets it interacts with.
+
+As the project does not rely on any centralized server, please understand that any coins deposited through the plugin are inherently in the hands of the Minecraft server owners.\
+From a user perspective, if you would not trust the server owners to hold your coins in their own personal wallets then you should not trust them to hold your coins through this plugin.
+
+For server owners, be aware that the world of cryptocurrency is no stranger to attacks and scams.\
+Take great care in your plugin selection and server management as malicious plugins and players with the right permissions can steal funds.\
+By nature, any plugin that communicates with Vertconomy to transfer balances for useful functionality can also do so maliciously.\
+Likewise, any player that can manage server funds, transfer player balances, or force other players to execute commands can do so maliciously.\
+Once funds are withdrawn, there is no going back.\
+*Be careful.*
 
 ## Contributions
 Plugin written by [@mshernandez5](https://github.com/mshernandez5/) with special thanks to the projects making this one possible:
