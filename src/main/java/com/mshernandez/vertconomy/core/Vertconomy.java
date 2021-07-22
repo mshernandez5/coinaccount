@@ -1,5 +1,7 @@
 package com.mshernandez.vertconomy.core;
 
+import java.util.Map;
+
 import com.mshernandez.vertconomy.core.service.WithdrawRequestResponse;
 import com.mshernandez.vertconomy.core.util.SatAmountFormat;
 
@@ -103,6 +105,41 @@ public interface Vertconomy
      * @return True if the transfer was successful.
      */
     public boolean transferPlayerBalance(OfflinePlayer sender, OfflinePlayer receiver, long amount);
+
+    /**
+     * Specify multiple account balance changes
+     * to make as one transaction, where the entire
+     * batch will fail if any one change fails.
+     * <p>
+     * If the total of all balance changes is not
+     * zero, then funds will be given or taken
+     * from the server account to attempt to complete
+     * the batch.
+     * <p>
+     * For example, using the following map:
+     * <table>
+     *    <tr>
+     *       <td>Player</td>
+     *       <td>Change</td>
+     *    </tr>
+     *    <tr>
+     *       <td>#1</td>
+     *       <td>-5L</td>
+     *    </tr>
+     *    <tr>
+     *       <td>#2</td>
+     *       <td>10L</td>
+     *    </tr>
+     * </table>
+     * Then player #2 will receive 5 sats from player #1 as well
+     * as an additional 5 sats from the server account, assuming
+     * player #1 and the server account have the balances to
+     * complete this operation.
+     * 
+     * @param changes A map of players to account balance changes.
+     * @return True if the changes were successfully executed.
+     */
+    public boolean batchTransfer(Map<OfflinePlayer, Long> changes);
 
     /**
      * Get the public wallet address allowing the player to

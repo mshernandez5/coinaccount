@@ -1,6 +1,9 @@
 package com.mshernandez.vertconomy.core;
 
+import java.util.Map;
+import java.util.UUID;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -12,6 +15,7 @@ import com.mshernandez.vertconomy.core.service.DepositService;
 import com.mshernandez.vertconomy.core.service.TransferService;
 import com.mshernandez.vertconomy.core.service.WithdrawRequestResponse;
 import com.mshernandez.vertconomy.core.service.WithdrawService;
+import com.mshernandez.vertconomy.core.service.exception.InsufficientFundsException;
 import com.mshernandez.vertconomy.core.util.SatAmountFormat;
 import com.mshernandez.vertconomy.wallet_interface.RPCWalletConnection;
 import com.mshernandez.vertconomy.wallet_interface.exceptions.WalletRequestException;
@@ -129,13 +133,29 @@ public class VertconomyImpl implements Vertconomy
     @Override
     public boolean moveToServer(OfflinePlayer player, long amount)
     {
-        return transferService.transferBalance(player.getUniqueId(), VertconomyConfiguration.SERVER_ACCOUNT_UUID, amount);
+        try
+        {
+            transferService.transferBalance(player.getUniqueId(), VertconomyConfiguration.SERVER_ACCOUNT_UUID, amount);
+        }
+        catch (InsufficientFundsException e)
+        {
+            return false;
+        }
+        return true;
     }
 
     @Override
     public boolean takeFromServer(OfflinePlayer player, long amount)
     {
-        return transferService.transferBalance(VertconomyConfiguration.SERVER_ACCOUNT_UUID, player.getUniqueId(), amount);
+        try
+        {
+            transferService.transferBalance(VertconomyConfiguration.SERVER_ACCOUNT_UUID, player.getUniqueId(), amount);
+        }
+        catch (InsufficientFundsException e)
+        {
+            return false;
+        }
+        return true;
     }
 
     @Override
@@ -162,7 +182,33 @@ public class VertconomyImpl implements Vertconomy
     @Override
     public boolean transferPlayerBalance(OfflinePlayer sender, OfflinePlayer receiver, long amount)
     {
-        return transferService.transferBalance(sender.getUniqueId(), receiver.getUniqueId(), amount);
+        try
+        {
+            transferService.transferBalance(sender.getUniqueId(), receiver.getUniqueId(), amount);
+        }
+        catch (InsufficientFundsException e)
+        {
+            return false;
+        }
+        return true;
+    }
+
+    @Override
+    public boolean batchTransfer(Map<OfflinePlayer, Long> changes)
+    {
+        // Map From Account ID Instead Of Player
+        Map<UUID, Long> idMapChanges = changes.entrySet().stream()
+            .collect(Collectors.toMap(e -> e.getKey().getUniqueId(), e -> e.getValue()));
+        // Attempt To Make Changes
+        try
+        {
+            transferService.batchTransfer(idMapChanges);
+        }
+        catch (InsufficientFundsException e)
+        {
+            return false;
+        }
+        return true;
     }
 
     @Override

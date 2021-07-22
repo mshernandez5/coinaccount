@@ -1,18 +1,23 @@
 package com.mshernandez.vertconomy.core.service;
 
+import java.util.Comparator;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.Set;
+import java.util.SortedSet;
+import java.util.TreeSet;
 import java.util.UUID;
-import java.util.logging.Logger;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
 import com.google.inject.persist.Transactional;
+import com.mshernandez.vertconomy.core.VertconomyConfiguration;
 import com.mshernandez.vertconomy.core.entity.Account;
 import com.mshernandez.vertconomy.core.entity.AccountDao;
 import com.mshernandez.vertconomy.core.entity.Deposit;
 import com.mshernandez.vertconomy.core.entity.DepositDao;
+import com.mshernandez.vertconomy.core.service.exception.InsufficientFundsException;
 import com.mshernandez.vertconomy.core.util.BinarySearchCoinSelector;
 import com.mshernandez.vertconomy.core.util.CoinEvaluator;
 import com.mshernandez.vertconomy.core.util.CoinSelector;
@@ -24,8 +29,6 @@ import com.mshernandez.vertconomy.core.util.DepositShareEvaluator;
 @Singleton
 public class TransferService
 {
-    private final Logger logger;
-
     private final AccountDao accountDao;
 
     private final DepositDao depositDao;
@@ -44,9 +47,8 @@ public class TransferService
      * @param depositDao A deposit DAO.
      */
     @Inject
-    public TransferService(Logger logger, AccountDao accountDao, DepositDao depositDao)
+    public TransferService(AccountDao accountDao, DepositDao depositDao)
     {
-        this.logger = logger;
         this.accountDao = accountDao;
         this.depositDao = depositDao;
         coinSelector = new BinarySearchCoinSelector<>(COIN_SELECTOR_MAX_REWIND);
@@ -60,17 +62,17 @@ public class TransferService
      * @param senderId The sending account ID.
      * @param receiverId The receiving account ID.
      * @param amount The amount to transfer, in sats.
+     * @throws InsufficientFundsException If the sender cannot afford the transfer.
      * @return True if the transfer was successful.
      */
-    @Transactional
-    public boolean transferBalance(UUID senderId, UUID receiverId, long amount)
+    @Transactional(rollbackOn = InsufficientFundsException.class)
+    public void transferBalance(UUID senderId, UUID receiverId, long amount) throws InsufficientFundsException
     {
         Account sender = accountDao.findOrCreate(senderId);
         Account receiver = accountDao.findOrCreate(receiverId);
         if (amount <= 0 || sender.calculateBalance() < amount)
         {
-            logger.info(sender + " can't send " + amount + " to " + receiver);
-            return false;
+            throw new InsufficientFundsException();
         }
         CoinEvaluator<Deposit> evaluator = new DepositShareEvaluator(sender, true, 0L);
         Set<Deposit> selected = coinSelector.selectInputs(evaluator, sender.getDeposits(), amount);
@@ -98,7 +100,67 @@ public class TransferService
         }
         accountDao.update(sender);
         accountDao.update(receiver);
-        logger.info(sender + " successfully sent " + amount + " to " + receiver);
-        return true;
+    }
+
+    /**
+     * Specify multiple account balance changes
+     * to make as one transaction, where the entire
+     * batch will fail if any one change fails.
+     * <p>
+     * If the total of all balance changes is not
+     * zero, then funds will be given or taken
+     * from the server account to attempt to complete
+     * the batch.
+     * <p>
+     * For example, using the following map:
+     * <table>
+     *    <tr>
+     *       <td>Account</td>
+     *       <td>Change</td>
+     *    </tr>
+     *    <tr>
+     *       <td>#1</td>
+     *       <td>-5L</td>
+     *    </tr>
+     *    <tr>
+     *       <td>#2</td>
+     *       <td>10L</td>
+     *    </tr>
+     * </table>
+     * Then account #2 will receive 5 sats from account #1 as well
+     * as an additional 5 sats from the server account, assuming
+     * account #1 and the server account have the balances to
+     * complete this operation.
+     * 
+     * @param changes A map of account UUIDs to balance changes.
+     * @return True if the changes were successfully executed.
+     */
+    @Transactional(rollbackOn = InsufficientFundsException.class)
+    public void batchTransfer(Map<UUID, Long> changes) throws InsufficientFundsException
+    {
+        // Must Execute Changes Adding To Server Account First
+        Comparator<UUID> changeComparator = new Comparator<UUID>()
+        {
+            @Override
+            public int compare(UUID a, UUID b)
+            {
+                return (int) (changes.get(a) - changes.get(b));
+            }
+        };
+        SortedSet<UUID> accountChangeOrder = new TreeSet<>(changeComparator);
+        accountChangeOrder.addAll(changes.keySet());
+        // Attempt To Make Changes
+        for (UUID id : accountChangeOrder)
+        {
+            long change = changes.get(id);
+            if (change < 0L)
+            {
+                transferBalance(id, VertconomyConfiguration.SERVER_ACCOUNT_UUID, Math.abs(change));
+            }
+            else
+            {
+                transferBalance(VertconomyConfiguration.SERVER_ACCOUNT_UUID, id, change);
+            }
+        }
     }
 }
