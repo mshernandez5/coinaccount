@@ -40,7 +40,7 @@ public class DepositShareEvaluator implements CoinEvaluator<Deposit>
     @Override
     public int compare(Deposit a, Deposit b)
     {
-        return (int) (a.getShare(account) - b.getShare(account));
+        return (int) (costAdjustedValue(a) - costAdjustedValue(b));
     }
 
     @Override
