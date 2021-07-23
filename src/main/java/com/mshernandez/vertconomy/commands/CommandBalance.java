@@ -75,7 +75,7 @@ public class CommandBalance implements CommandExecutor, TabCompleter
             if (otherPlayerLookup)
             {
                 player = Bukkit.getPlayer(args[0]);
-                if (!player.hasPlayedBefore())
+                if (player == null || !player.hasPlayedBefore())
                 {
                     BaseComponent[] component = new ComponentBuilder()
                         .append("Unknown Player: ").color(ChatColor.DARK_RED)
