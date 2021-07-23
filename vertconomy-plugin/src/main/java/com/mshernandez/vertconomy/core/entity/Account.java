@@ -56,13 +56,6 @@ public class Account
     private String returnAddress;
 
     /**
-     * True if a return address was manually
-     * set for this account.
-     */
-    @Column(name = "AUTO_UPDATE_ADDRESS")
-    private boolean autoUpdateReturnAddress;
-
-    /**
      * Stores the last known pending balance from
      * deposits the user has made but have not yet
      * met the minimum number of confirmations.
@@ -113,7 +106,6 @@ public class Account
         balances = new HashSet<>();
         depositAddress = "";
         returnAddress = "";
-        autoUpdateReturnAddress = false;
         processedDepositIDs = new HashSet<>();
         version = 0L;
     }
@@ -131,7 +123,6 @@ public class Account
         balances = new HashSet<>();
         this.depositAddress = depositAddress;
         returnAddress = "";
-        autoUpdateReturnAddress = false;
         processedDepositIDs = new HashSet<>();
         version = 0L;
     }
@@ -254,23 +245,10 @@ public class Account
      * shutdown or user ban.
      * 
      * @param returnAddress The address to refund to.
-     * @param preserve Whether to automatically update this return address in the future.
      */
-    public void setReturnAddress(String returnAddress, boolean autoUpdate)
+    public void setReturnAddress(String returnAddress)
     {
         this.returnAddress = returnAddress;
-        autoUpdateReturnAddress = autoUpdate;
-    }
-
-    /**
-     * Returns true if the account return address
-     * should be automatically updated.
-     * 
-     * @return True if the account return address should be automatically updated.
-     */
-    public boolean shouldAutoUpdateReturnAddress()
-    {
-        return autoUpdateReturnAddress;
     }
 
     /**

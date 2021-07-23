@@ -210,11 +210,6 @@ public class WithdrawService
             depositDao.update(inputDeposit);
         }
         initiator.setWithdrawRequest(request);
-        // If Account Has Not Yet Set Return Address, Update To Most Recent Withdraw Address
-        if (initiator.shouldAutoUpdateReturnAddress())
-        {
-            initiator.setReturnAddress(destAddress, true);
-        }
         accountDao.update(initiator);
         accountDao.update(withdrawAccount);
         return new VertconomyWithdrawRequestResponse(request);
