@@ -129,8 +129,8 @@ public class SatAmountFormat
      */
     public long absoluteAmount(double amount)
     {
-        // Must Round Fractional Values Up, No Partial Sats
-        return (long) (Math.ceil(amount * scale.SAT_SCALE));
+        // Cuts Off Fractional Portions, No Partial Sats
+        return (long) (amount * scale.SAT_SCALE);
     }
 
     /**

@@ -18,12 +18,16 @@ import net.milkbowl.vault.economy.EconomyResponse.ResponseType;
  */
 public class VaultAdapter implements Economy
 {
-    // Vertconomy Instance
+    // Vertconomy
     Vertconomy vertconomy;
 
-    public VaultAdapter(Vertconomy vertconomy)
+    // Vault Request Executor
+    VaultRequestExecutor vaultRequestExecutor;
+
+    public VaultAdapter(Vertconomy vertconomy, VaultRequestExecutor vaultRequestExecutor)
     {
         this.vertconomy = vertconomy;
+        this.vaultRequestExecutor = vaultRequestExecutor;
     }
 
     // Plugin Information
@@ -151,17 +155,23 @@ public class VaultAdapter implements Economy
     @Override
     public EconomyResponse withdrawPlayer(OfflinePlayer player, double amount)
     {
-        if (vertconomy.moveToServer(player, vertconomy.getFormatter().absoluteAmount(amount)))
+        if (!Bukkit.isPrimaryThread())
+        {
+            return new EconomyResponse(0.0,
+                vertconomy.getPlayerBalance(player),
+                EconomyResponse.ResponseType.FAILURE,
+                "Cannot accept Vault requests from other threads!");
+        }
+        if (vaultRequestExecutor.queueChange(player, -vertconomy.getFormatter().absoluteAmount(amount)))
         {
             return new EconomyResponse(amount,
                 vertconomy.getPlayerBalance(player),
-                EconomyResponse.ResponseType.SUCCESS,
-                null);
+                EconomyResponse.ResponseType.SUCCESS, null);
         }
         return new EconomyResponse(0.0,
             vertconomy.getPlayerBalance(player),
             EconomyResponse.ResponseType.FAILURE,
-            "Failed To Move " + vertconomy.getFormatter().format(amount));
+            "Failed To Take " + vertconomy.getFormatter().format(amount));
     }
 
     @Override
@@ -187,17 +197,23 @@ public class VaultAdapter implements Economy
     @Override
     public EconomyResponse depositPlayer(OfflinePlayer player, double amount)
     {
-        if (vertconomy.takeFromServer(player, vertconomy.getFormatter().absoluteAmount(amount)))
+        if (!Bukkit.isPrimaryThread())
+        {
+            return new EconomyResponse(0.0,
+                vertconomy.getPlayerBalance(player),
+                EconomyResponse.ResponseType.FAILURE,
+                "Cannot accept Vault requests from other threads!");
+        }
+        if (vaultRequestExecutor.queueChange(player, vertconomy.getFormatter().absoluteAmount(amount)))
         {
             return new EconomyResponse(amount,
                 vertconomy.getPlayerBalance(player),
-                EconomyResponse.ResponseType.SUCCESS,
-                null);
+                EconomyResponse.ResponseType.SUCCESS, null);
         }
         return new EconomyResponse(0.0,
             vertconomy.getPlayerBalance(player),
             EconomyResponse.ResponseType.FAILURE,
-            "Failed To Claim " + vertconomy.getFormatter().format(amount));
+            "Failed To Give " + vertconomy.getFormatter().format(amount));
     }
 
     @Override

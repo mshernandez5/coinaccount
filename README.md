@@ -16,6 +16,8 @@ Unfortunately, by nature of the API it is impossible to create a proper implemen
 
 *So does it support Vault API plugins?* Well, I'd say it's more like Vertconomy "has the potential to work with a limited selection of Vault-compatible plugins through forbidden dark magic that comes with the risk of lost funds and may easily break with plugin updates" =)
 
+On top of the non-standard Vault implementation provided by this plugin, other plugins tend to ignore the success/failure responses provided by Vault API calls leading to situations where actions may be taken despite the server or player not having the necessary funds to do so. Please test any external plugin features thoroughly before making them available to players.
+
 Due to the complexities of working with Vault plugins and relatively high risk of unintended behavior Vault support is disabled by default, but this can be changed in the plugin configuration.
 
 ## How can I use this plugin?

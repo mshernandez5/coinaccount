@@ -15,6 +15,7 @@ import com.mshernandez.vertconomy.core.VertconomyBuilder;
 import com.mshernandez.vertconomy.core.util.CoinScale;
 import com.mshernandez.vertconomy.tasks.CheckDepositTask;
 import com.mshernandez.vertconomy.vault.VaultAdapter;
+import com.mshernandez.vertconomy.vault.VaultRequestExecutor;
 import com.mshernandez.vertconomy.wallet_interface.RPCWalletConnection;
 
 import org.bukkit.Bukkit;
@@ -37,6 +38,9 @@ public class App extends JavaPlugin
 
     // Periodically Check For New Deposits
     private BukkitTask depositCheckTask;
+
+    // Group & Execute Vault Requests
+    private BukkitTask vaultRequestTask;
 
     // Save References To Close On Plugin Disable
     private static Server webServer = null;
@@ -141,6 +145,8 @@ public class App extends JavaPlugin
         // Register Vertconomy Wrapper With Vault
         if (configuration.getBoolean("vault-integration", false))
         {
+            VaultRequestExecutor vaultRequestExecutor = new VaultRequestExecutor(vertconomy);
+            vaultRequestTask = Bukkit.getScheduler().runTaskTimer(this, vaultRequestExecutor, 0L, 0L);
             Plugin vault = getServer().getPluginManager().getPlugin("Vault");
             if (vault == null)
             {
@@ -148,7 +154,7 @@ public class App extends JavaPlugin
                 return;
             }
             getLogger().info("Vault found, attempting to register economy...");
-            getServer().getServicesManager().register(Economy.class, new VaultAdapter(vertconomy),
+            getServer().getServicesManager().register(Economy.class, new VaultAdapter(vertconomy, vaultRequestExecutor),
                 vault, ServicePriority.Normal);
         }
 
@@ -158,7 +164,7 @@ public class App extends JavaPlugin
         getCommand("withdraw").setExecutor(new CommandWithdraw(vertconomy));
         getCommand("vertconomy").setExecutor(new CommandVertconomy(vertconomy));
 
-        // Register Tasks
+        // Register Core Tasks
         depositCheckTask = Bukkit.getScheduler()
             .runTaskTimer(this, new CheckDepositTask(vertconomy), DEPOSIT_CHECK_INTERVAL, DEPOSIT_CHECK_INTERVAL);
     }
@@ -168,6 +174,10 @@ public class App extends JavaPlugin
     {
         getLogger().info("Stopping Vertconomy...");
         // End Running Tasks
+        if (vaultRequestTask != null)
+        {
+            vaultRequestTask.cancel();
+        }
         depositCheckTask.cancel();
         // Close H2 Web Console
         if (webServer != null)
