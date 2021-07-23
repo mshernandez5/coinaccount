@@ -3,6 +3,8 @@ package com.mshernandez.vertconomy.core.util;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.fail;
 
+import java.math.BigDecimal;
+
 import org.junit.jupiter.api.Test;
 
 /**
@@ -20,19 +22,79 @@ public class VertcoinFormatterTest
     }
 
     @Test
-    public void formatSatAmount()
+    public void formatSatAmountFullScale()
     {
         SatAmountFormatter formatter = createTestFormatter(CoinScale.FULL);
-        String formatted = formatter.format(123456789L);
-        assertEquals("1.23456789 VTC", formatted);
+        assertEquals("1.23456789 VTC", formatter.format(123456789L));
+        assertEquals("0.12345678 VTC", formatter.format(12345678L));
+        assertEquals("0.00001234 VTC", formatter.format(1234L));
     }
 
     @Test
-    public void formatRelativeAmount()
+    public void formatSatAmountMilliScale()
+    {
+        SatAmountFormatter formatter = createTestFormatter(CoinScale.MILLI);
+        assertEquals("1234.56789 mVTC", formatter.format(123456789L));
+        assertEquals("0.01234 mVTC", formatter.format(1234L));
+    }
+
+    @Test
+    public void formatSatAmountMicroScale()
+    {
+        SatAmountFormatter formatter = createTestFormatter(CoinScale.MICRO);
+        assertEquals("1234567.89 µVTC", formatter.format(123456789L));
+        assertEquals("0.12 µVTC", formatter.format(12L));
+    }
+
+    @Test
+    public void formatSatAmountBaseScale()
+    {
+        SatAmountFormatter formatter = createTestFormatter(CoinScale.BASE);
+        assertEquals("123456789 sat", formatter.format(123456789L));
+        assertEquals("1234 sat", formatter.format(1234L));
+    }
+
+    @Test
+    public void formatRelativeAmountFullScale()
     {
         SatAmountFormatter formatter = createTestFormatter(CoinScale.FULL);
-        String formatted = formatter.format(1.0);
-        assertEquals("1.00000000 VTC", formatted);
+        assertEquals("0.00000000 VTC", formatter.format(BigDecimal.ZERO));
+        assertEquals("0.50000000 VTC", formatter.format(new BigDecimal("0.5")));
+        assertEquals("1.00000000 VTC", formatter.format(new BigDecimal("1.0")));
+        assertEquals("1.00000000 VTC", formatter.format(new BigDecimal("1.000000001")));
+        assertEquals("1.00000000 VTC", formatter.format(new BigDecimal("1.000000009999")));
+    }
+
+    @Test
+    public void formatRelativeAmountMilliScale()
+    {
+        SatAmountFormatter formatter = createTestFormatter(CoinScale.MILLI);
+        assertEquals("0.00000 mVTC", formatter.format(BigDecimal.ZERO));
+        assertEquals("0.50000 mVTC", formatter.format(new BigDecimal("0.5")));
+        assertEquals("1.01000 mVTC", formatter.format(new BigDecimal("1.01")));
+        assertEquals("1.01000 mVTC", formatter.format(new BigDecimal("1.010001")));
+        assertEquals("1.01000 mVTC", formatter.format(new BigDecimal("1.010009999")));
+    }
+
+    @Test
+    public void formatRelativeAmountMicroScale()
+    {
+        SatAmountFormatter formatter = createTestFormatter(CoinScale.MICRO);
+        assertEquals("0.00 µVTC", formatter.format(BigDecimal.ZERO));
+        assertEquals("0.50 µVTC", formatter.format(new BigDecimal("0.5")));
+        assertEquals("1.01 µVTC", formatter.format(new BigDecimal("1.01")));
+        assertEquals("1.01 µVTC", formatter.format(new BigDecimal("1.011")));
+        assertEquals("1.01 µVTC", formatter.format(new BigDecimal("1.019999")));
+    }
+
+    @Test
+    public void formatRelativeAmountBaseScale()
+    {
+        SatAmountFormatter formatter = createTestFormatter(CoinScale.BASE);
+        assertEquals("0 sat", formatter.format(BigDecimal.ZERO));
+        assertEquals("1000 sat", formatter.format(new BigDecimal("1000")));
+        assertEquals("1000 sat", formatter.format(new BigDecimal("1000.1")));
+        assertEquals("1000 sat", formatter.format(new BigDecimal("1000.9999")));
     }
 
     @Test

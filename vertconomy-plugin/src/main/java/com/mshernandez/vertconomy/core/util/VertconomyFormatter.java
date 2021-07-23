@@ -1,5 +1,8 @@
 package com.mshernandez.vertconomy.core.util;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.text.DecimalFormat;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -69,29 +72,56 @@ public class VertconomyFormatter implements SatAmountFormatter
     }
 
     @Override
-    public String format(long amount)
+    public String format(long satAmount)
     {
-        return format((double) amount / scale.SAT_SCALE);
+        StringBuilder stringBuilder = new StringBuilder(Long.toString(satAmount));
+        if (scale == CoinScale.BASE)
+        {
+            stringBuilder.append(' ').append(baseUnitSymbol);
+        }
+        else
+        {
+            StringBuilder zeroPadding = new StringBuilder();
+            int numZeroesToPad = scale.NUM_VALID_FRACTION_DIGITS + 1 - stringBuilder.length();
+            for (; numZeroesToPad > 0; numZeroesToPad--)
+            {
+                zeroPadding.append('0');
+            }
+            stringBuilder = zeroPadding.append(stringBuilder);
+            stringBuilder.insert(stringBuilder.length() - scale.NUM_VALID_FRACTION_DIGITS, ".")
+                .append(' ')
+                .append(scale.PREFIX)
+                .append(symbol);
+        }
+        return stringBuilder.toString();
     }
 
     @Override
-    public String format(double amount)
+    public String format(BigDecimal amount)
     {
-        return String.format("%." + scale.NUM_VALID_FRACTION_DIGITS + "f "
-            + ((scale == CoinScale.BASE) ? baseUnitSymbol : (scale.PREFIX + symbol)), amount);
+        DecimalFormat decimalFormat = new DecimalFormat();
+        decimalFormat.setGroupingUsed(false);
+        decimalFormat.setMinimumFractionDigits(scale.NUM_VALID_FRACTION_DIGITS);
+        decimalFormat.setMaximumFractionDigits(scale.NUM_VALID_FRACTION_DIGITS);
+        return new StringBuilder()
+            .append(decimalFormat.format(amount.setScale(scale.NUM_VALID_FRACTION_DIGITS, RoundingMode.FLOOR)))
+            .append(' ')
+            .append((scale == CoinScale.BASE) ? baseUnitSymbol : (scale.PREFIX + symbol))
+            .toString();
     }
 
     @Override
-    public double relativeAmount(long amount)
+    public BigDecimal relativeAmount(long satAmount)
     {
-        return amount / (double) scale.SAT_SCALE;
+        return new BigDecimal(satAmount)
+            .movePointLeft(scale.NUM_VALID_FRACTION_DIGITS)
+            .setScale(scale.NUM_VALID_FRACTION_DIGITS, RoundingMode.FLOOR);
     }
 
     @Override
-    public long absoluteAmount(double amount)
+    public long absoluteAmount(BigDecimal relativeAmount)
     {
-        // Cuts Off Fractional Portions, No Partial Sats
-        return (long) (amount * scale.SAT_SCALE);
+        return relativeAmount.movePointRight(scale.NUM_VALID_FRACTION_DIGITS).longValue();
     }
 
     @Override

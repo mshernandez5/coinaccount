@@ -1,24 +1,29 @@
 package com.mshernandez.vertconomy.core.util;
 
+import java.math.BigDecimal;
+
 public interface SatAmountFormatter
 {
     /**
      * Format a sat amount into a readable String according
      * to the current currency settings.
      * 
-     * @param amount The unformatted amount, in sats.
+     * @param satAmount The unformatted amount, in sats.
      * @return A formatted string representing the amount.
      */
-    public String format(long amount);
+    public String format(long satAmount);
 
     /**
      * Format a double into a readable amount according
      * to the current currency settings.
+     * <p>
+     * Fractional amounts beyond the level of precision
+     * defined by the current scale will be dropped.
      * 
-     * @param amount The unformatted amount, relative to the current scale.
+     * @param relativeAmount The unformatted amount, relative to the current scale.
      * @return A formatted string representing the amount.
      */
-    public String format(double amount);
+    public String format(BigDecimal relativeAmount);
 
     /**
      *  Parse a user-provided amount (relative to the current scale)
@@ -41,10 +46,10 @@ public interface SatAmountFormatter
      * to the absolute sat amount according to
      * the current currency settings.
      * 
-     * @param amount The absolute amount in sats.
+     * @param satAmount The absolute amount in sats.
      * @return The relative amount.
      */
-    public double relativeAmount(long amount);
+    public BigDecimal relativeAmount(long satAmount);
 
     /**
      * Get the absolute sat amount corresponding
@@ -54,7 +59,7 @@ public interface SatAmountFormatter
      * @param amount The relative amount.
      * @return The absolute amount in sats.
      */
-    public long absoluteAmount(double amount);
+    public long absoluteAmount(BigDecimal relativeAmount);
 
     /**
      * How many fractional digits should be displayed

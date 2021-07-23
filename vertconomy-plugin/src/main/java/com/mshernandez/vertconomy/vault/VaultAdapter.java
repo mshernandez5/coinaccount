@@ -1,8 +1,10 @@
 package com.mshernandez.vertconomy.vault;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 import com.mshernandez.vertconomy.core.Vertconomy;
+import com.mshernandez.vertconomy.core.util.SatAmountFormatter;
 
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
@@ -67,7 +69,7 @@ public class VaultAdapter implements Economy
     @Override
     public String format(double amount)
     {
-        return vertconomy.getFormatter().format(amount);
+        return vertconomy.getFormatter().format(new BigDecimal(amount));
     }
 
     // Player Economy Operations
@@ -75,7 +77,9 @@ public class VaultAdapter implements Economy
     @Override
     public double getBalance(OfflinePlayer player)
     {
-        return vertconomy.getFormatter().relativeAmount(vertconomy.getPlayerBalance(player));
+        return vertconomy.getFormatter()
+            .relativeAmount(vertconomy.getPlayerBalance(player))
+            .doubleValue();
     }
 
     @Override
@@ -162,7 +166,11 @@ public class VaultAdapter implements Economy
                 EconomyResponse.ResponseType.FAILURE,
                 "Cannot accept Vault requests from other threads!");
         }
-        if (vaultRequestExecutor.queueChange(player, -vertconomy.getFormatter().absoluteAmount(amount)))
+        SatAmountFormatter formatter = vertconomy.getFormatter();
+        BigDecimal adjusted = new BigDecimal("0.5")
+            .movePointLeft(formatter.getNumFractionalDigits())
+            .add(new BigDecimal(amount));
+        if (vaultRequestExecutor.queueChange(player, -formatter.absoluteAmount(adjusted)))
         {
             return new EconomyResponse(amount,
                 vertconomy.getPlayerBalance(player),
@@ -171,7 +179,7 @@ public class VaultAdapter implements Economy
         return new EconomyResponse(0.0,
             vertconomy.getPlayerBalance(player),
             EconomyResponse.ResponseType.FAILURE,
-            "Failed To Take " + vertconomy.getFormatter().format(amount));
+            "Failed To Take " + formatter.format(adjusted));
     }
 
     @Override
@@ -204,7 +212,11 @@ public class VaultAdapter implements Economy
                 EconomyResponse.ResponseType.FAILURE,
                 "Cannot accept Vault requests from other threads!");
         }
-        if (vaultRequestExecutor.queueChange(player, vertconomy.getFormatter().absoluteAmount(amount)))
+        SatAmountFormatter formatter = vertconomy.getFormatter();
+        BigDecimal adjusted = new BigDecimal("0.5")
+            .movePointLeft(formatter.getNumFractionalDigits())
+            .add(new BigDecimal(amount));
+        if (vaultRequestExecutor.queueChange(player, formatter.absoluteAmount(adjusted)))
         {
             return new EconomyResponse(amount,
                 vertconomy.getPlayerBalance(player),
@@ -213,7 +225,7 @@ public class VaultAdapter implements Economy
         return new EconomyResponse(0.0,
             vertconomy.getPlayerBalance(player),
             EconomyResponse.ResponseType.FAILURE,
-            "Failed To Give " + vertconomy.getFormatter().format(amount));
+            "Failed To Give " + formatter.format(adjusted));
     }
 
     @Override
