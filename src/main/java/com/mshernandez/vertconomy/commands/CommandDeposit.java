@@ -5,6 +5,7 @@ import com.mshernandez.vertconomy.core.Vertconomy;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
+import org.bukkit.command.ConsoleCommandSender;
 import org.bukkit.entity.Player;
 
 import net.md_5.bungee.api.ChatColor;
@@ -37,10 +38,18 @@ public class CommandDeposit implements CommandExecutor
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args)
     {
-        if (sender instanceof Player)
+        if (sender instanceof Player || sender instanceof ConsoleCommandSender)
         {
             // Copyable Deposit Address
-            String address = vertconomy.getPlayerDepositAddress(((Player) sender));
+            String address;
+            if (sender instanceof Player)
+            {
+                address = vertconomy.getPlayerDepositAddress(((Player) sender));
+            }
+            else
+            {
+                address = vertconomy.getServerDepositAddress();
+            }
             TextComponent addressMsg = new TextComponent(address);
             addressMsg.setClickEvent(new ClickEvent(ClickEvent.Action.COPY_TO_CLIPBOARD, address));
             addressMsg.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, new Text("Click to copy address!")));

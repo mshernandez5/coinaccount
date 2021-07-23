@@ -11,6 +11,7 @@ import com.mshernandez.vertconomy.core.util.InvalidSatAmountException;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
+import org.bukkit.command.ConsoleCommandSender;
 import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 
@@ -44,9 +45,8 @@ public class CommandWithdraw implements CommandExecutor, TabCompleter
         {
             return false;
         }
-        if (sender instanceof Player)
+        if (sender instanceof Player || sender instanceof ConsoleCommandSender)
         {
-            Player player = (Player) sender;
             if (args[0].equals("confirm"))
             {
                 // Confirm Pending Withdrawal
@@ -55,7 +55,15 @@ public class CommandWithdraw implements CommandExecutor, TabCompleter
                     return false;
                 }
                 // Broadcast TX
-                String txid = vertconomy.completePlayerWithdrawRequest(player);
+                String txid;
+                if (sender instanceof Player)
+                {
+                    txid = vertconomy.completePlayerWithdrawRequest((Player) sender);
+                }
+                else
+                {
+                    txid = vertconomy.completeServerWithdrawRequest();
+                }
                 if (txid == null)
                 {
                     BaseComponent[] component = new ComponentBuilder()
@@ -93,7 +101,16 @@ public class CommandWithdraw implements CommandExecutor, TabCompleter
                 {
                     return false;
                 }
-                if (vertconomy.cancelPlayerWithdrawRequest(player))
+                boolean result;
+                if (sender instanceof Player)
+                {
+                    result = vertconomy.cancelPlayerWithdrawRequest((Player) sender);
+                }
+                else
+                {
+                    result = vertconomy.cancelServerWithdrawRequest();
+                }
+                if (result)
                 {
                     BaseComponent[] component = new ComponentBuilder()
                         .append("The withdraw request has been canceled.").color(ChatColor.YELLOW)
@@ -147,7 +164,15 @@ public class CommandWithdraw implements CommandExecutor, TabCompleter
                     }
                 }
                 // Withdraw Amount
-                WithdrawRequestResponse request = vertconomy.initiatePlayerWithdrawRequest(player, args[1], satAmount);
+                WithdrawRequestResponse request;
+                if (sender instanceof Player)
+                {
+                    request = vertconomy.initiatePlayerWithdrawRequest((Player) sender, args[1], satAmount);
+                }
+                else
+                {
+                    request = vertconomy.initiateServerWithdrawRequest(args[1], satAmount);
+                }
                 if (request.getResponseType() != WithdrawRequestResponseType.SUCCESS)
                 {
                     String errorMessage;
