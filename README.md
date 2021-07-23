@@ -11,14 +11,20 @@ Vertconomy interfaces with a user-provided wallet via standard [bitcoind RPC met
 All player balances are held as part of the same wallet with an embedded database keeping track of specific player balances for zero-fee transfers between players within the server.
 
 ## Does it work with existing plugins?
-Vertconomy aims to provide at least limited functionality with existing plugins through the common Minecraft [Vault API](https://github.com/MilkBowl/VaultAPI).
+Vertconomy originally aimed to provide functionality with existing plugins through the common Minecraft [Vault API](https://github.com/MilkBowl/VaultAPI).
 Unfortunately, by nature of the API it is impossible to create a proper implementation due to the (fair) assumption that in-game currency can be created out of thin air and sent back into the void at will.
+
+Despite this, an experimental Vault API implementation was created with strong limitations:
+* Obviously cryptocurrency cannot be created in-game from nothing. Any funds Vault attempts to give the player will be taken from the server account, while any funds Vault attempts to withdraw from the player will be given to the server account.
+* Vertconomy attempts to group Vault API calls into groups which must succeed or fail as a whole so that a failure to send funds from one end during an operation with multiple transfers does not leave unintended effects on player balances. Though this appears to work decently well it is ultimately a hack and not guaranteed.
+* The limited floating-point precision provided by double amounts (required by Vault) makes these requests susceptible to withdrawing or depositing slightly different amounts than intended, especially if it involves large numbers.
+* Other plugins tend to ignore the success/failure responses provided by Vault API calls - especially when attempting to give money to players - leading to situations where actions may be taken despite the server or player not having the necessary funds to do so. Please test any external plugin features thoroughly before making them available to players.
 
 *So does it support Vault API plugins?* Well, I'd say it's more like Vertconomy "has the potential to work with a limited selection of Vault-compatible plugins through forbidden dark magic that comes with the risk of lost funds and may easily break with plugin updates" =)
 
-On top of the non-standard Vault implementation provided by this plugin, other plugins tend to ignore the success/failure responses provided by Vault API calls - especially when attempting to give money to players - leading to situations where actions may be taken despite the server or player not having the necessary funds to do so. Please test any external plugin features thoroughly before making them available to players.
-
 Due to the complexities of working with Vault plugins and relatively high risk of unintended behavior Vault support is disabled by default, but this can be changed in the plugin configuration.
+
+The current goal is to develop a set of plugins built against the Vertconomy API which will allow proper functionality.
 
 ## How can I use this plugin?
 You will need a dedicated Vertcoin wallet configured to listen for RPC connections. Do not use an existing Vertcoin wallet. The configuration file for Vertcoin wallet can be found at one of the following locations if the wallet configuration directory was not manually changed:
