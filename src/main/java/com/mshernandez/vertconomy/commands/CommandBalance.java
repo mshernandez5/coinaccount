@@ -135,7 +135,7 @@ public class CommandBalance implements CommandExecutor, TabCompleter
                 .append("Server-Owned Balance: ").color(ChatColor.GOLD)
                 .append(formatter.format(vertconomy.getServerBalance())).color(ChatColor.GREEN);
             // Show Withdrawable Portion Of Balance If Applicable
-            long withdrawableServerBalance = vertconomy.getWithdrawableServerBalance();
+            long withdrawableServerBalance = vertconomy.getServerWithdrawableBalance();
             if (serverBalance != withdrawableServerBalance)
             {
                 cb.append("\n").append("Notice: ").color(ChatColor.GRAY)
