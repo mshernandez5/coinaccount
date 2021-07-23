@@ -37,7 +37,7 @@ public class JPAWithdrawRequestDao implements WithdrawRequestDao
     public Collection<WithdrawRequest> findAll()
     {
         EntityManager entityManager = emProvider.get();
-        return entityManager.createQuery("SELECT w FROM WITHDRAW_REQUEST w", WithdrawRequest.class)
+        return entityManager.createQuery("SELECT w FROM WithdrawRequest w", WithdrawRequest.class)
             .getResultList();
     }
 
@@ -45,7 +45,7 @@ public class JPAWithdrawRequestDao implements WithdrawRequestDao
     public Collection<WithdrawRequest> findAllIncomplete()
     {
         EntityManager entityManager = emProvider.get();
-        return entityManager.createQuery("SELECT w FROM WITHDRAW_REQUEST w WHERE w.COMPLETE = TRUE", WithdrawRequest.class)
+        return entityManager.createQuery("SELECT w FROM WithdrawRequest w WHERE w.complete = FALSE", WithdrawRequest.class)
             .getResultList();
     }
 
