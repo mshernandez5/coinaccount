@@ -166,7 +166,7 @@ public class App extends JavaPlugin
             }
             getLogger().info("Vault found, attempting to register economy...");
             getServer().getServicesManager().register(Economy.class, new VaultAdapter(vertconomy, vaultRequestExecutor),
-                vault, ServicePriority.Normal);
+                this, ServicePriority.Normal);
         }
 
         // Register Commands
@@ -180,6 +180,9 @@ public class App extends JavaPlugin
             .runTaskTimer(this, new CheckDepositTask(vertconomy), DEPOSIT_CHECK_INTERVAL, DEPOSIT_CHECK_INTERVAL);
         cancelExpireRequesTask = Bukkit.getScheduler()
             .runTaskTimer(this, new CancelExpiredRequestsTask(vertconomy), EXPIRED_REQUEST_CHECK_INTERVAL, EXPIRED_REQUEST_CHECK_INTERVAL);
+        
+        // Register Vertconomy API For External Use
+        getServer().getServicesManager().register(Vertconomy.class, vertconomy, this, ServicePriority.Highest);
     }
 
     @Override
