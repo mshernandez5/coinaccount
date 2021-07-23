@@ -94,6 +94,12 @@
       <version>5.7.2</version>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-engine</artifactId>
+      <version>5.7.2</version>
+      <scope>test</scope>
+    </dependency>
 
   </dependencies>
 
@@ -105,9 +111,15 @@
     </pluginRepository>
   </pluginRepositories>
 
-  <!-- Maven Shade Plugin - Reduce JAR Size -->
   <build>
     <plugins>
+      <!-- Newer Version Of Maven Surefire For JUnit 5 Tests -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>3.0.0-M5</version>
+      </plugin>
+      <!-- Maven Shade Plugin - Reduce JAR Size -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-shade-plugin</artifactId>
