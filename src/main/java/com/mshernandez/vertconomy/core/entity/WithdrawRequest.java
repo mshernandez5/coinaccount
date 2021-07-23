@@ -76,6 +76,7 @@ public class WithdrawRequest
         this.feeAmount = fees;
         this.txHex = txHex;
         this.timestamp = timestamp;
+        complete = false;
         version = 0L;
     }
 
@@ -107,6 +108,16 @@ public class WithdrawRequest
     public boolean isComplete()
     {
         return complete;
+    }
+
+    /**
+     * Marks this request as complete,
+     * indicating the withdraw transaction
+     * has been sent out to the blockchain.
+     */
+    public void setComplete()
+    {
+        complete = true;
     }
 
     /**

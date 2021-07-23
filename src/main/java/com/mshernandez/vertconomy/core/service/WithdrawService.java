@@ -317,6 +317,11 @@ public class WithdrawService
         {
             withdrawRequestDao.remove(withdrawRequest);
         }
+        else
+        {
+            withdrawRequest.setComplete();
+            withdrawRequestDao.update(withdrawRequest);
+        }
         accountDao.update(withdrawAccount);
         accountDao.update(initiator);
         return txid;
