@@ -85,9 +85,6 @@ withdraw-request-expire-time: 60000
 # Experimental Vault Integration - Risk Of Lost Funds
 vault-integration: false
 
-# Automatically Configure Essentials Currency Formatting If Found
-configure-essentials: false
-
 ###################################
 # Development Settings: CAREFUL
 ###################################

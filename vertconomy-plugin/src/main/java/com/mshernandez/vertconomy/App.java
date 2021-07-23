@@ -1,7 +1,5 @@
 package com.mshernandez.vertconomy;
 
-import java.io.File;
-import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.sql.SQLException;
@@ -107,28 +105,6 @@ public class App extends JavaPlugin
 
         // Grab General Behavior Settings
         long withdrawRequestExpireTime = configuration.getLong("withdraw-request-expire-time", 60000L);
-
-        // If Essentials Economy Exists, Configure Economy Commands
-        Plugin essentials = getServer().getPluginManager().getPlugin("Essentials");
-        if (configuration.getBoolean("configure-essentials", false) && essentials != null)
-        {
-            getLogger().info("Found Essentials, customizing currency formatting.");
-            FileConfiguration essentialsConfiguration = essentials.getConfig();
-            essentialsConfiguration.options().copyHeader(true);
-            essentialsConfiguration.set("currency-symbol", scale.CHAR_PREFIX);
-            essentialsConfiguration.set("currency-symbol-prefix", false);
-            essentialsConfiguration.set("currency-symbol-suffix", (scale == CoinScale.FULL) ? false : true);
-            essentialsConfiguration.set("min-money", 0);
-            essentialsConfiguration.set("minimum-pay-amount", (1.0 / scale.SAT_SCALE));
-            try
-            {
-                essentialsConfiguration.save(new File("plugins/Essentials/config.yml"));
-            }
-            catch (IOException e)
-            {
-                getLogger().warning("Failed to configure Essentials economy commands!");
-            }
-        }
 
         // Start H2 Web Console If Enabled; Option Will Likely Be Removed In Future
         if (configuration.getBoolean("enable-h2-console", false))
