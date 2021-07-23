@@ -134,6 +134,14 @@ public class CommandBalance implements CommandExecutor, TabCompleter
             ComponentBuilder cb = new ComponentBuilder()
                 .append("Server-Owned Balance: ").color(ChatColor.GOLD)
                 .append(formatter.format(vertconomy.getServerBalance())).color(ChatColor.GREEN);
+            // Show Unconfirmed Balances If Applicable
+            long unconfirmedBalance = vertconomy.getServerUnconfirmedBalance();
+            if (unconfirmedBalance != 0L)
+            {
+                cb.append(" (Pending: ").color(ChatColor.GRAY)
+                    .append(formatter.format(unconfirmedBalance)).color(ChatColor.GRAY)
+                    .append(")").color(ChatColor.GRAY);
+            }
             // Show Withdrawable Portion Of Balance If Applicable
             long withdrawableServerBalance = vertconomy.getServerWithdrawableBalance();
             if (serverBalance != withdrawableServerBalance)

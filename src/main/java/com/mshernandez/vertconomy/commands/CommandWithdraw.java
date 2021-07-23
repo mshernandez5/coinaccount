@@ -88,7 +88,7 @@ public class CommandWithdraw implements CommandExecutor, TabCompleter
                         .append("\n\n").reset()
                         .append("Some of your remaining funds may be unavailable for withdraw until the transaction is confirmed.")
                         .color(ChatColor.YELLOW)
-                        .append("\n")
+                        .append("\n").reset()
                         .create();
                     sender.spigot().sendMessage(component);
                     return true;
@@ -229,14 +229,14 @@ public class CommandWithdraw implements CommandExecutor, TabCompleter
                         .append(confirmCmdMsg).color(ChatColor.GREEN).bold(true)
                         .append(" and send the withdrawal, use ").reset().color(ChatColor.AQUA)
                         .append("/withdraw confirm").color(ChatColor.GREEN)
-                        .append("\n")
+                        .append("\n").reset()
                         .append("To ").color(ChatColor.AQUA)
                         .append(cancelCmdMsg).color(ChatColor.RED).bold(true)
                         .append(" the withdrawal, use ").reset().color(ChatColor.AQUA)
                         .append("/withdraw cancel").color(ChatColor.RED)
-                        .append("\n\n")
+                        .append("\n\n").reset()
                         .append("This request will automatically be canceled if not confirmed soon.").color(ChatColor.YELLOW)
-                        .append("\n")
+                        .append("\n").reset()
                         .create();
                     sender.spigot().sendMessage(component);
                     return true;

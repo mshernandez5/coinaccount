@@ -59,14 +59,14 @@ public class CommandDeposit implements CommandExecutor
                 .append("\n")
                 .append("Deposit ").color(ChatColor.AQUA)
                 .append(vertconomy.getFormatter().getSymbol()).color(ChatColor.GREEN)
-                .append("\n").append("1) ").reset()
+                .append("\n").reset().append("1) ")
                 .append("Deposit To: ").color(ChatColor.AQUA)
                 .append(addressMsg).color(ChatColor.GREEN)
-                .append("\n").append("2) ").reset()
+                .append("\n").reset().append("2) ")
                 .append("Wait For Your Transaction To Reach ").color(ChatColor.YELLOW)
                 .append("" + vertconomy.getMinDepositConfirmations()).color(ChatColor.LIGHT_PURPLE)
                 .append(" Confirmations").color(ChatColor.YELLOW)
-                .append("\n")
+                .append("\n").reset()
                 .create();
             sender.spigot().sendMessage(component);
         }

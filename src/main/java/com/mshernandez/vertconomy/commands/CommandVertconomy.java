@@ -76,7 +76,7 @@ public class CommandVertconomy implements CommandExecutor
             .append("\n").reset()
             .append("Official Repository: ").color(ChatColor.YELLOW)
             .append(repoLinkMsg)
-            .append("\n")
+            .append("\n").reset()
             .create();
         sender.spigot().sendMessage(component);
         return true;
