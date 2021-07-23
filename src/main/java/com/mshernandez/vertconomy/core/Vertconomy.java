@@ -35,6 +35,11 @@ public interface Vertconomy
     public void checkForNewDeposits();
 
     /**
+     * Cancel any expired withdraw requests.
+     */
+    public void cancelExpiredRequests();
+
+    /**
      * Return the usable balance held by the server
      * account.
      * 

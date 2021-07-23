@@ -79,10 +79,13 @@ scale: base
 # General Plugin Behavior
 ###################################
 
+# Time In Milliseconds For A Withdraw Request To Expire
+withdraw-request-expire-time: 60000
+
 # Experimental Vault Integration - Risk Of Lost Funds
 vault-integration: false
 
-# Automatically Configure Essentials Economy Commands If Found
+# Automatically Configure Essentials Currency Formatting If Found
 configure-essentials: false
 
 ###################################

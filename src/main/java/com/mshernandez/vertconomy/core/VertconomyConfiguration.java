@@ -25,12 +25,16 @@ public class VertconomyConfiguration
     private final String baseUnitSymbol;
     private final CoinScale scale;
 
+    // Vertconomy Behavior Settings
+    private final long withdrawRequestExpireTime;
+
     public VertconomyConfiguration(int minDepositConfirmations,
                                    int minChangeConfirmations,
                                    int targetBlockTime,
                                    String symbol,
                                    String baseUnitSymbol,
-                                   CoinScale scale)
+                                   CoinScale scale,
+                                   long withdrawRequestExpireTime)
     {
         this.minDepositConfirmations = minDepositConfirmations;
         this.minChangeConfirmations = minChangeConfirmations;
@@ -38,6 +42,7 @@ public class VertconomyConfiguration
         this.symbol = symbol;
         this.baseUnitSymbol = baseUnitSymbol;
         this.scale = scale;
+        this.withdrawRequestExpireTime = withdrawRequestExpireTime;
     }
 
     public int getMinDepositConfirmations()
@@ -68,5 +73,10 @@ public class VertconomyConfiguration
     public CoinScale getScale()
     {
         return scale;
+    }
+
+    public long getWithdrawRequestExpireTime()
+    {
+        return withdrawRequestExpireTime;
     }
 }

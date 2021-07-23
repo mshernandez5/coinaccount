@@ -1,5 +1,7 @@
 package com.mshernandez.vertconomy.core.entity;
 
+import java.util.Collection;
+
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import javax.persistence.EntityManager;
@@ -29,6 +31,22 @@ public class JPAWithdrawRequestDao implements WithdrawRequestDao
     {
         EntityManager entityManager = emProvider.get();
         return entityManager.find(WithdrawRequest.class, txid);
+    }
+
+    @Override
+    public Collection<WithdrawRequest> findAll()
+    {
+        EntityManager entityManager = emProvider.get();
+        return entityManager.createQuery("SELECT w FROM WITHDRAW_REQUEST w", WithdrawRequest.class)
+            .getResultList();
+    }
+
+    @Override
+    public Collection<WithdrawRequest> findAllIncomplete()
+    {
+        EntityManager entityManager = emProvider.get();
+        return entityManager.createQuery("SELECT w FROM WITHDRAW_REQUEST w WHERE w.COMPLETE = TRUE", WithdrawRequest.class)
+            .getResultList();
     }
 
     @Override

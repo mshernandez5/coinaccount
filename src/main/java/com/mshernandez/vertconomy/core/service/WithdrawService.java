@@ -1,7 +1,9 @@
 package com.mshernandez.vertconomy.core.service;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -341,5 +343,27 @@ public class WithdrawService
             return null;
         }
         return completeWithdraw(initiator.getWithdrawRequest().getTxid());
+    }
+
+    /**
+     * Cancels all expired withdraw requests.
+     * 
+     * @return A set of UUIDs corresponding to accounts with requests that were canceled.
+     */
+    @Transactional
+    public Set<UUID> cancelExpiredRequests()
+    {
+        Collection<WithdrawRequest> requests = withdrawRequestDao.findAllIncomplete();
+        Set<UUID> expiredRequestInitiatingAccounts = new HashSet<>();
+        for (WithdrawRequest request : requests)
+        {
+            long timeSinceRequestInitiated = System.currentTimeMillis() - request.getTimestamp();
+            if (timeSinceRequestInitiated < 0L || timeSinceRequestInitiated > config.getWithdrawRequestExpireTime())
+            {
+                expiredRequestInitiatingAccounts.add(request.getAccount().getAccountUUID());
+                cancelWithdraw(request.getTxid());
+            }
+        }
+        return expiredRequestInitiatingAccounts;
     }
 }

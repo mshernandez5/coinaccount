@@ -13,6 +13,7 @@ import com.mshernandez.vertconomy.commands.CommandWithdraw;
 import com.mshernandez.vertconomy.core.Vertconomy;
 import com.mshernandez.vertconomy.core.VertconomyBuilder;
 import com.mshernandez.vertconomy.core.util.CoinScale;
+import com.mshernandez.vertconomy.tasks.CancelExpiredRequestsTask;
 import com.mshernandez.vertconomy.tasks.CheckDepositTask;
 import com.mshernandez.vertconomy.vault.VaultAdapter;
 import com.mshernandez.vertconomy.vault.VaultRequestExecutor;
@@ -36,8 +37,14 @@ public class App extends JavaPlugin
     // How Often To Check For New Deposits, In Ticks
     private static final long DEPOSIT_CHECK_INTERVAL = 200L; // Approximately 10 Seconds
 
+    // How Often To Check For Expired Tasks, In Ticks
+    private static final long EXPIRED_REQUEST_CHECK_INTERVAL = 200L; // Approximately 10 Seconds
+
     // Periodically Check For New Deposits
     private BukkitTask depositCheckTask;
+
+    // Check For & Cancel Expired Withdraw Requests
+    private BukkitTask cancelExpireRequesTask;
 
     // Group & Execute Vault Requests
     private BukkitTask vaultRequestTask;
@@ -94,6 +101,9 @@ public class App extends JavaPlugin
                 scale = CoinScale.BASE;
         }
 
+        // Grab General Behavior Settings
+        long withdrawRequestExpireTime = configuration.getLong("withdraw-request-expire-time", 60000L);
+
         // If Essentials Economy Exists, Configure Economy Commands
         Plugin essentials = getServer().getPluginManager().getPlugin("Essentials");
         if (configuration.getBoolean("configure-essentials", false) && essentials != null)
@@ -140,6 +150,7 @@ public class App extends JavaPlugin
             .setSymbol(symbol)
             .setBaseUnitSymbol(baseUnitSymbol)
             .setScale(scale)
+            .setWithdrawRequestExpireTime(withdrawRequestExpireTime)
             .build();
 
         // Register Vertconomy Wrapper With Vault
@@ -167,6 +178,8 @@ public class App extends JavaPlugin
         // Register Core Tasks
         depositCheckTask = Bukkit.getScheduler()
             .runTaskTimer(this, new CheckDepositTask(vertconomy), DEPOSIT_CHECK_INTERVAL, DEPOSIT_CHECK_INTERVAL);
+        cancelExpireRequesTask = Bukkit.getScheduler()
+            .runTaskTimer(this, new CancelExpiredRequestsTask(vertconomy), EXPIRED_REQUEST_CHECK_INTERVAL, EXPIRED_REQUEST_CHECK_INTERVAL);
     }
 
     @Override
@@ -179,6 +192,7 @@ public class App extends JavaPlugin
             vaultRequestTask.cancel();
         }
         depositCheckTask.cancel();
+        cancelExpireRequesTask.cancel();
         // Close H2 Web Console
         if (webServer != null)
         {

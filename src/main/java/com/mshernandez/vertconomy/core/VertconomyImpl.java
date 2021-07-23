@@ -1,6 +1,7 @@
 package com.mshernandez.vertconomy.core;
 
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -124,6 +125,28 @@ public class VertconomyImpl implements Vertconomy
         }
         // Check For Change Deposits
         depositService.registerChangeDeposits();
+    }
+
+    @Override
+    public void cancelExpiredRequests()
+    {
+        Set<UUID> expiredRequestAccountIDs = withdrawService.cancelExpiredRequests();
+        BaseComponent[] component = new ComponentBuilder()
+                .append("[Vertconomy] ").color(ChatColor.BLUE)
+                .append("Your withdraw request expired.").color(ChatColor.YELLOW)
+                .create();
+        for (UUID id : expiredRequestAccountIDs)
+        {
+            Player player = Bukkit.getPlayer(id);
+            if (player != null && player.isOnline())
+            {
+                player.spigot().sendMessage(component);
+            }
+            else if (id.equals(VertconomyConfiguration.SERVER_ACCOUNT_UUID))
+            {
+                Bukkit.getConsoleSender().spigot().sendMessage(component);
+            }
+        }
     }
 
     @Override

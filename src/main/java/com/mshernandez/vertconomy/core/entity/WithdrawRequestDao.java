@@ -1,5 +1,7 @@
 package com.mshernandez.vertconomy.core.entity;
 
+import java.util.Collection;
+
 public interface WithdrawRequestDao
 {
     /**
@@ -10,6 +12,20 @@ public interface WithdrawRequestDao
      * @return A withdraw request object.
      */
     WithdrawRequest find(String txid);
+
+    /**
+     * Finds all withdraw requests.
+     * 
+     * @return A collection of all withdraw requests.
+     */
+    Collection<WithdrawRequest> findAll();
+
+    /**
+     * Finds all incomplete withdraw requests.
+     * 
+     * @return A collection of all incomplete withdraw requests.
+     */
+    Collection<WithdrawRequest> findAllIncomplete();
 
     /**
      * Persist a newly created withdraw request.

@@ -25,6 +25,8 @@ public class VertconomyBuilder
     private String baseUnitSymbol;
     private CoinScale scale;
 
+    private long withdrawRequestExpireTime;
+
     /**
      * Begin creating a new Vertconomy instance.
      */
@@ -38,6 +40,7 @@ public class VertconomyBuilder
         symbol = null;
         baseUnitSymbol = null;
         scale = null;
+        withdrawRequestExpireTime = -1L;
     }
 
     /**
@@ -56,7 +59,8 @@ public class VertconomyBuilder
                                                                      minChangeConfirmations,
                                                                      targetBlockTime,
                                                                      symbol,
-                                                                     baseUnitSymbol, scale);
+                                                                     baseUnitSymbol, scale,
+                                                                     withdrawRequestExpireTime);
         // Setup Dependency Injection
         Module jpaModule = new JpaPersistModule(VertconomyConfiguration.JPA_UNIT_NAME);
         Module vertconomyModule = new VertconomyInjectorModule(wallet, config);
@@ -81,7 +85,8 @@ public class VertconomyBuilder
             && targetBlockTime > 0
             && symbol != null
             && baseUnitSymbol != null
-            && scale != null;
+            && scale != null
+            && withdrawRequestExpireTime > 0L;
     }
 
     /**
@@ -167,6 +172,19 @@ public class VertconomyBuilder
     public VertconomyBuilder setScale(CoinScale scale)
     {
         this.scale = scale;
+        return this;
+    }
+
+    /**
+     * Set the time, in milliseconds, for a withdraw request
+     * to expire.
+     * 
+     * @param withdrawRequestExpireTime The time, in milliseconds, for a withdraw request to expire.
+     * @return A reference to this builder for chaining methods.
+     */
+    public VertconomyBuilder setWithdrawRequestExpireTime(long withdrawRequestExpireTime)
+    {
+        this.withdrawRequestExpireTime = withdrawRequestExpireTime;
         return this;
     }
 }
