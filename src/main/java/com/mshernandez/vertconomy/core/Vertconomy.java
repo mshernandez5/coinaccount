@@ -8,11 +8,11 @@ import com.mshernandez.vertconomy.core.util.SatAmountFormat;
 import org.bukkit.OfflinePlayer;
 
 /**
- * The core of the plugin, the duct tape
- * bonding Minecraft and Vertcoin together.
+ * The duct tape binding Minecraft and cryptocurrency
+ * together.
  * <p>
- * Makes requests to internal service objects
- * based on calls from in-game commands, tasks.
+ * Makes methods available to transfer cryptocurrency
+ * between players.
  */
 public interface Vertconomy
 {

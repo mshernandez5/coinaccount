@@ -112,6 +112,16 @@ public class VertconomyImpl implements Vertconomy
                 player.spigot().sendMessage(component);
             }
         }
+        // Check For Server Account Deposits
+        long addedServerBalance = depositService.registerNewDeposits(VertconomyConfiguration.SERVER_ACCOUNT_UUID);
+        if (addedServerBalance != 0L)
+        {
+            BaseComponent[] component = new ComponentBuilder()
+                .append("[Vertconomy] Processed Server Deposits: ").color(ChatColor.BLUE)
+                .append(formatter.format(addedServerBalance)).color(ChatColor.GREEN)
+                .create();
+            Bukkit.getConsoleSender().spigot().sendMessage(component);
+        }
         // Check For Change Deposits
         depositService.registerChangeDeposits();
     }
