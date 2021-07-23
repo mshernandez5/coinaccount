@@ -48,25 +48,53 @@ public interface Vertconomy
      * 
      * @return The withdrawable balance associated with the server account.
      */
-    public long getWithdrawableServerBalance();
+    public long getServerWithdrawableBalance();
 
     /**
-     * Gives player funds to the server account.
+     * Return the total unconfirmed balances associated
+     * with the server account.
      * 
-     * @param player The player to take funds from.
-     * @param amount The amount, in sats, to send to the server account.
-     * @return True if the transfer was successful.
+     * @return Unconfirmed deposit balances for the server account.
      */
-    public boolean moveToServer(OfflinePlayer player, long amount);
+    public long getServerUnconfirmedBalance();
 
     /**
-     * Gives server funds to the specified player.
+     * Get the public wallet address allowing funds to be
+     * given to the server account.
      * 
-     * @param player The player to give the taken funds to.
-     * @param amount The amount, in sats, to take from the server.
-     * @return True if the transfer was successful.
+     * @return The deposit address associated with the server account.
      */
-    public boolean takeFromServer(OfflinePlayer player, long amount);
+    public String getServerDepositAddress();
+
+    /**
+     * Initiate a withdraw request by the server.
+     * 
+     * @param destAddress The address to withdraw to.
+     * @param amount The amount to withdraw, or -1L for all.
+     * @return A response object for the withdraw attempt.
+     */
+    public WithdrawRequestResponse initiateServerWithdrawRequest(String destAddress, long amount);
+
+    /**
+     * Cancels any active withdraw request initiated by the server.
+     * 
+     * @return True if the request was found and canceled.
+     */
+    public boolean cancelServerWithdrawRequest();
+
+    /**
+     * Completes any active withdraw request initiated by the server.
+     * 
+     * @return The TXID of the withdraw transaction, or null if no request was found.
+     */
+    public String completeServerWithdrawRequest();
+
+    /**
+     * Checks whether the server has an active withdraw request.
+     * 
+     * @return True if an active withdraw request exists for the server.
+     */
+    public boolean checkIfServerHasWithdrawRequest();
 
     /**
      * Return the useable balance held by the player's
@@ -96,6 +124,49 @@ public interface Vertconomy
     public long getPlayerUnconfirmedBalance(OfflinePlayer player);
 
     /**
+     * Get the public wallet address allowing the player to
+     * deposit funds into their account.
+     * 
+     * @param player The player associated with the account.
+     * @return The deposit address associated with the account.
+     */
+    public String getPlayerDepositAddress(OfflinePlayer player);
+
+    /**
+     * Initiate a withdraw request by the user.
+     * 
+     * @param player The player that initiated the request.
+     * @param destAddress The address to withdraw to.
+     * @param amount The amount to withdraw, or -1L for all.
+     * @return A response object for the withdraw attempt.
+     */
+    public WithdrawRequestResponse initiatePlayerWithdrawRequest(OfflinePlayer player, String destAddress, long amount);
+
+    /**
+     * Cancels any active withdraw request initiated by the user.
+     * 
+     * @param player The player that initiated the request.
+     * @return True if the request was found and canceled.
+     */
+    public boolean cancelPlayerWithdrawRequest(OfflinePlayer player);
+
+    /**
+     * Completes any active withdraw request initiated by the user.
+     * 
+     * @param player The player that initiated the request.
+     * @return The TXID of the withdraw transaction, or null if no request was found.
+     */
+    public String completePlayerWithdrawRequest(OfflinePlayer player);
+
+    /**
+     * Checks whether the player has an active withdraw request.
+     * 
+     * @param player The player to check.
+     * @return True if an active withdraw request exists for the player.
+     */
+    public boolean checkIfPlayerHasWithdrawRequest(OfflinePlayer player);
+
+    /**
      * Transfer the given amount from one player
      * to another.
      *  
@@ -105,6 +176,24 @@ public interface Vertconomy
      * @return True if the transfer was successful.
      */
     public boolean transferPlayerBalance(OfflinePlayer sender, OfflinePlayer receiver, long amount);
+
+    /**
+     * Gives player funds to the server account.
+     * 
+     * @param player The player to take funds from.
+     * @param amount The amount, in sats, to send to the server account.
+     * @return True if the transfer was successful.
+     */
+    public boolean moveToServer(OfflinePlayer player, long amount);
+
+    /**
+     * Gives server funds to the specified player.
+     * 
+     * @param player The player to give the taken funds to.
+     * @param amount The amount, in sats, to take from the server.
+     * @return True if the transfer was successful.
+     */
+    public boolean takeFromServer(OfflinePlayer player, long amount);
 
     /**
      * Specify multiple account balance changes
@@ -140,49 +229,6 @@ public interface Vertconomy
      * @return True if the changes were successfully executed.
      */
     public boolean batchTransfer(Map<OfflinePlayer, Long> changes);
-
-    /**
-     * Get the public wallet address allowing the player to
-     * deposit funds into their account.
-     * 
-     * @param player The player associated with the account.
-     * @return The deposit address associated with the account.
-     */
-    public String getPlayerDepositAddress(OfflinePlayer player);
-
-    /**
-     * Checks whether the player has an active withdraw request.
-     * 
-     * @param player The player to check.
-     * @return True if an active withdraw request exists for the player.
-     */
-    public boolean checkIfPlayerHasWithdrawRequest(OfflinePlayer player);
-
-    /**
-     * Initiate a withdraw request by the user.
-     * 
-     * @param player The player that initiated the request.
-     * @param destAddress The address to withdraw to.
-     * @param amount The amount to withdraw, or -1L for all.
-     * @return A response object for the withdraw attempt.
-     */
-    public WithdrawRequestResponse initiatePlayerWithdrawRequest(OfflinePlayer player, String destAddress, long amount);
-
-    /**
-     * Completes any active withdraw request initiated by the user.
-     * 
-     * @param player The player that initiated the request.
-     * @return The TXID of the withdraw transaction, or null if no request was found.
-     */
-    public String completePlayerWithdrawRequest(OfflinePlayer player);
-
-    /**
-     * Cancels any active withdraw request initiated by the user.
-     * 
-     * @param player The player that initiated the request.
-     * @return True if the request was found and canceled.
-     */
-    public boolean cancelPlayerWithdrawRequest(OfflinePlayer player);
 
     /**
      * Get the minimum number of confirmations required

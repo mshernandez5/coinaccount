@@ -124,10 +124,116 @@ public class VertconomyImpl implements Vertconomy
     }
 
     @Override
-    public long getWithdrawableServerBalance()
+    public long getServerWithdrawableBalance()
     {
         Account serverAccount = accountDao.findOrCreate(VertconomyConfiguration.SERVER_ACCOUNT_UUID);
         return serverAccount.calculateWithdrawableBalance();
+    }
+
+    @Override
+    public long getServerUnconfirmedBalance()
+    {
+        Account serverAccount = accountDao.findOrCreate(VertconomyConfiguration.SERVER_ACCOUNT_UUID);
+        return serverAccount.getPendingBalance();
+    }
+
+    @Override
+    public String getServerDepositAddress()
+    {
+        Account serverAccount = accountDao.findOrCreate(VertconomyConfiguration.SERVER_ACCOUNT_UUID);
+        return serverAccount.getDepositAddress();
+    }
+
+    @Override
+    public WithdrawRequestResponse initiateServerWithdrawRequest(String destAddress, long amount)
+    {
+        return withdrawService.initiateWithdraw(VertconomyConfiguration.SERVER_ACCOUNT_UUID, destAddress, amount);
+    }
+
+    @Override
+    public boolean cancelServerWithdrawRequest()
+    {
+        return withdrawService.cancelWithdraw(VertconomyConfiguration.SERVER_ACCOUNT_UUID);
+    }
+
+    @Override
+    public String completeServerWithdrawRequest()
+    {
+        return withdrawService.completeWithdraw(VertconomyConfiguration.SERVER_ACCOUNT_UUID);
+    }
+
+    @Override
+    public boolean checkIfServerHasWithdrawRequest()
+    {
+        Account serverAccount = accountDao.findOrCreate(VertconomyConfiguration.SERVER_ACCOUNT_UUID);
+        return serverAccount.getWithdrawRequest() != null;
+    }
+
+    @Override
+    public long getPlayerBalance(OfflinePlayer player)
+    {
+        Account playerAccount = accountDao.findOrCreate(player.getUniqueId());
+        return playerAccount == null ? 0L : playerAccount.calculateBalance();
+    }
+
+    @Override
+    public long getPlayerWithdrawableBalance(OfflinePlayer player)
+    {
+        Account playerAccount = accountDao.findOrCreate(player.getUniqueId());
+        return playerAccount == null ? 0L : playerAccount.calculateWithdrawableBalance();
+    }
+
+    @Override
+    public long getPlayerUnconfirmedBalance(OfflinePlayer player)
+    {
+        Account playerAccount = accountDao.findOrCreate(player.getUniqueId());
+        return playerAccount == null ? 0L : playerAccount.getPendingBalance();
+    }
+
+    @Override
+    public String getPlayerDepositAddress(OfflinePlayer player)
+    {
+        Account playerAccount = accountDao.findOrCreate(player.getUniqueId());
+        return playerAccount == null ? "ERROR" : playerAccount.getDepositAddress();
+    }
+
+    @Override
+    public WithdrawRequestResponse initiatePlayerWithdrawRequest(OfflinePlayer player, String destAddress, long amount)
+    {
+        return withdrawService.initiateWithdraw(player.getUniqueId(), destAddress, amount);
+    }
+
+    @Override
+    public boolean cancelPlayerWithdrawRequest(OfflinePlayer player)
+    {
+        return withdrawService.cancelWithdraw(player.getUniqueId());
+    }
+
+    @Override
+    public String completePlayerWithdrawRequest(OfflinePlayer player)
+    {
+        return withdrawService.completeWithdraw(player.getUniqueId());
+    }
+
+    @Override
+    public boolean checkIfPlayerHasWithdrawRequest(OfflinePlayer player)
+    {
+        Account playerAccount = accountDao.findOrCreate(player.getUniqueId());
+        return playerAccount != null;
+    }
+
+    @Override
+    public boolean transferPlayerBalance(OfflinePlayer sender, OfflinePlayer receiver, long amount)
+    {
+        try
+        {
+            transferService.transferBalance(sender.getUniqueId(), receiver.getUniqueId(), amount);
+        }
+        catch (InsufficientFundsException e)
+        {
+            return false;
+        }
+        return true;
     }
 
     @Override
@@ -159,41 +265,6 @@ public class VertconomyImpl implements Vertconomy
     }
 
     @Override
-    public long getPlayerBalance(OfflinePlayer player)
-    {
-        Account playerAccount = accountDao.findOrCreate(player.getUniqueId());
-        return playerAccount == null ? 0L : playerAccount.calculateBalance();
-    }
-
-    @Override
-    public long getPlayerWithdrawableBalance(OfflinePlayer player)
-    {
-        Account playerAccount = accountDao.findOrCreate(player.getUniqueId());
-        return playerAccount == null ? 0L : playerAccount.calculateWithdrawableBalance();
-    }
-
-    @Override
-    public long getPlayerUnconfirmedBalance(OfflinePlayer player)
-    {
-        Account playerAccount = accountDao.findOrCreate(player.getUniqueId());
-        return playerAccount == null ? 0L : playerAccount.getPendingBalance();
-    }
-
-    @Override
-    public boolean transferPlayerBalance(OfflinePlayer sender, OfflinePlayer receiver, long amount)
-    {
-        try
-        {
-            transferService.transferBalance(sender.getUniqueId(), receiver.getUniqueId(), amount);
-        }
-        catch (InsufficientFundsException e)
-        {
-            return false;
-        }
-        return true;
-    }
-
-    @Override
     public boolean batchTransfer(Map<OfflinePlayer, Long> changes)
     {
         // Map From Account ID Instead Of Player
@@ -209,38 +280,6 @@ public class VertconomyImpl implements Vertconomy
             return false;
         }
         return true;
-    }
-
-    @Override
-    public String getPlayerDepositAddress(OfflinePlayer player)
-    {
-        Account playerAccount = accountDao.findOrCreate(player.getUniqueId());
-        return playerAccount == null ? "ERROR" : playerAccount.getDepositAddress();
-    }
-
-    @Override
-    public boolean checkIfPlayerHasWithdrawRequest(OfflinePlayer player)
-    {
-        Account playerAccount = accountDao.findOrCreate(player.getUniqueId());
-        return playerAccount == null ? false : true;
-    }
-
-    @Override
-    public WithdrawRequestResponse initiatePlayerWithdrawRequest(OfflinePlayer player, String destAddress, long amount)
-    {
-        return withdrawService.initiateWithdraw(player.getUniqueId(), destAddress, amount);
-    }
-
-    @Override
-    public String completePlayerWithdrawRequest(OfflinePlayer player)
-    {
-        return withdrawService.completeWithdraw(player.getUniqueId());
-    }
-
-    @Override
-    public boolean cancelPlayerWithdrawRequest(OfflinePlayer player)
-    {
-        return withdrawService.cancelWithdraw(player.getUniqueId());
     }
 
     @Override
