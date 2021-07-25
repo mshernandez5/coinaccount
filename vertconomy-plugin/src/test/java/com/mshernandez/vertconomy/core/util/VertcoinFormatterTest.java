@@ -28,6 +28,8 @@ public class VertcoinFormatterTest
         assertEquals("1.23456789 VTC", formatter.format(123456789L));
         assertEquals("0.12345678 VTC", formatter.format(12345678L));
         assertEquals("0.00001234 VTC", formatter.format(1234L));
+        assertEquals("0.00000001 VTC", formatter.format(1L));
+        assertEquals("0.00000000 VTC", formatter.format(0L));
     }
 
     @Test
@@ -36,6 +38,8 @@ public class VertcoinFormatterTest
         SatAmountFormatter formatter = createTestFormatter(CoinScale.MILLI);
         assertEquals("1234.56789 mVTC", formatter.format(123456789L));
         assertEquals("0.01234 mVTC", formatter.format(1234L));
+        assertEquals("0.00001 mVTC", formatter.format(1L));
+        assertEquals("0.00000 mVTC", formatter.format(0L));
     }
 
     @Test
@@ -44,6 +48,8 @@ public class VertcoinFormatterTest
         SatAmountFormatter formatter = createTestFormatter(CoinScale.MICRO);
         assertEquals("1234567.89 µVTC", formatter.format(123456789L));
         assertEquals("0.12 µVTC", formatter.format(12L));
+        assertEquals("0.01 µVTC", formatter.format(1L));
+        assertEquals("0.00 µVTC", formatter.format(0L));
     }
 
     @Test
@@ -52,6 +58,8 @@ public class VertcoinFormatterTest
         SatAmountFormatter formatter = createTestFormatter(CoinScale.BASE);
         assertEquals("123456789 sat", formatter.format(123456789L));
         assertEquals("1234 sat", formatter.format(1234L));
+        assertEquals("1 sat", formatter.format(1L));
+        assertEquals("0 sat", formatter.format(0L));
     }
 
     @Test
@@ -59,6 +67,7 @@ public class VertcoinFormatterTest
     {
         SatAmountFormatter formatter = createTestFormatter(CoinScale.FULL);
         assertEquals("0.00000000 VTC", formatter.format(BigDecimal.ZERO));
+        assertEquals("0.00000001 VTC", formatter.format(new BigDecimal("0.00000001")));
         assertEquals("0.50000000 VTC", formatter.format(new BigDecimal("0.5")));
         assertEquals("1.00000000 VTC", formatter.format(new BigDecimal("1.0")));
         assertEquals("1.00000000 VTC", formatter.format(new BigDecimal("1.000000001")));
@@ -70,6 +79,7 @@ public class VertcoinFormatterTest
     {
         SatAmountFormatter formatter = createTestFormatter(CoinScale.MILLI);
         assertEquals("0.00000 mVTC", formatter.format(BigDecimal.ZERO));
+        assertEquals("0.00001 mVTC", formatter.format(new BigDecimal("0.00001")));
         assertEquals("0.50000 mVTC", formatter.format(new BigDecimal("0.5")));
         assertEquals("1.01000 mVTC", formatter.format(new BigDecimal("1.01")));
         assertEquals("1.01000 mVTC", formatter.format(new BigDecimal("1.010001")));
@@ -81,6 +91,7 @@ public class VertcoinFormatterTest
     {
         SatAmountFormatter formatter = createTestFormatter(CoinScale.MICRO);
         assertEquals("0.00 µVTC", formatter.format(BigDecimal.ZERO));
+        assertEquals("0.01 µVTC", formatter.format(new BigDecimal("0.01")));
         assertEquals("0.50 µVTC", formatter.format(new BigDecimal("0.5")));
         assertEquals("1.01 µVTC", formatter.format(new BigDecimal("1.01")));
         assertEquals("1.01 µVTC", formatter.format(new BigDecimal("1.011")));
@@ -92,6 +103,7 @@ public class VertcoinFormatterTest
     {
         SatAmountFormatter formatter = createTestFormatter(CoinScale.BASE);
         assertEquals("0 sat", formatter.format(BigDecimal.ZERO));
+        assertEquals("1 sat", formatter.format(new BigDecimal("1")));
         assertEquals("1000 sat", formatter.format(new BigDecimal("1000")));
         assertEquals("1000 sat", formatter.format(new BigDecimal("1000.1")));
         assertEquals("1000 sat", formatter.format(new BigDecimal("1000.9999")));
@@ -102,6 +114,7 @@ public class VertcoinFormatterTest
     {
         SatAmountFormatter formatter = createTestFormatter(CoinScale.FULL);
         parseValidRelativeAmount(formatter, "0", 0L);
+        parseValidRelativeAmount(formatter, "0.00000001", 1L);
         parseValidRelativeAmount(formatter, "12", 1200000000L);
         parseValidRelativeAmount(formatter, "1.243", 124300000L);
         parseValidRelativeAmount(formatter, "100.12345678", 10012345678L);
