@@ -18,7 +18,9 @@ import java.util.stream.Collectors;
  * of those before it since a better solution is possible.
  * <p>
  * This selector does not always return the optimal solution,
- * but attempts to get close to it without attempting all possibilities.
+ * but attempts to get close to it without attempting all
+ * possibilities.
+ * <p>
  * For example, given inputs (1,4,6) with target 5
  * then (1,4) will be selected which is best.
  * However, given inputs (2,3,6) with target 5
@@ -120,8 +122,6 @@ public class BinarySearchCoinSelector<T> implements CoinSelector<T>
         // Keep Selecting Inputs Until Target Value Is Met
         while (target > 0L && !sorted.isEmpty())
         {
-            // Every Selected Input Adds Fees To The Target Amount
-            //target += evaluator.cost(obj);
             // Binary Search For Next Input Closest To Current Target Amount
             int first = 0,
                 last = sorted.size() - 1,

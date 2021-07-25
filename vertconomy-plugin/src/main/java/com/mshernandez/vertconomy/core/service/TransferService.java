@@ -22,6 +22,7 @@ import com.mshernandez.vertconomy.core.util.BinarySearchCoinSelector;
 import com.mshernandez.vertconomy.core.util.CoinEvaluator;
 import com.mshernandez.vertconomy.core.util.CoinSelector;
 import com.mshernandez.vertconomy.core.util.DepositShareEvaluator;
+import com.mshernandez.vertconomy.core.util.InternalTransferPreselector;
 
 /**
  * Helps transfer balances internally between accounts.
@@ -75,7 +76,7 @@ public class TransferService
             throw new InsufficientFundsException();
         }
         CoinEvaluator<Deposit> evaluator = new DepositShareEvaluator(sender, true, 0L);
-        Set<Deposit> selected = coinSelector.selectInputs(evaluator, sender.getDeposits(), amount);
+        Set<Deposit> selected = new InternalTransferPreselector(evaluator, coinSelector, sender, receiver).selectInputs(amount);
         long remainingOwed = amount;
         Iterator<Deposit> it = selected.iterator();
         while (it.hasNext() && remainingOwed > 0L)
