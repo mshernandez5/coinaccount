@@ -138,6 +138,30 @@ public interface Vertconomy
     public String getPlayerDepositAddress(OfflinePlayer player);
 
     /**
+     * Get an address that could be used to return player
+     * balances in the event of a server shutdown or
+     * player ban.
+     * <p>
+     * If this address has not been set an empty String may
+     * be returned.
+     * 
+     * @param player The player associated with the account.
+     * @return A return address associated with the account, or empty string if none.
+     */
+    public String getPlayerReturnAddress(OfflinePlayer player);
+
+    /**
+     * Set an address that could be used to return player
+     * balances in the event of a server shutdown or
+     * player ban.
+     * 
+     * @param player The player associated with the account.
+     * @param address The new return address.
+     * @return True if the address was valid and set.
+     */
+    public boolean setPlayerReturnAddress(OfflinePlayer player, String address);
+
+    /**
      * Initiate a withdraw request by the user.
      * 
      * @param player The player that initiated the request.

@@ -234,6 +234,32 @@ public class VertconomyImpl implements Vertconomy
     }
 
     @Override
+    public String getPlayerReturnAddress(OfflinePlayer player)
+    {
+        Account playerAccount = accountDao.findOrCreate(player.getUniqueId());
+        return playerAccount.getReturnAddress();
+    }
+
+    @Override
+    public boolean setPlayerReturnAddress(OfflinePlayer player, String address)
+    {
+        try
+        {
+            if (!wallet.isAddressValid(address))
+            {
+                return false;
+            }
+        }
+        catch (WalletRequestException e)
+        {
+            return false;
+        }
+        Account playerAccount = accountDao.findOrCreate(player.getUniqueId());
+        playerAccount.setReturnAddress(address);
+        return true;
+    }
+
+    @Override
     public WithdrawRequestResponse initiatePlayerWithdrawRequest(OfflinePlayer player, String destAddress, long amount)
     {
         return withdrawService.initiateWithdraw(player.getUniqueId(), destAddress, amount);
