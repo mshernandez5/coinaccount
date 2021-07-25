@@ -28,6 +28,7 @@ public class InternalTransferPreselector
 
     public InternalTransferPreselector(CoinEvaluator<Deposit> evaluator, CoinSelector<Deposit> primarySelector, Account sender, Account receiver)
     {
+        this.evaluator = evaluator;
         this.primarySelector = primarySelector;
         this.sender = sender;
         this.receiver = receiver;
