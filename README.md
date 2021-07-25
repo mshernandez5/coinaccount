@@ -16,7 +16,7 @@ Unfortunately, by nature of the API it is impossible to create a proper implemen
 
 Despite this, an experimental Vault API implementation was created with strong limitations:
 * Obviously cryptocurrency cannot be created in-game from nothing. Any funds Vault attempts to give the player will be taken from the server account, while any funds Vault attempts to withdraw from the player will be given to the server account.
-* Vertconomy attempts to group Vault API calls into groups which must succeed or fail as a whole so that a failure to send funds from one end during an operation with multiple transfers does not leave unintended effects on player balances. Though this appears to work decently well it is ultimately a hack and not guaranteed.
+* Vertconomy attempts to place Vault API calls into groups which must succeed or fail as a whole so that a failure to send funds from one end during an operation with multiple transfers does not leave unintended effects on player balances. Though this appears to work decently well it is ultimately a hack and not guaranteed.
 * The limited floating-point precision provided by double values (required by Vault) makes these requests susceptible to withdrawing or depositing slightly different values than intended, especially if it involves large or very precise amounts.
 * Other plugins tend to ignore the success/failure responses provided by Vault API calls - especially when attempting to give money to players - leading to situations where actions may be taken despite the server or player not having the necessary funds to do so. For example, EssentialsX sign shops will give or take items regardless of whether the balance transfers were successful while ChestShop appears to work without issue. Please test any external plugin features thoroughly before making them available to players.
 
@@ -24,7 +24,7 @@ Despite this, an experimental Vault API implementation was created with strong l
 
 Due to the complexities of working with Vault plugins and relatively high risk of unintended behavior Vault support is disabled by default, but this can be changed in the plugin configuration.
 
-The current goal is to develop a set of plugins built against the Vertconomy API which will allow proper functionality.
+The current goal is to develop additional commands and plugins built against the Vertconomy API to fill any major gaps left by Vault compatibility issues.
 
 ## How can I use this plugin?
 You will need a dedicated Vertcoin wallet configured to listen for RPC connections. Do not use an existing Vertcoin wallet. The configuration file for Vertcoin wallet can be found at one of the following locations if the wallet configuration directory was not manually changed:
