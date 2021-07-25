@@ -8,26 +8,29 @@ website: https://github.com/mshernandez5/vertconomy
 # Loading
 main: com.mshernandez.vertconomy.App
 api-version: 1.17
-depend: [Vault]
-loadbefore: [Essentials]
+softdepend: [Vault]
 
 # Commands
 commands:
   balance:
-    description: Allows a player to check their vertconomy balance.
+    description: Check your vertconomy account balance.
     aliases: [bal]
     usage: /balance [player]
     permission: vertconomy.balance
   deposit:
-    description: Allows a player to deposit crypto into their vertconomy account.
+    description: Deposit cryptocurrency into your vertconomy account.
     usage: /deposit
     permission: vertconomy.deposit
+  pay:
+    description: Send cryptocurrency to another player.
+    usage: /pay [amount] [player]
+    permission: vertconomy.pay
   withdraw:
-    description: Allows players to withdraw crypto from their vertconomy account.
-    usage: /withdraw (<amount> | all) <address>
+    description: Withdraw cryptocurrency to your wallet.
+    usage: /withdraw [amount | all] [address]
     permission: vertconomy.withdraw
   vertconomy:
-    description: Show the status of the plugin and wallet connection.
+    description: Show plugin information and wallet connection status.
     usage: /vertconomy
     permission: vertconomy.status
 
@@ -43,6 +46,9 @@ permissions:
       vertconomy.balance: true
   vertconomy.deposit:
     description: Allows players to use the /deposit command.
+    default: op
+  vertconomy.pay:
+    description: Allows players to use the /pay command.
     default: op
   vertconomy.withdraw:
     description: Allows players to use the /withdraw command.

@@ -6,6 +6,7 @@ import java.sql.SQLException;
 
 import com.mshernandez.vertconomy.commands.CommandBalance;
 import com.mshernandez.vertconomy.commands.CommandDeposit;
+import com.mshernandez.vertconomy.commands.CommandPay;
 import com.mshernandez.vertconomy.commands.CommandVertconomy;
 import com.mshernandez.vertconomy.commands.CommandWithdraw;
 import com.mshernandez.vertconomy.core.Vertconomy;
@@ -152,6 +153,7 @@ public class App extends JavaPlugin
         // Register Commands
         getCommand("balance").setExecutor(new CommandBalance(vertconomy));
         getCommand("deposit").setExecutor(new CommandDeposit(vertconomy));
+        getCommand("pay").setExecutor(new CommandPay(vertconomy));
         getCommand("withdraw").setExecutor(new CommandWithdraw(vertconomy));
         getCommand("vertconomy").setExecutor(new CommandVertconomy(vertconomy));
 
