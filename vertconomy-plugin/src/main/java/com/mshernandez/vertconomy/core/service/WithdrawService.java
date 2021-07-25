@@ -182,8 +182,8 @@ public class WithdrawService
         catch (WalletRequestException e)
         {
             logger.warning("Error Initiating Withdraw For Account: " + initiator.getAccountUUID());
-            e.printStackTrace();
-            return new VertconomyWithdrawRequestResponse(WithdrawRequestResponseType.UNKNOWN_FAILURE);
+            logger.warning(e.getMessage());
+            return new VertconomyWithdrawRequestResponse(WithdrawRequestResponseType.NO_WALLET_CONNECTION);
         }
         // Persist Request & Lock Input Deposits
         withdrawRequestDao.persist(request);

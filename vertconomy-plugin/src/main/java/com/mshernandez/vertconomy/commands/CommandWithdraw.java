@@ -190,6 +190,9 @@ public class CommandWithdraw implements CommandExecutor, TabCompleter
                         case INVALID_ADDRESS:
                             errorMessage = "Invalid withdraw address!";
                             break;
+                        case NO_WALLET_CONNECTION:
+                            errorMessage = "There was an issue communicating with the wallet.";
+                            break;
                         default:
                             errorMessage = "An unknown error occured while attempting to make the withdrawal.";
                     }

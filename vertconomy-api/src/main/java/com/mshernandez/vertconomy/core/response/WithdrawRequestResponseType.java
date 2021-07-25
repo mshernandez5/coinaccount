@@ -37,6 +37,11 @@ public enum WithdrawRequestResponseType
     INVALID_ADDRESS,
 
     /**
+     * Indicates the wallet cannot be reached.
+     */
+    NO_WALLET_CONNECTION,
+
+    /**
      * Indicates an unknown failure.
      */
     UNKNOWN_FAILURE
