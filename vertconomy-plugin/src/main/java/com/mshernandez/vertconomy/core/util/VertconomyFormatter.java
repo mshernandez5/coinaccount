@@ -99,12 +99,8 @@ public class VertconomyFormatter implements SatAmountFormatter
     @Override
     public String format(BigDecimal amount)
     {
-        DecimalFormat decimalFormat = new DecimalFormat();
-        decimalFormat.setGroupingUsed(false);
-        decimalFormat.setMinimumFractionDigits(scale.NUM_VALID_FRACTION_DIGITS);
-        decimalFormat.setMaximumFractionDigits(scale.NUM_VALID_FRACTION_DIGITS);
         return new StringBuilder()
-            .append(decimalFormat.format(amount.setScale(scale.NUM_VALID_FRACTION_DIGITS, RoundingMode.FLOOR)))
+            .append(amount.setScale(scale.NUM_VALID_FRACTION_DIGITS, RoundingMode.FLOOR).toPlainString())
             .append(' ')
             .append((scale == CoinScale.BASE) ? baseUnitSymbol : (scale.PREFIX + symbol))
             .toString();
