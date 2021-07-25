@@ -28,6 +28,7 @@ import com.mshernandez.vertconomy.wallet_interface.responses.SignRawTransactionR
 import com.mshernandez.vertconomy.wallet_interface.responses.SmartFeeResponse;
 import com.mshernandez.vertconomy.wallet_interface.responses.TransactionListResponse;
 import com.mshernandez.vertconomy.wallet_interface.responses.UnspentOutputResponse;
+import com.mshernandez.vertconomy.wallet_interface.responses.ValidateAddressResponse;
 import com.mshernandez.vertconomy.wallet_interface.responses.WalletInfoResponse;
 
 /**
@@ -496,6 +497,43 @@ public class RPCWalletConnection
             throw new RPCErrorResponseException(response.error);
         }
         return response.result;
+    }
+
+    /**
+     * Gets information about the provided address.
+     * 
+     * @param address The address.
+     * @return An object carrying information about the address.
+     * @throws WalletRequestException If the wallet could not be reached or execute the command.
+     * @throws RPCErrorResponseException If the received response indicates an error.
+     */
+    public ValidateAddressResponse.Result validateAddress(String address) throws WalletRequestException, RPCErrorResponseException
+    {
+        JsonArray params = new JsonArray();
+        params.add(address);
+        WalletRequest jsonRequest = new WalletRequest()
+            .setId(DEFAULT_REQUEST_ID)
+            .setMethod("validateaddress")
+            .setParams(params);
+        ValidateAddressResponse response = gson.fromJson(makeRequest(jsonRequest), ValidateAddressResponse.class);
+        if (response.error != null)
+        {
+            throw new RPCErrorResponseException(response.error);
+        }
+        return response.result;
+    }
+
+    /**
+     * Checks whether the provided address is valid.
+     * 
+     * @param address The address.
+     * @return True if the address is valid, false otherwise.
+     * @throws WalletRequestException If the wallet could not be reached or execute the command.
+     * @throws RPCErrorResponseException If the received response indicates an error.
+     */
+    public boolean isAddressValid(String address)  throws WalletRequestException, RPCErrorResponseException
+    {
+        return validateAddress(address).isValid;
     }
 
     /**
