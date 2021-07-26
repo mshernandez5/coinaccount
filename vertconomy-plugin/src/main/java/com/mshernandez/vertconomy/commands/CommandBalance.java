@@ -171,7 +171,7 @@ public class CommandBalance implements CommandExecutor, TabCompleter
         List<String> options = new ArrayList<>();
         if (args.length == 1 && sender.hasPermission(PERMISSION_VIEW_OTHER_BALANCES))
         {
-            for (OfflinePlayer p : Bukkit.getOnlinePlayers())
+            for (Player p : Bukkit.getOnlinePlayers())
             {
                 options.add(p.getName());
             }

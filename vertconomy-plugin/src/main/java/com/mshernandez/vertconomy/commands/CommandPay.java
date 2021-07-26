@@ -1,5 +1,6 @@
 package com.mshernandez.vertconomy.commands;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import com.mshernandez.vertconomy.core.Vertconomy;
@@ -20,7 +21,6 @@ import net.md_5.bungee.api.chat.ComponentBuilder;
 
 public class CommandPay implements CommandExecutor, TabCompleter
 {
-
     private Vertconomy vertconomy;
 
     public CommandPay(Vertconomy vertconomy)
@@ -125,7 +125,18 @@ public class CommandPay implements CommandExecutor, TabCompleter
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args)
     {
-        return null;
+        List<String> options = new ArrayList<>();
+        if (args.length == 1)
+        {
+            for (Player p : Bukkit.getOnlinePlayers())
+            {
+                options.add(p.getName());
+            }
+        }
+        else if (args.length == 2)
+        {
+            options.add("[amount]");
+        }
+        return options;
     }
-    
 }

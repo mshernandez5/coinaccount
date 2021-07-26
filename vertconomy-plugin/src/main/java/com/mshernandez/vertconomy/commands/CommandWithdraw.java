@@ -262,14 +262,14 @@ public class CommandWithdraw implements CommandExecutor, TabCompleter
         List<String> options = new ArrayList<>();
         if (args.length == 1)
         {
-            options.add("<amount>");
+            options.add("[amount]");
             options.add("all");
             options.add("confirm");
             options.add("cancel");
         }
         else if (args.length == 2)
         {
-            options.add("<address>");
+            options.add("[address]");
         }
         return options;
     }
