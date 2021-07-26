@@ -75,8 +75,7 @@ public class TransferService
         {
             throw new InsufficientFundsException();
         }
-        CoinEvaluator<Deposit> evaluator = new DepositShareEvaluator(sender, true, 0L);
-        Set<Deposit> selected = new InternalTransferPreselector(evaluator, coinSelector, sender, receiver).selectInputs(amount);
+        Set<Deposit> selected = new InternalTransferPreselector(coinSelector, sender, receiver).selectInputs(amount);
         long remainingOwed = amount;
         Iterator<Deposit> it = selected.iterator();
         while (it.hasNext() && remainingOwed > 0L)

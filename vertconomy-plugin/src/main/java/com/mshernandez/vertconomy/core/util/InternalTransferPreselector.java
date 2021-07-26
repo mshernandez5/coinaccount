@@ -20,18 +20,18 @@ import com.mshernandez.vertconomy.core.entity.Deposit;
  */
 public class InternalTransferPreselector
 {
-    CoinEvaluator<Deposit> evaluator;
     CoinSelector<Deposit> primarySelector;
+    CoinEvaluator<Deposit> evaluator;
 
     Account sender;
     Account receiver;
 
-    public InternalTransferPreselector(CoinEvaluator<Deposit> evaluator, CoinSelector<Deposit> primarySelector, Account sender, Account receiver)
+    public InternalTransferPreselector(CoinSelector<Deposit> primarySelector, Account sender, Account receiver)
     {
-        this.evaluator = evaluator;
         this.primarySelector = primarySelector;
         this.sender = sender;
         this.receiver = receiver;
+        evaluator = new DepositShareEvaluator(sender, true, 0L);
     }
 
     /**

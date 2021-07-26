@@ -19,6 +19,13 @@ import net.md_5.bungee.api.ChatColor;
 import net.md_5.bungee.api.chat.BaseComponent;
 import net.md_5.bungee.api.chat.ComponentBuilder;
 
+/**
+ *  /pay
+ *  <ul>
+ *      <li>Allows players to send cryptocurrency to each other.</li>
+ *      <li>Allows the console (server account) to send cryptocurrency to players.</li>
+ *  </ul>
+ */
 public class CommandPay implements CommandExecutor, TabCompleter
 {
     private Vertconomy vertconomy;
