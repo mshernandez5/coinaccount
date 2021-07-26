@@ -19,9 +19,7 @@ import com.mshernandez.vertconomy.core.entity.Deposit;
 import com.mshernandez.vertconomy.core.entity.DepositDao;
 import com.mshernandez.vertconomy.core.service.exception.InsufficientFundsException;
 import com.mshernandez.vertconomy.core.util.BinarySearchCoinSelector;
-import com.mshernandez.vertconomy.core.util.CoinEvaluator;
 import com.mshernandez.vertconomy.core.util.CoinSelector;
-import com.mshernandez.vertconomy.core.util.DepositShareEvaluator;
 import com.mshernandez.vertconomy.core.util.InternalTransferPreselector;
 
 /**
