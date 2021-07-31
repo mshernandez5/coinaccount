@@ -1,0 +1,74 @@
+syntax = "proto3";
+
+package com.mshernandez.coinaccount.grpc;
+
+import "coinaccount_service.proto";
+
+/**
+ * Handles internal transfers between accounts.
+ */
+service TransferService
+{
+    // Tranfers balances between accounts.
+    rpc TransferBalance(TransferBalanceRequest) returns (TransferBalanceResponse) {}
+
+    /**
+     * Conducts multiple balance changes as a group which must
+     * succeed or fail as a whole.
+     *
+     * Each individual account balance change may be positive or negative
+     * but the sum of all changes must equal zero to ensure no balances
+     * are unaccounted for.
+     */
+    rpc BatchTransferBalance(BatchTransferBalanceRequest) returns (BatchTransferBalanceResponse) {}
+}
+
+/**
+ * Request parameters for TransferBalance()
+ */
+message TransferBalanceRequest
+{
+    AccountIdentifier sender_id = 1; // The balance sending account.
+    AccountIdentifier receiver_id = 2; // The balance receiving account.
+    bool transfer_all = 3; // Whether to transfer all funds.
+    uint64 amount = 4; // The amount to transfer if transfer_all is false.
+}
+
+/**
+ * Response object given by TransferBalance()
+ */
+message TransferBalanceResponse
+{
+    ResponseType response_type = 1;
+}
+
+/**
+ * Specifies a single balance change to be executed in a batch transfer.
+ */
+message BalanceChange
+{
+    AccountIdentifier account_id = 1; // The account affected by the change.
+    sint64 net_balance_change = 2; // The net change to the account balance.
+}
+
+/**
+ * Request parameters for BatchTransferBalance()
+ *
+ * Specifies a set of account balance changes to make as a group.
+ *
+ * Each individual account balance change may be positive or negative
+ * but the sum of all changes must equal zero to ensure no balances
+ * are unaccounted for.
+ */
+message BatchTransferBalanceRequest
+{
+    repeated BalanceChange changes = 1;
+}
+ 
+/**
+ * Response object given by BatchTransferBalance()
+ */
+message BatchTransferBalanceResponse
+{
+    ResponseType response_type = 1;
+}

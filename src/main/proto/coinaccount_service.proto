@@ -1,0 +1,97 @@
+syntax = "proto3";
+
+package com.mshernandez.coinaccount.grpc;
+
+/**
+ * Provides common message types shared between services
+ * and metadata about CoinAccount itself.
+ */
+service CoinAccountService
+{
+    // Check the server status.
+    rpc CheckCoinAccountStatus(Empty) returns (CheckCoinAccountStatusResponse) {}
+
+    // Returns information about the coin including symbol and base unit symbol.
+    rpc GetCoinRepresentation(Empty) returns (GetCoinRepresentationResponse) {}
+
+    // Get deposit configuration settings relevant to the end-user.
+    rpc GetDepositConfiguration(Empty) returns (GetDepositConfigurationResponse) {}
+
+    // Get withdrawal configuration settings relevant to the end-user.
+    rpc GetWithdrawConfiguration(Empty) returns (GetWithdrawConfigurationResponse) {}
+}
+
+/**
+ * Response object given by CheckCoinAccountStatus()
+ *
+ * CoinAccount status information.
+ */
+message CheckCoinAccountStatusResponse
+{
+    ResponseType response_type = 1;
+    bool has_wallet_connection = 2; // Whether CoinAccount has a valid wallet connection.
+}
+
+/**
+ * Response object given by GetCoinRepresentation()
+ */
+message GetCoinRepresentationResponse
+{
+    ResponseType response_type = 1;
+    string coin_symbol = 2; // The symbol of the coin being used, ex. "VTC"
+    string coin_base_unit_symbol = 3; // The base unit symbol of the coin being used, ex. "sat"
+}
+
+/**
+ * Response object given by GetDepositConfiguration()
+ *
+ * Deposit configuration settings relevant to the end-user.
+ */
+message GetDepositConfigurationResponse
+{
+    ResponseType response_type = 1;
+    uint32 min_deposit_confirmations = 2; // The minimum number of confirmations to consider a deposit valid.
+}
+
+/**
+ * Response object given by GetWithdrawConfiguration()
+ *
+ * Withdrawal configuration settings relevant to the end-user.
+ */
+message GetWithdrawConfigurationResponse
+{
+    ResponseType response_type = 1;
+    uint32 target_block_time = 2; // The target number of blocks to confirm a withdrawal.
+}
+
+/**
+ * Every possible CoinAccount response type across all services.
+ */
+enum ResponseType
+{
+    SUCCESS = 0; // Indicates a successful response.
+    ERROR_NO_WALLET_CONNECTION = 1; // The service does not have a valid wallet connection to complete the request.
+    ERROR_INVALID_ACCOUNT_IDENTIFIER = 2; // The account identifier is not valid.
+    ERROR_UNACCOUNTED_FUNDS = 3; // The changes are invalid; they would leave some funds unaccounted for.
+    ERROR_INSUFFICIENT_FUNDS = 4; // An account does not have enough total funds to complete the request.
+    ERROR_NOT_ENOUGH_WITHDRAWABLE_FUNDS = 5; // The account cannot currently withdraw this amount.
+    ERROR_CANNOT_AFFORD_FEES = 6; // The account cannot afford the fees to withdraw the desired amount.
+    ERROR_WITHDRAW_REQUEST_ALREADY_EXISTS = 7; // A withdraw request must not exist but an existing one was found.
+    ERROR_WITHDRAW_REQUEST_NOT_FOUND = 8; // A withdraw request must exist but was not found.
+    ERROR_INVALID_ADDRESS = 9; // The provided address is invalid.
+    ERROR_INTERNAL = 10; // There was an internal service error.
+    ERROR_UNKNOWN = 11; // An unknown error occured.
+}
+
+/**
+ * Represents a UUID, used to identify accounts.
+ */
+message AccountIdentifier
+{
+    string uuid = 1; // Must be a valid UUID that uniquely identifies an account.
+}
+
+/**
+ * An empty message when no parameters are required.
+ */
+message Empty {}

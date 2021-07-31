@@ -1,0 +1,71 @@
+syntax = "proto3";
+
+package com.mshernandez.coinaccount.grpc;
+
+import "coinaccount_service.proto";
+
+/**
+ * Provides information about accounts.
+ */
+service AccountInfoService
+{
+    // Get information about the balances owned by an account.
+    rpc GetBalanceInfo(AccountIdentifier) returns (GetBalanceInfoResponse) {}
+
+    // Get a deposit address for an account.
+    rpc GetDepositAddress(AccountIdentifier) returns (GetDepositAddressResponse) {}
+
+    // Get a return address for an account.
+    rpc GetReturnAddress(AccountIdentifier) returns (GetReturnAddressResponse) {}
+
+    // Set a return address for an account.
+    rpc SetReturnAddress(SetReturnAddressRequest) returns (SetReturnAddressResponse) {}
+}
+
+/**
+ * Response object given by GetBalanceInfo()
+ *
+ * Details the balances held by an account.
+ */
+message GetBalanceInfoResponse
+{
+    ResponseType response_type = 1;
+    uint64 confirmed_balance = 2; // The Total Confirmed Account Balance
+    uint64 withdrawable_balance = 3; // How Much May Be Withdrawn At This Time
+    uint64 unconfirmed_balance = 4; // Unusable Balances Pending Confirmation
+}
+
+/**
+ * Response object given by GetDepositAddress()
+ */
+message GetDepositAddressResponse
+{
+    ResponseType response_type = 1;
+    string deposit_address = 2;
+}
+
+/**
+ * Response object given by GetReturnAddress()
+ */
+message GetReturnAddressResponse
+{
+    ResponseType response_type = 1;
+    string return_address = 2;
+}
+
+/**
+ * Request parameters for SetReturnAddress()
+ */
+message SetReturnAddressRequest
+{
+    AccountIdentifier account_id = 1;
+    string return_address = 2;
+}
+
+/**
+ * Response object given by SetReturnAddress()
+ */
+message SetReturnAddressResponse
+{
+    ResponseType response_type = 1;
+}

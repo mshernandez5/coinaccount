@@ -1,0 +1,81 @@
+syntax = "proto3";
+
+package com.mshernandez.coinaccount.grpc;
+
+import "coinaccount_service.proto";
+
+/**
+ * Handles account withdrawals.
+ */
+service WithdrawService
+{
+    // Initiates a withdraw request for an account.
+    rpc InitiateWithdraw(InitiateWithdrawRequest) returns (InitiateWithdrawResponse) {}
+
+    // Cancels a pending withdraw request initiated by an account.
+    rpc CancelWithdraw(AccountIdentifier) returns (CancelWithdrawResponse) {}
+
+    // Completes a pending withdraw request initiated by an account.
+    rpc CompleteWithdraw(AccountIdentifier) returns (CompleteWithdrawResponse) {}
+
+    // Check if a withdraw request exists for the given account.
+    rpc CheckForPendingWithdraw(AccountIdentifier) returns (CheckForPendingWithdrawResponse) {}
+}
+
+/**
+ * Request parameters for InitiateWithdraw()
+ */
+message InitiateWithdrawRequest
+{
+    AccountIdentifier account_id = 1; // The account initiating the withdraw.
+    string dest_address = 2; // The address to withdraw funds to.
+    bool withdraw_all = 3; // Whether to withdraw all funds, if true ignores the specified amount.
+    uint64 amount = 4; // The amount to withdraw if withdraw_all is false.
+}
+
+/**
+ * Response object given by InitiateWithdraw()
+ *
+ * Gives details about the pending withdraw if
+ * successful.
+ */
+message InitiateWithdrawResponse
+{
+    ResponseType response_type = 1;
+    uint64 withdraw_amount = 2; // The amount to be sent to the withdraw address.
+    uint64 fee_amount = 3; // The amount to be paid in fees.
+    uint64 total_cost = 4; // The total cost for the account to make the withdrawal.
+}
+
+/**
+ * Response object given by CancelWithdraw()
+ */
+message CancelWithdrawResponse
+{
+    ResponseType response_type = 1;
+}
+
+/**
+ * Response object given by CompleteWithdraw()
+ */
+message CompleteWithdrawResponse
+{
+    ResponseType response_type = 1;
+    string txid = 2; // The TXID of the withdraw transaction if the request was successful.
+}
+
+/**
+ * Response object given by CheckForPendingWithdraw()
+ * 
+ * Indicates whether a pending withdraw request exists.
+ * If so, then the response also includes information about
+ * the pending withdrawal.
+ */
+message CheckForPendingWithdrawResponse
+{
+    ResponseType response_type = 1;
+    bool withdraw_request_exists = 2; // Whether a withdraw request exists for the account.
+    uint64 withdraw_amount = 3; // The amount to be sent to the withdraw address if the request exists.
+    uint64 fee_amount = 4; // The amount to be paid in fees if the request exists.
+    uint64 total_cost = 5; // The total cost for the account to make the withdrawal if the request exists.
+}

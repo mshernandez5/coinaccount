@@ -1,0 +1,43 @@
+syntax = "proto3";
+
+package com.mshernandez.coinaccount.grpc;
+
+import "coinaccount_service.proto";
+
+/**
+ * Provides information about accounts.
+ */
+service NotificationService
+{
+    // Receive notifications for the specified accounts.
+    rpc ReceiveNotifications(NotificationRequest) returns (stream Notification) {}
+}
+
+/**
+ * Notifies the server to send notifications
+ * for the specified accounts.
+ */
+message NotificationRequest
+{
+    repeated AccountIdentifier account_id = 1;
+}
+
+/**
+ * Notifies clients that an event has occurred
+ * affecting specified account.
+ */
+message Notification
+{
+    NotificationType notification_type = 1; // The type of notification.
+    AccountIdentifier account_id = 2; // The ID of the affected account.
+    uint64 amount = 3; // Amount for applicable notifications.
+}
+
+/**
+ * The type of notification.
+ */
+enum NotificationType
+{
+    CONFIRMED_DEPOSIT = 0;
+    EXPIRED_WITHDRAW_REQUEST = 1;
+}
