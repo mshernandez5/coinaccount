@@ -80,7 +80,7 @@ public class NotificationController extends NotificationServiceImplBase
     }
 
     @Override
-    public void receiveNotifications(NotificationRequest request, StreamObserver<Notification> responseObserver)
+    public void subscribeNotifications(NotificationRequest request, StreamObserver<Notification> responseObserver)
     {
         try
         {

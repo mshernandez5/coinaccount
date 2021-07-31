@@ -10,7 +10,7 @@ import "coinaccount_service.proto";
 service NotificationService
 {
     // Receive notifications for the specified accounts.
-    rpc ReceiveNotifications(NotificationRequest) returns (stream Notification) {}
+    rpc SubscribeNotifications(NotificationRequest) returns (stream Notification) {}
 }
 
 /**
