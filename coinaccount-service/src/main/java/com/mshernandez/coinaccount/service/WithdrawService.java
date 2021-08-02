@@ -134,6 +134,11 @@ public class WithdrawService
         // Form TX Outputs
         long withdrawAmount = withdrawAll ? (totalOwnedValue - totalFees) : amount;
         long changeAmount = totalInputValue - (withdrawAmount + totalFees);
+        // Make Sure That Account Can Afford Combined Fees
+        if (withdrawAmount <= 0L)
+        {
+            throw new CannotAffordFeesException();
+        }
         Map<String, Long> txOutputs = new HashMap<>();
         txOutputs.put(destAddress, withdrawAmount);
         if (changeAmount > 0L)
