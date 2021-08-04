@@ -20,6 +20,7 @@ import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.databind.node.TextNode;
 import com.mshernandez.coinaccount.service.wallet_rpc.exception.WalletRequestException;
 import com.mshernandez.coinaccount.service.wallet_rpc.exception.WalletResponseError;
 import com.mshernandez.coinaccount.service.wallet_rpc.exception.WalletResponseException;
@@ -157,7 +158,7 @@ public class WalletService
         catch (IOException | InterruptedException e)
         {
             // Failed To Get Response
-            throw new WalletRequestException("Failed To Make Request: " + request.getMethod());
+            throw new WalletRequestException("Failed To Make Request: " + request.getMethod() + ", " + e.getMessage());
         }
     }
 
@@ -180,7 +181,7 @@ public class WalletService
         ArrayNode jsonOutputs = objectMapper.createArrayNode();
         for (Entry<String, Long> e : outputs.entrySet())
         {
-            ObjectNode amount = objectMapper.valueToTree(new SatAmount(e.getValue()));
+            TextNode amount = objectMapper.valueToTree(new SatAmount(e.getValue()));
             ObjectNode kvPair = objectMapper.createObjectNode();
             kvPair.set(e.getKey(), amount);
             jsonOutputs.add(kvPair);

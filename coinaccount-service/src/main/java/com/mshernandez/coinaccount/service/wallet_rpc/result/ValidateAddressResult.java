@@ -2,14 +2,13 @@ package com.mshernandez.coinaccount.service.wallet_rpc.result;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Getter
 @Setter
-@NoArgsConstructor(access = AccessLevel.PRIVATE)
+@NoArgsConstructor
 public class ValidateAddressResult
 {
     /**

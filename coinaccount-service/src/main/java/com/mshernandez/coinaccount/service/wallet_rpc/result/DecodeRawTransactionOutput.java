@@ -5,14 +5,13 @@ import java.util.List;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.mshernandez.coinaccount.service.wallet_rpc.SatAmount;
 
-import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Getter
 @Setter
-@NoArgsConstructor(access = AccessLevel.PRIVATE)
+@NoArgsConstructor
 public class DecodeRawTransactionOutput
 {
     /**
@@ -33,7 +32,7 @@ public class DecodeRawTransactionOutput
 
     @Getter
     @Setter
-    @NoArgsConstructor(access = AccessLevel.PRIVATE)
+    @NoArgsConstructor
     public class ScriptPubKey
     {
         /**

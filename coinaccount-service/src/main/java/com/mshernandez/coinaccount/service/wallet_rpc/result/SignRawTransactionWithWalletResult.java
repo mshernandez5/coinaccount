@@ -30,7 +30,7 @@ public class SignRawTransactionWithWalletResult
 
     @Getter
     @Setter
-    @NoArgsConstructor(access = AccessLevel.PRIVATE)
+    @NoArgsConstructor
     public class ScriptVerificationError
     {
         /**
