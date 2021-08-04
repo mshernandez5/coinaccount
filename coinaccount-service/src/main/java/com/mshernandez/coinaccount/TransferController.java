@@ -20,6 +20,7 @@ import com.mshernandez.coinaccount.service.wallet_rpc.exception.WalletRequestExc
 
 import io.grpc.stub.StreamObserver;
 import io.quarkus.grpc.GrpcService;
+import io.smallrye.common.annotation.Blocking;
 
 @GrpcService
 public class TransferController extends TransferServiceImplBase
@@ -28,6 +29,7 @@ public class TransferController extends TransferServiceImplBase
     TransferService transferService;
 
     @Override
+    @Blocking
     public void transferBalance(TransferBalanceRequest request, StreamObserver<TransferBalanceResponse> responseObserver)
     {
         ResponseType responseType = ResponseType.ERROR_UNKNOWN;
@@ -57,6 +59,7 @@ public class TransferController extends TransferServiceImplBase
     }
 
     @Override
+    @Blocking
     public void batchTransferBalance(BatchTransferBalanceRequest request, StreamObserver<BatchTransferBalanceResponse> responseObserver)
     {
         ResponseType responseType = ResponseType.SUCCESS;

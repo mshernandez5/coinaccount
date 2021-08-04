@@ -16,6 +16,7 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 import io.grpc.stub.StreamObserver;
 import io.quarkus.grpc.GrpcService;
+import io.smallrye.common.annotation.Blocking;
 
 @GrpcService
 public class CoinAccountController extends CoinAccountServiceImplBase
@@ -36,6 +37,7 @@ public class CoinAccountController extends CoinAccountServiceImplBase
     WalletService walletService;
 
     @Override
+    @Blocking
     public void checkCoinAccountStatus(Empty empty, StreamObserver<CheckCoinAccountStatusResponse> responseObserver)
     {
         boolean connectedToWallet = true;
@@ -55,7 +57,7 @@ public class CoinAccountController extends CoinAccountServiceImplBase
         responseObserver.onCompleted();
     }
 
-    @Override 
+    @Override
     public void getCoinRepresentation(Empty empty, StreamObserver<GetCoinRepresentationResponse> responseObserver)
     {
         GetCoinRepresentationResponse response =  GetCoinRepresentationResponse.newBuilder()

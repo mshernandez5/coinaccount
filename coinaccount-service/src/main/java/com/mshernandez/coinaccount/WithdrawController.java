@@ -24,6 +24,7 @@ import com.mshernandez.coinaccount.service.wallet_rpc.exception.WalletRequestExc
 
 import io.grpc.stub.StreamObserver;
 import io.quarkus.grpc.GrpcService;
+import io.smallrye.common.annotation.Blocking;
 
 @GrpcService
 public class WithdrawController extends WithdrawServiceImplBase
@@ -32,6 +33,7 @@ public class WithdrawController extends WithdrawServiceImplBase
     WithdrawService withdrawService;
 
     @Override
+    @Blocking
     public void initiateWithdraw(InitiateWithdrawRequest request, StreamObserver<InitiateWithdrawResponse> responseObserver)
     {
         InitiateWithdrawResponse response;
@@ -93,6 +95,7 @@ public class WithdrawController extends WithdrawServiceImplBase
     }
 
     @Override
+    @Blocking
     public void cancelWithdraw(AccountIdentifier accountId, StreamObserver<CancelWithdrawResponse> responseObserver)
     {
         CancelWithdrawResponse response;
@@ -128,6 +131,7 @@ public class WithdrawController extends WithdrawServiceImplBase
     }
 
     @Override
+    @Blocking
     public void completeWithdraw(AccountIdentifier accountId, StreamObserver<CompleteWithdrawResponse> responseObserver)
     {
         CompleteWithdrawResponse response;
@@ -164,6 +168,7 @@ public class WithdrawController extends WithdrawServiceImplBase
     }
 
     @Override
+    @Blocking
     public void checkForPendingWithdraw(AccountIdentifier accountId, StreamObserver<CheckForPendingWithdrawResponse> responseObserver)
     {
         CheckForPendingWithdrawResponse response;

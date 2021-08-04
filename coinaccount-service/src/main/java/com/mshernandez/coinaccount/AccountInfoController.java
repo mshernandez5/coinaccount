@@ -21,6 +21,7 @@ import org.jboss.logging.Logger;
 
 import io.grpc.stub.StreamObserver;
 import io.quarkus.grpc.GrpcService;
+import io.smallrye.common.annotation.Blocking;
 
 @GrpcService
 public class AccountInfoController extends AccountInfoServiceImplBase
@@ -32,6 +33,7 @@ public class AccountInfoController extends AccountInfoServiceImplBase
     AccountInfoService accountInfoService;
 
     @Override
+    @Blocking
     public void getBalanceInfo(AccountIdentifier accountId, StreamObserver<GetBalanceInfoResponse> responseObserver)
     {
         GetBalanceInfoResponse response;
@@ -59,6 +61,7 @@ public class AccountInfoController extends AccountInfoServiceImplBase
             }
             else
             {
+                logger.warn("getBalanceInfo: Unexpected Exception: " + e.getMessage());
                 responseType = ResponseType.ERROR_INTERNAL;
             }
             response = GetBalanceInfoResponse.newBuilder()
@@ -73,6 +76,7 @@ public class AccountInfoController extends AccountInfoServiceImplBase
     }
 
     @Override
+    @Blocking
     public void getDepositAddress(AccountIdentifier accountId, StreamObserver<GetDepositAddressResponse> responseObserver)
     {
         GetDepositAddressResponse response;
@@ -97,11 +101,12 @@ public class AccountInfoController extends AccountInfoServiceImplBase
             }
             else
             {
+                logger.warn("getDepositAddress: Unexpected Exception: " + e.getMessage());
                 responseType = ResponseType.ERROR_INTERNAL;
             }
             response = GetDepositAddressResponse.newBuilder()
                 .setResponseType(responseType)
-                .setDepositAddress("")
+                .setDepositAddress("ERROR")
                 .build();
         }
         responseObserver.onNext(response);
@@ -109,6 +114,7 @@ public class AccountInfoController extends AccountInfoServiceImplBase
     }
 
     @Override
+    @Blocking
     public void getReturnAddress(AccountIdentifier accountId, StreamObserver<GetReturnAddressResponse> responseObserver)
     {
         GetReturnAddressResponse response;
@@ -133,11 +139,12 @@ public class AccountInfoController extends AccountInfoServiceImplBase
             }
             else
             {
+                logger.warn("getReturnAddress: Unexpected Exception: " + e.getMessage());
                 responseType = ResponseType.ERROR_INTERNAL;
             }
             response = GetReturnAddressResponse.newBuilder()
                 .setResponseType(responseType)
-                .setReturnAddress("")
+                .setReturnAddress("ERROR")
                 .build();
         }
         responseObserver.onNext(response);
@@ -145,6 +152,7 @@ public class AccountInfoController extends AccountInfoServiceImplBase
     }
 
     @Override
+    @Blocking
     public void setReturnAddress(SetReturnAddressRequest request, StreamObserver<SetReturnAddressResponse> responseObserver)
     {
         SetReturnAddressResponse response;
@@ -173,6 +181,7 @@ public class AccountInfoController extends AccountInfoServiceImplBase
             }
             else
             {
+                logger.warn("setReturnAddress: Unexpected Exception: " + e.getMessage());
                 responseType = ResponseType.ERROR_INTERNAL;
             }
             response = SetReturnAddressResponse.newBuilder()

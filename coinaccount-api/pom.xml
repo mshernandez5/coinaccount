@@ -24,6 +24,15 @@
   </dependencies>
 
   <build>
+    <!-- Include Proto Source In JAR -->
+    <resources> 
+      <resource>
+        <directory>src/main/proto</directory>
+        <includes>
+          <include>**/*.proto</include>
+        </includes>
+      </resource>
+    </resources>
     <extensions>
       <extension>
         <groupId>kr.motd.maven</groupId>
@@ -32,6 +41,7 @@
       </extension>
     </extensions>
     <plugins>
+      <!-- Generate Java Stubs From Proto Definitions -->
       <plugin>
         <groupId>org.xolstice.maven.plugins</groupId>
         <artifactId>protobuf-maven-plugin</artifactId>
@@ -46,6 +56,20 @@
             <goals>
               <goal>compile</goal>
               <goal>compile-custom</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <!-- Need To Index Generated Classes For Quarkus To Include -->
+      <plugin>
+        <groupId>org.jboss.jandex</groupId>
+        <artifactId>jandex-maven-plugin</artifactId>
+        <version>1.1.0</version>
+        <executions>
+          <execution>
+            <id>make-index</id>
+            <goals>
+              <goal>jandex</goal>
             </goals>
           </execution>
         </executions>
