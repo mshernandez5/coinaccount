@@ -134,6 +134,9 @@ public class WalletService
                 case 200:
                     // All Good
                     break;
+                case 500:
+                    // Internal Service Error, Will Check Specific Error Later
+                    break;
                 default:
                     // HTTP Response Indicates Issue
                     throw new WalletRequestException("HTTP Response Error " + httpResponse.statusCode() + ": " + request.getMethod());
