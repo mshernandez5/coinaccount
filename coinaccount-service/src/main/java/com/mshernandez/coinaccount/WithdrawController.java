@@ -161,6 +161,10 @@ public class WithdrawController extends WithdrawServiceImplBase
             {
                 responseType = ResponseType.ERROR_NO_WALLET_CONNECTION;
             }
+            else if (e instanceof WithdrawRequestNotFoundException)
+            {
+                responseType = ResponseType.ERROR_WITHDRAW_REQUEST_NOT_FOUND;
+            }
             else
             {
                 logger.warn("completeWithdraw: Unexpected Exception: " + e.getMessage());
