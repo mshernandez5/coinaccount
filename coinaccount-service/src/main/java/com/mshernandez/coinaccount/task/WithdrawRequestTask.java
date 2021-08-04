@@ -5,6 +5,7 @@ import java.util.UUID;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
+import javax.transaction.Transactional;
 
 import com.mshernandez.coinaccount.service.WithdrawService;
 
@@ -25,6 +26,7 @@ public class WithdrawRequestTask
     WithdrawService withdrawService;
 
     @Scheduled(every = "{coinaccount.withdraw.expire.check}")
+    @Transactional
     public void cancelExpiredWithdrawRequests()
     {
         // Cancel All Expired Requests
