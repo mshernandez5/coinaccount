@@ -79,6 +79,8 @@ public class WalletService
 
     /**
      * Send a JSON-RPC method invocation request to the wallet.
+     * <p>
+     * Only use this method for non-generic result types!
      * 
      * @param <T> The type of result expected to be returned by the response.
      * @param request The request to make to the wallet.
@@ -88,6 +90,23 @@ public class WalletService
      * @throws WalletResponseException If the response indicates an error.
      */
     private <T> T makeRequest(RPCRequest request, Class<T> resultType)
+    {
+        return makeRequest(request, resultType, false, null);
+    }
+
+    /**
+     * Send a JSON-RPC method invocation request to the wallet.
+     * 
+     * @param <T> The type of result expected to be returned by the response.
+     * @param request The request to make to the wallet.
+     * @param resultType The class type of the expected result.
+     * @param isGeneric Must use true for generic result types that need to be parameterized.
+     * @param parameterType Only required for generic result types, the type to use as a parameter to the result type.
+     * @return An RPCResponse parameterized to match the expected result type.
+     * @throws WalletRequestException If there was an issue making the RPC request.
+     * @throws WalletResponseException If the response indicates an error.
+     */
+    private <T, P> T makeRequest(RPCRequest request, Class<T> resultType, boolean isGeneric, Class<P> parameterType)
     {
         request.setJsonRpcVersion(JSON_RPC_VERSION).setId(JSON_RPC_REQUEST_ID);
         String json;
@@ -118,7 +137,16 @@ public class WalletService
                     // HTTP Response Indicates Issue
                     throw new WalletRequestException("HTTP Response Error " + httpResponse.statusCode() + ": " + request.getMethod());
             }
-            JavaType responseType = objectMapper.getTypeFactory().constructParametricType(RPCResponse.class, resultType);
+            JavaType responseType;
+            if (isGeneric)
+            {
+                JavaType innerType = objectMapper.getTypeFactory().constructParametricType(resultType, parameterType);
+                responseType = objectMapper.getTypeFactory().constructParametricType(RPCResponse.class, innerType);
+            }
+            else
+            {
+                responseType = objectMapper.getTypeFactory().constructParametricType(RPCResponse.class, resultType);
+            }
             RPCResponse<T> response = objectMapper.readValue(httpResponse.body(), responseType);
             if (response.getError() != null)
             {
@@ -265,7 +293,7 @@ public class WalletService
         }
         params.add(addressNode);
         RPCRequest request = new RPCRequest().setMethod("listunspent").setParams(params);
-        return makeRequest(request, (Class<List<ListUnspentUTXO>>)(Class<?>) List.class);
+        return makeRequest(request, (Class<List<ListUnspentUTXO>>)(Class<?>) List.class, true, ListUnspentUTXO.class);
     }
 
     /**
