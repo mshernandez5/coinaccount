@@ -218,7 +218,7 @@ public class WithdrawService
         for (Deposit lockedDeposit : lockedDeposits)
         {
             long lockedAmount = lockedDeposit.getShare(internalAccount);
-            long updatedAmount = lockedDeposit.getShare(internalAccount) + lockedAmount;
+            long updatedAmount = lockedDeposit.getShare(initiatorAccount) + lockedAmount;
             lockedDeposit.setShare(initiatorAccount, updatedAmount);
             lockedDeposit.setShare(internalAccount, 0L);
             lockedDeposit.setWithdrawLock(null);
