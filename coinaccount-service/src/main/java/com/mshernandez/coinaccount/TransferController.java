@@ -18,6 +18,8 @@ import com.mshernandez.coinaccount.service.exception.InsufficientFundsException;
 import com.mshernandez.coinaccount.service.exception.UnaccountedFundsException;
 import com.mshernandez.coinaccount.service.wallet_rpc.exception.WalletRequestException;
 
+import org.jboss.logging.Logger;
+
 import io.grpc.stub.StreamObserver;
 import io.quarkus.grpc.GrpcService;
 import io.smallrye.common.annotation.Blocking;
@@ -25,6 +27,9 @@ import io.smallrye.common.annotation.Blocking;
 @GrpcService
 public class TransferController extends TransferServiceImplBase
 {
+    @Inject
+    Logger logger;
+
     @Inject
     TransferService transferService;
 
@@ -39,17 +44,25 @@ public class TransferController extends TransferServiceImplBase
             UUID receiverUUID = UUID.fromString(request.getReceiverId().getUuid());
             transferService.transferBalance(senderUUID, receiverUUID, request.getTransferAll(), request.getAmount());
         }
-        catch (IllegalArgumentException e)
+        catch (Exception e)
         {
-            responseType = ResponseType.ERROR_INVALID_ACCOUNT_IDENTIFIER;
-        }
-        catch (InsufficientFundsException e)
-        {
-            responseType = ResponseType.ERROR_INSUFFICIENT_FUNDS;
-        }
-        catch (WalletRequestException e)
-        {
-            responseType = ResponseType.ERROR_NO_WALLET_CONNECTION;
+            if (e instanceof IllegalArgumentException)
+            {
+                responseType = ResponseType.ERROR_INVALID_ACCOUNT_IDENTIFIER;
+            }
+            else if (e instanceof InsufficientFundsException)
+            {
+                responseType = ResponseType.ERROR_INSUFFICIENT_FUNDS;
+            }
+            else if (e instanceof WalletRequestException)
+            {
+                responseType = ResponseType.ERROR_NO_WALLET_CONNECTION;
+            }
+            else
+            {
+                logger.warn("transferBalance: Unexpected Exception: " + e.getMessage());
+                responseType = ResponseType.ERROR_INTERNAL;
+            }
         }
         TransferBalanceResponse response = TransferBalanceResponse.newBuilder()
             .setResponseType(responseType)
@@ -73,17 +86,25 @@ public class TransferController extends TransferServiceImplBase
             }
             transferService.batchTransfer(changes);
         }
-        catch (IllegalArgumentException e)
+        catch (Exception e)
         {
-            responseType = ResponseType.ERROR_INVALID_ACCOUNT_IDENTIFIER;
-        }
-        catch (UnaccountedFundsException e)
-        {
-            responseType = ResponseType.ERROR_UNACCOUNTED_FUNDS;
-        }
-        catch (WalletRequestException e)
-        {
-            responseType = ResponseType.ERROR_NO_WALLET_CONNECTION;
+            if (e instanceof IllegalArgumentException)
+            {
+                responseType = ResponseType.ERROR_INVALID_ACCOUNT_IDENTIFIER;
+            }
+            else if (e instanceof UnaccountedFundsException)
+            {
+                responseType = ResponseType.ERROR_UNACCOUNTED_FUNDS;
+            }
+            else if (e instanceof WalletRequestException)
+            {
+                responseType = ResponseType.ERROR_NO_WALLET_CONNECTION;
+            }
+            else
+            {
+                logger.warn("batchTransferBalance: Unexpected Exception: " + e.getMessage());
+                responseType = ResponseType.ERROR_INTERNAL;
+            }
         }
         BatchTransferBalanceResponse response = BatchTransferBalanceResponse.newBuilder()
             .setResponseType(responseType)

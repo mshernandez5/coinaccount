@@ -22,6 +22,8 @@ import com.mshernandez.coinaccount.service.exception.WithdrawRequestNotFoundExce
 import com.mshernandez.coinaccount.service.result.WithdrawRequestResult;
 import com.mshernandez.coinaccount.service.wallet_rpc.exception.WalletRequestException;
 
+import org.jboss.logging.Logger;
+
 import io.grpc.stub.StreamObserver;
 import io.quarkus.grpc.GrpcService;
 import io.smallrye.common.annotation.Blocking;
@@ -29,6 +31,9 @@ import io.smallrye.common.annotation.Blocking;
 @GrpcService
 public class WithdrawController extends WithdrawServiceImplBase
 {
+    @Inject
+    Logger logger;
+
     @Inject
     WithdrawService withdrawService;
 
@@ -81,6 +86,7 @@ public class WithdrawController extends WithdrawServiceImplBase
             }
             else
             {
+                logger.warn("initiateWithdraw: Unexpected Exception: " + e.getMessage());
                 responseType = ResponseType.ERROR_INTERNAL;
             }
             response = InitiateWithdrawResponse.newBuilder()
@@ -120,6 +126,7 @@ public class WithdrawController extends WithdrawServiceImplBase
             }
             else
             {
+                logger.warn("cancelWithdraw: Unexpected Exception: " + e.getMessage());
                 responseType = ResponseType.ERROR_INTERNAL;
             }
             response = CancelWithdrawResponse.newBuilder()
@@ -156,6 +163,7 @@ public class WithdrawController extends WithdrawServiceImplBase
             }
             else
             {
+                logger.warn("completeWithdraw: Unexpected Exception: " + e.getMessage());
                 responseType = ResponseType.ERROR_INTERNAL;
             }
             response = CompleteWithdrawResponse.newBuilder()
@@ -193,6 +201,7 @@ public class WithdrawController extends WithdrawServiceImplBase
             }
             else
             {
+                logger.warn("checkForPendingWithdraw: Unexpected Exception: " + e.getMessage());
                 responseType = ResponseType.ERROR_INTERNAL;
             }
             response = CheckForPendingWithdrawResponse.newBuilder()
