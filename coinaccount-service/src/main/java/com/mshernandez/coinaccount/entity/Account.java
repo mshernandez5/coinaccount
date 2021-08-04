@@ -27,7 +27,7 @@ import javax.persistence.Version;
 public class Account
 {
     @Id
-    @Column(name = "ID")
+    @Column(name = "ID", length = 16)
     private UUID id;
 
     /**
