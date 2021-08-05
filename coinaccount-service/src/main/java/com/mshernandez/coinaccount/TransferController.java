@@ -37,15 +37,19 @@ public class TransferController extends TransferServiceImplBase
     @Blocking
     public void transferBalance(TransferBalanceRequest request, StreamObserver<TransferBalanceResponse> responseObserver)
     {
-        ResponseType responseType = ResponseType.ERROR_UNKNOWN;
+        TransferBalanceResponse response;
         try
         {
             UUID senderUUID = UUID.fromString(request.getSenderId().getUuid());
             UUID receiverUUID = UUID.fromString(request.getReceiverId().getUuid());
             transferService.transferBalance(senderUUID, receiverUUID, request.getTransferAll(), request.getAmount());
+            response = TransferBalanceResponse.newBuilder()
+                .setResponseType(ResponseType.SUCCESS)
+                .build();
         }
         catch (Exception e)
         {
+            ResponseType responseType = ResponseType.ERROR_UNKNOWN;
             if (e instanceof IllegalArgumentException)
             {
                 responseType = ResponseType.ERROR_INVALID_ACCOUNT_IDENTIFIER;
@@ -63,10 +67,10 @@ public class TransferController extends TransferServiceImplBase
                 logger.warn("transferBalance: Unexpected Exception: " + e.getMessage());
                 responseType = ResponseType.ERROR_INTERNAL;
             }
+            response = TransferBalanceResponse.newBuilder()
+                .setResponseType(responseType)
+                .build();
         }
-        TransferBalanceResponse response = TransferBalanceResponse.newBuilder()
-            .setResponseType(responseType)
-            .build();
         responseObserver.onNext(response);
         responseObserver.onCompleted();
     }
@@ -75,7 +79,7 @@ public class TransferController extends TransferServiceImplBase
     @Blocking
     public void batchTransferBalance(BatchTransferBalanceRequest request, StreamObserver<BatchTransferBalanceResponse> responseObserver)
     {
-        ResponseType responseType = ResponseType.SUCCESS;
+        BatchTransferBalanceResponse response;
         try
         {
             Map<UUID, Long> changes = new HashMap<>();
@@ -85,9 +89,13 @@ public class TransferController extends TransferServiceImplBase
                 changes.put(accountUUID, change.getNetBalanceChange());
             }
             transferService.batchTransfer(changes);
+            response = BatchTransferBalanceResponse.newBuilder()
+                .setResponseType(ResponseType.SUCCESS)
+                .build();
         }
         catch (Exception e)
         {
+            ResponseType responseType = ResponseType.ERROR_UNKNOWN;
             if (e instanceof IllegalArgumentException)
             {
                 responseType = ResponseType.ERROR_INVALID_ACCOUNT_IDENTIFIER;
@@ -105,10 +113,10 @@ public class TransferController extends TransferServiceImplBase
                 logger.warn("batchTransferBalance: Unexpected Exception: " + e.getMessage());
                 responseType = ResponseType.ERROR_INTERNAL;
             }
+            response = BatchTransferBalanceResponse.newBuilder()
+                .setResponseType(responseType)
+                .build();
         }
-        BatchTransferBalanceResponse response = BatchTransferBalanceResponse.newBuilder()
-            .setResponseType(responseType)
-            .build();
         responseObserver.onNext(response);
         responseObserver.onCompleted();
     }
