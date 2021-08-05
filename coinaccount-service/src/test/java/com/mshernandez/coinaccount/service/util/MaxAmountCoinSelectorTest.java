@@ -79,4 +79,24 @@ public class MaxAmountCoinSelectorTest
         assertNotNull(selected);
         assertEquals(expected, selected);
     }
+
+    @Test
+    public void minimumTargetMetShouldReturnAllInputs()
+    {
+        Set<Long> inputs = new HashSet<>();
+        inputs.add(20L);
+        inputs.add(10L);
+        Set<Long> selected = coinSelector.selectInputs(evaluator, inputs, 30L);
+        assertEquals(inputs, selected);
+    }
+
+    @Test
+    public void minimumTargetNotMetShouldReturnNull()
+    {
+        Set<Long> inputs = new HashSet<>();
+        inputs.add(20L);
+        inputs.add(10L);
+        Set<Long> selected = coinSelector.selectInputs(evaluator, inputs, 31L);
+        assertNull(selected);
+    }
 }

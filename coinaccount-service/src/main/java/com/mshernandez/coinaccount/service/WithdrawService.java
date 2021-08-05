@@ -107,16 +107,18 @@ public class WithdrawService
         long feeRateSatKb = walletService.estimateSmartFee(blockConfirmationTarget).getFeeRate().getSatAmount();
         long inputFee = (long) Math.ceil(P2PKH_INPUT_VSIZE * feeRateSatKb / 1000.0);
         long totalFees = (long) Math.ceil(BASE_WITHDRAW_TX_SIZE * feeRateSatKb / 1000.0);
-        CoinSelector<Deposit> coinSelector;
+        DepositShareEvaluator evaluator = new DepositShareEvaluator(initiator, inputFee);
+        Set<Deposit> inputDeposits;
         if (withdrawAll)
         {
-            coinSelector = new MaxAmountCoinSelector<>();
+            CoinSelector<Deposit> coinSelector = new MaxAmountCoinSelector<>();
+            inputDeposits = coinSelector.selectInputs(evaluator, initiator.getDeposits(), totalFees);
         }
         else
         {
-            coinSelector = new BinarySearchCoinSelector<>();
+            CoinSelector<Deposit> coinSelector = new BinarySearchCoinSelector<>();
+            inputDeposits = coinSelector.selectInputs(evaluator, initiator.getDeposits(), amount);
         }
-        Set<Deposit> inputDeposits = coinSelector.selectInputs(new DepositShareEvaluator(initiator, inputFee), initiator.getDeposits(), amount);
         if (inputDeposits == null)
         {
             throw new CannotAffordFeesException();
@@ -134,11 +136,6 @@ public class WithdrawService
         // Form TX Outputs
         long withdrawAmount = withdrawAll ? (totalOwnedValue - totalFees) : amount;
         long changeAmount = totalInputValue - (withdrawAmount + totalFees);
-        // Make Sure That Account Can Afford Combined Fees
-        if (withdrawAmount <= 0L)
-        {
-            throw new CannotAffordFeesException();
-        }
         Map<String, Long> txOutputs = new HashMap<>();
         txOutputs.put(destAddress, withdrawAmount);
         if (changeAmount > 0L)
