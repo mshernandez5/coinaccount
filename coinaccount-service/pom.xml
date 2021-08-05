@@ -15,8 +15,36 @@
   <artifactId>coinaccount-service</artifactId>
   <packaging>jar</packaging>
 
+  <!-- Quarkus Version & Project Properties-->
+  <properties>
+    <compiler-plugin.version>3.8.1</compiler-plugin.version>
+    <maven.compiler.parameters>true</maven.compiler.parameters>
+    <maven.compiler.source>11</maven.compiler.source>
+    <maven.compiler.target>11</maven.compiler.target>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+    <quarkus.platform.artifact-id>quarkus-universe-bom</quarkus.platform.artifact-id>
+    <quarkus.platform.group-id>io.quarkus</quarkus.platform.group-id>
+    <quarkus.platform.version>2.0.3.Final</quarkus.platform.version>
+    <surefire-plugin.version>3.0.0-M5</surefire-plugin.version>
+    <maven-dependency-plugin-version>3.2.0</maven-dependency-plugin-version>
+  </properties>
+
+  <!-- All Quarkus Dependencies Same Version -->
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>${quarkus.platform.group-id}</groupId>
+        <artifactId>${quarkus.platform.artifact-id}</artifactId>
+        <version>${quarkus.platform.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
   <dependencies>
-    <!-- gRPC API Stubs -->
+    <!-- gRPC API Proto Source -->
     <dependency>
       <groupId>com.mshernandez.coinaccount</groupId>
       <artifactId>coinaccount-api</artifactId>
@@ -80,6 +108,36 @@
 
   <build>
     <plugins>
+      <!-- Unpack Proto Definitions For Code Generation -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <version>${maven-dependency-plugin-version}</version>
+        <executions>
+          <execution>
+            <?m2e ignore?>
+            <id>unpack</id>
+            <phase>validate</phase>
+            <goals>
+              <goal>unpack</goal>
+            </goals>
+            <configuration>
+              <artifactItems>
+                <artifactItem>
+                  <groupId>com.mshernandez.coinaccount</groupId>
+                  <artifactId>coinaccount-api</artifactId>
+                  <version>0.0.1-SNAPSHOT</version>
+                  <type>jar</type>
+                  <overWrite>true</overWrite>
+                  <outputDirectory>src/main/proto</outputDirectory>
+                  <includes>**/*.proto</includes>
+                </artifactItem>
+              </artifactItems>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
       <!-- Quarkus -->
       <plugin>
         <groupId>${quarkus.platform.group-id}</groupId>
