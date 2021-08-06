@@ -94,27 +94,10 @@ public class Account
     private long version;
 
     /**
-     * Creates a new account capable of holding
-     * in-game funds but cannot deposit from or
-     * withdraw to an external wallet.
-     * 
-     * @param id The player UUID to associate with the account.
-     */
-    public Account(UUID id)
-    {
-        this.id = id;
-        balances = new HashSet<>();
-        depositAddress = "";
-        returnAddress = "";
-        processedDepositIDs = new HashSet<>();
-        version = 0L;
-    }
-
-    /**
-     * Creates a new user account.
+     * Creates a new account.
      * There should only be one account per user.
      * 
-     * @param id The player UUID to associate with the account.
+     * @param id The UUID to associate with the account.
      * @param depositAddress A wallet deposit address for this account.
      */
     public Account(UUID id, String depositAddress)

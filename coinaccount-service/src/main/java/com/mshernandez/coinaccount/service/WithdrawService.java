@@ -72,7 +72,7 @@ public class WithdrawService
 
     /**
      * Initiates a withdrawal that will not be sent to the network
-     * until player confirmation is received.
+     * until further confirmation is received.
      * 
      * @param initiatorId The ID of the account initiating the withdrawal.
      * @param destAddress The wallet address the account is attempting to withdraw to.

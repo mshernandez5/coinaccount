@@ -21,15 +21,15 @@ import javax.persistence.Version;
 /**
  * Saves details of a deposit transaction
  * and distributes ownership of the received
- * coins among server players.
+ * coins among accounts.
  * <p>
  * Basically represents a UTXO that can be split
- * up among many players.
+ * up among many accounts.
  * <p>
- * For example, if player #1 deposits 1000 sats
- * and gives 250 to player #2 in game, then the
+ * For example, if account #1 deposits 1000 sats
+ * and transfers 250 to account #2, then the
  * deposit holding the 1000 sats will allocate
- * 750 sats to player #1 and 250 sats to player #2.
+ * 750 sats to account #1 and 250 sats to account #2.
  */
 @Entity
 @IdClass(DepositKey.class)
@@ -88,11 +88,11 @@ public class Deposit
     private long version;
 
     /**
-     * Save transaction details for player deposits.
+     * Create a new deposit.
      * 
-     * @param TXID The blockchain transaction ID.
-     * @param vout The vout index.
-     * @param total The total number of sats received in the transaction.
+     * @param TXID The deposit transaction ID.
+     * @param vout The vout index for this output.
+     * @param total The total number of sats received in the output.
      */
     public Deposit(String TXID, int vout, long total)
     {
@@ -114,9 +114,10 @@ public class Deposit
     }
 
     /**
-     * Get the unique ID for this transaction.
+     * Get the TXID of the transaction which
+     * created this deposit.
      * 
-     * @return A blockchain transaction ID.
+     * @return The deposit transaction ID.
      */
     public String getTXID()
     {
