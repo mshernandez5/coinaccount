@@ -1,0 +1,71 @@
+:root
+{
+    --background-color: whitesmoke;
+    --common-border-radius: 5px;
+}
+
+html, body
+{
+    /* Reset Browser Margins */
+    margin: 0;
+    /* Make Full Space Available */
+    width: 100%;
+    height: 100%;
+    /* No Overflow / Scroll */
+    overflow: hidden;
+    /* Default Font */
+    font: 1.25rem 'Abel Regular', sans-serif;
+}
+
+body
+{
+    
+    /* Default Background */
+    background: var(--background-color);
+    /* Child Positioning */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+}
+
+#status-bar
+{
+    margin-top: 15px;
+    display: flex;
+    align-items: center;
+}
+
+#status-bar div:first-child
+{
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: end;
+}
+
+#status-bar img:first-child
+{
+    margin-right: auto;
+}
+
+#logo
+{
+    min-width: 15vw;
+    min-height: 5vh;
+}
+
+.box
+{
+    width: 95%;
+    background-color: rgb(250, 250, 250);
+    box-shadow: gray 1px 1px 4px;
+    border-radius: var(--common-border-radius);
+}
+
+.inner-box-padded
+{
+    width: 100%;
+    height: 100%;
+    padding: 10px;
+}
