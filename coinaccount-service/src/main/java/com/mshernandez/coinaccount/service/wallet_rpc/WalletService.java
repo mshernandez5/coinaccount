@@ -27,6 +27,7 @@ import com.mshernandez.coinaccount.service.wallet_rpc.exception.WalletResponseEx
 import com.mshernandez.coinaccount.service.wallet_rpc.parameter.CreateRawTransactionInput;
 import com.mshernandez.coinaccount.service.wallet_rpc.result.DecodeRawTransactionResult;
 import com.mshernandez.coinaccount.service.wallet_rpc.result.EstimateSmartFeeResult;
+import com.mshernandez.coinaccount.service.wallet_rpc.result.GetAddressInfoResult;
 import com.mshernandez.coinaccount.service.wallet_rpc.result.GetWalletInfoResult;
 import com.mshernandez.coinaccount.service.wallet_rpc.result.ListUnspentUTXO;
 import com.mshernandez.coinaccount.service.wallet_rpc.result.SignRawTransactionWithWalletResult;
@@ -49,11 +50,11 @@ public class WalletService
     private static final String JSON_RPC_REQUEST_ID = "CoinAccount Wallet Service";
 
     // Connection Properties
-    private URI uri;
-    private String basicAuth;
+    private final URI uri;
+    private final String basicAuth;
 
     // JSON Object Mapper
-    private ObjectMapper objectMapper;
+    private final ObjectMapper objectMapper;
 
     /**
      * Creates a new wallet RPC service instance.
@@ -274,6 +275,14 @@ public class WalletService
         params.add(address);
         RPCRequest request = new RPCRequest().setMethod("validateaddress").setParams(params);
         return makeRequest(request, ValidateAddressResult.class);
+    }
+
+    public GetAddressInfoResult getAddressInfo(String address)
+    {
+        ArrayNode params = objectMapper.createArrayNode();
+        params.add(address);
+        RPCRequest request = new RPCRequest().setMethod("getaddressinfo").setParams(params);
+        return makeRequest(request, GetAddressInfoResult.class);
     }
 
     /**
