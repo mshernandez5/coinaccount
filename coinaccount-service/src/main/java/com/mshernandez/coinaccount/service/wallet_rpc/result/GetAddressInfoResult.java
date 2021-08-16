@@ -173,13 +173,4 @@ public class GetAddressInfoResult
      */
     @JsonProperty("hdmasterfingerprint")
     private String hdMasterFingerprint;
-
-    /**
-     * Array of labels associated with the
-     * address. Currently limited to one
-     * label but returned as an array to keep
-     * the API stable if there are multiple
-     * labels enabled in the future.
-     */
-    private List<String> labels;
 }
