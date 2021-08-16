@@ -38,14 +38,26 @@ public class LongEvaluator implements CoinEvaluator<Long>
     }
 
     @Override
-    public long cost(Long l)
+    public long evaluate(Long l)
+    {
+        return l.longValue();
+    }
+
+    @Override
+    public double cost(Long obj)
     {
         return fee;
     }
 
     @Override
-    public long evaluate(Long l)
+    public double nthInputCost(long index)
     {
-        return l.longValue();
+        return 0.0;
+    }
+
+    @Override
+    public long costImpactOnTarget(double cost)
+    {
+        return (long) cost;
     }
 }

@@ -57,18 +57,18 @@ public class InternalTransferPreselector
         {
             Deposit next = iterator.next();
             selected.add(next);
-            target -= evaluator.costAdjustedValue(next);
+            target -= evaluator.netValue(next);
         }
         // Select Remaining Deposits With Regular Algorithm
         if (target > 0L)
         {
             senderDeposits.removeAll(selected);
-            Set<Deposit> additional = selector.selectInputs(evaluator, senderDeposits, target);
-            if (additional == null)
+            CoinSelectionResult<Deposit> result = selector.selectInputs(evaluator, senderDeposits, target);
+            if (!result.isValid())
             {
                 return null;
             }
-            selected.addAll(additional);
+            selected.addAll(result.getSelection());
         }
         return selected;
     }

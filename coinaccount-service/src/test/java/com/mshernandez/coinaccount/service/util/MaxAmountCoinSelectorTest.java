@@ -1,8 +1,8 @@
 package com.mshernandez.coinaccount.service.util;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -15,11 +15,11 @@ public class MaxAmountCoinSelectorTest
     private CoinEvaluator<Long> evaluator = new LongEvaluator();
 
     @Test
-    public void emptyInputsShouldReturnNull()
+    public void emptyInputsShouldReturnInvalidResult()
     {
         Set<Long> inputs = new HashSet<>();
-        Set<Long> selected = coinSelector.selectInputs(evaluator, inputs, 0L);
-        assertNull(selected);
+        CoinSelectionResult<Long> result = coinSelector.selectInputs(evaluator, inputs, 0L);
+        assertFalse(result.isValid());
     }
 
     @Test
@@ -27,9 +27,9 @@ public class MaxAmountCoinSelectorTest
     {
         Set<Long> inputs = new HashSet<>();
         inputs.add(5L);
-        Set<Long> selected = coinSelector.selectInputs(evaluator, inputs, 0L);
-        assertNotNull(selected);
-        assertEquals(inputs, selected);
+        CoinSelectionResult<Long> result = coinSelector.selectInputs(evaluator, inputs, 0L);
+        assertTrue(result.isValid());
+        assertEquals(inputs, result.getSelection());
     }
 
     @Test
@@ -42,9 +42,9 @@ public class MaxAmountCoinSelectorTest
         inputs.add(10L);
         inputs.add(20L);
         inputs.add(40L);
-        Set<Long> selected = coinSelector.selectInputs(evaluator, inputs, 0L);
-        assertNotNull(selected);
-        assertEquals(inputs, selected);
+        CoinSelectionResult<Long> result = coinSelector.selectInputs(evaluator, inputs, 0L);
+        assertTrue(result.isValid());
+        assertEquals(inputs, result.getSelection());
     }
 
     @Test
@@ -55,9 +55,9 @@ public class MaxAmountCoinSelectorTest
         inputs.add(10L);
         Set<Long> expected = new HashSet<>();
         expected.add(10L);
-        Set<Long> selected = coinSelector.selectInputs(evaluator, inputs, 0L);
-        assertNotNull(selected);
-        assertEquals(expected, selected);
+        CoinSelectionResult<Long> result = coinSelector.selectInputs(evaluator, inputs, 0L);
+        assertTrue(result.isValid());
+        assertEquals(expected, result.getSelection());
     }
 
     @Test
@@ -75,9 +75,9 @@ public class MaxAmountCoinSelectorTest
             expected.add(l);
         }
         CoinEvaluator<Long> evaluatorSimulatingFees = new LongEvaluator(fee);
-        Set<Long> selected = coinSelector.selectInputs(evaluatorSimulatingFees, inputs, 0L);
-        assertNotNull(selected);
-        assertEquals(expected, selected);
+        CoinSelectionResult<Long> result = coinSelector.selectInputs(evaluatorSimulatingFees, inputs, 0L);
+        assertTrue(result.isValid());
+        assertEquals(expected, result.getSelection());
     }
 
     @Test
@@ -86,17 +86,18 @@ public class MaxAmountCoinSelectorTest
         Set<Long> inputs = new HashSet<>();
         inputs.add(20L);
         inputs.add(10L);
-        Set<Long> selected = coinSelector.selectInputs(evaluator, inputs, 30L);
-        assertEquals(inputs, selected);
+        CoinSelectionResult<Long> result = coinSelector.selectInputs(evaluator, inputs, 30L);
+        assertTrue(result.isValid());
+        assertEquals(inputs, result.getSelection());
     }
 
     @Test
-    public void minimumTargetNotMetShouldReturnNull()
+    public void minimumTargetNotMetShouldReturnInvalidResult()
     {
         Set<Long> inputs = new HashSet<>();
         inputs.add(20L);
         inputs.add(10L);
-        Set<Long> selected = coinSelector.selectInputs(evaluator, inputs, 31L);
-        assertNull(selected);
+        CoinSelectionResult<Long> result = coinSelector.selectInputs(evaluator, inputs, 31L);
+        assertFalse(result.isValid());
     }
 }

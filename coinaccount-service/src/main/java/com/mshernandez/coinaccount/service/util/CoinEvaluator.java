@@ -18,14 +18,6 @@ public interface CoinEvaluator<T> extends Comparator<T>
     boolean isValid(T obj);
 
     /**
-     * Determine the cost of selecting this particular input.
-     * 
-     * @param obj The object.
-     * @return The cost for selecting the object.
-     */
-    long cost(T obj);
-
-    /**
      * Evaluate an object into a discrete value
      * suitable for comparisons.
      * 
@@ -35,20 +27,54 @@ public interface CoinEvaluator<T> extends Comparator<T>
     long evaluate(T obj);
 
     /**
+     * Determine the cost of selecting this particular input.
+     * <p>
+     * The cost may use a different scale/unit than values.
+     * 
+     * @param obj The object.
+     * @return The cost for selecting the object.
+     */
+    double cost(T obj);
+
+    /**
+     * Determine any additional cost of selecting the nth input,
+     * independent of the standard value or cost of the input.
+     * <p>
+     * This may be used to add additional costs based solely on the
+     * number of inputs selected.
+     * 
+     * @param index The zero-based index representing the position of the next input.
+     * @return The cost of selecting the input at the given index.
+     */
+    double nthInputCost(long index);
+
+    /**
+     * Determine how much the given cost raises the selection target.
+     * 
+     * @param cost The cost.
+     * @return The impact of the cost on the selection target, in units of the target value.
+     */
+    long costImpactOnTarget(double cost);
+
+    /**
      * Get the net value of the object considering
-     * costs.
+     * its selection cost.
+     * <p>
+     * This should not include costs based on the
+     * number of inputs selected, as that would apply
+     * equally to any of the next selected inputs.
      * 
      * @param obj The object to evaluate.
-     * @return The adjusted value.
+     * @return The adjusted net value.
      */
-    default long costAdjustedValue(T obj)
+    default long netValue(T obj)
     {
-        return evaluate(obj) - cost(obj);
+        return evaluate(obj) - costImpactOnTarget(cost(obj));
     }
 
     @Override
     default int compare(T a, T b)
     {
-        return (int) (costAdjustedValue(a) - costAdjustedValue(b));
+        return (int) (netValue(a) - netValue(b));
     }
 }

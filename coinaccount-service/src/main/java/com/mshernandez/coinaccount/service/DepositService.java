@@ -14,12 +14,15 @@ import com.mshernandez.coinaccount.dao.DepositDao;
 import com.mshernandez.coinaccount.dao.WithdrawRequestDao;
 import com.mshernandez.coinaccount.entity.Account;
 import com.mshernandez.coinaccount.entity.Deposit;
+import com.mshernandez.coinaccount.entity.DepositType;
 import com.mshernandez.coinaccount.entity.WithdrawRequest;
 import com.mshernandez.coinaccount.service.wallet_rpc.WalletService;
 import com.mshernandez.coinaccount.service.wallet_rpc.exception.WalletRequestException;
 import com.mshernandez.coinaccount.service.wallet_rpc.result.ListUnspentUTXO;
 
 import org.eclipse.microprofile.config.inject.ConfigProperty;
+import org.jboss.logging.Logger;
+import org.jboss.logging.Logger.Level;
 
 /**
  * Processes UTXOs into deposits and allocates the funds
@@ -39,6 +42,9 @@ public class DepositService
 
     @ConfigProperty(name = "coinaccount.change.confirmations")
     int minChangeConfirmations;
+
+    @Inject
+    Logger logger;
 
     @Inject
     WalletService walletService;
@@ -83,8 +89,35 @@ public class DepositService
             {
                 if (!oldTXIDs.contains(utxo.getTxid()))
                 {
+                    // Determine Deposit Type
+                    DepositType type;
+                    String descriptor = utxo.getDesc();
+                    if (descriptor.startsWith("pkh"))
+                    {
+                        type = DepositType.P2PKH;
+                    }
+                    else if (descriptor.startsWith("sh(wpkh"))
+                    {
+                        type = DepositType.P2SH_P2WPKH;
+                    }
+                    else if (descriptor.startsWith("wpkh"))
+                    {
+                        type = DepositType.P2WPKH;
+                    }
+                    else if (descriptor.startsWith("tr"))
+                    {
+                        type = DepositType.P2TR;
+                    }
+                    else
+                    {
+                        // Wallet Generated Non-Supported Addresses For Account Deposits, Would Require Update To Address
+                        logger.log(Level.ERROR, "Unsupported Deposit Received By " + accountId  + ": " + descriptor);
+                        continue;
+                    }
+                    // Determine Deposit Amount
                     long depositAmount = utxo.getAmount().getSatAmount();
-                    Deposit deposit = new Deposit(utxo.getTxid(), utxo.getVout(), depositAmount);
+                    // Create, Persist, & Distribute New Deposit
+                    Deposit deposit = new Deposit(utxo.getTxid(), utxo.getVout(), type, depositAmount);
                     depositDao.persist(deposit);
                     deposit.setShare(account, depositAmount);
                     addedBalance += depositAmount;
@@ -124,8 +157,33 @@ public class DepositService
                     WithdrawRequest withdrawRequest = withdrawRequestDao.find(utxo.getTxid());
                     if (withdrawRequest != null)
                     {
+                        // Determine Deposit Type
+                        DepositType type;
+                        String descriptor = utxo.getDesc();
+                        if (descriptor.startsWith("pkh"))
+                        {
+                            type = DepositType.P2PKH;
+                        }
+                        else if (descriptor.startsWith("sh(wpkh"))
+                        {
+                            type = DepositType.P2SH_P2WPKH;
+                        }
+                        else if (descriptor.startsWith("wpkh"))
+                        {
+                            type = DepositType.P2WPKH;
+                        }
+                        else if (descriptor.startsWith("tr"))
+                        {
+                            type = DepositType.P2TR;
+                        }
+                        else
+                        {
+                            // Wallet Generated A Non-Supported Addresses For Change Deposits, Would Require Update To Address
+                            logger.log(Level.ERROR, "Unsupported Change Deposit Received: " + descriptor);
+                            continue;
+                        }
                         // Create Change Deposit
-                        Deposit deposit = new Deposit(utxo.getTxid(), utxo.getVout(), utxo.getAmount().getSatAmount());
+                        Deposit deposit = new Deposit(utxo.getTxid(), utxo.getVout(), type, utxo.getAmount().getSatAmount());
                         // Lookup Inputs To Change Deposit, Distribute Unused Balances
                         Set<Deposit> inputs = withdrawRequest.getInputs();
                         for (Deposit inputDeposit : inputs)

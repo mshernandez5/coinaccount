@@ -52,6 +52,12 @@ public class Deposit
     private long total;
 
     /**
+     * The type of UTXO backing this deposit.
+     */
+    @Column(name = "TYPE")
+    private DepositType type;
+
+    /**
      * All shares of this deposit.
      */
     @ElementCollection(fetch = FetchType.EAGER)
@@ -92,12 +98,14 @@ public class Deposit
      * 
      * @param TXID The deposit transaction ID.
      * @param vout The vout index for this output.
+     * @param size The vsize that this UTXO would take to use as an input.
      * @param total The total number of sats received in the output.
      */
-    public Deposit(String TXID, int vout, long total)
+    public Deposit(String TXID, int vout, DepositType type, long total)
     {
         this.TXID = TXID;
         this.vout = vout;
+        this.type = type;
         this.total = total;
         this.shares = new HashMap<>();
         withdrawLock = null;
@@ -132,6 +140,16 @@ public class Deposit
     public int getVout()
     {
         return vout;
+    }
+
+    /**
+     * Get the type of UTXO backing this deposit.
+     * 
+     * @return The type of UTXO backing this deposit.
+     */
+    public DepositType getType()
+    {
+        return type;
     }
 
     /**

@@ -25,6 +25,7 @@ import com.mshernandez.coinaccount.service.exception.WithdrawRequestAlreadyExist
 import com.mshernandez.coinaccount.service.exception.WithdrawRequestNotFoundException;
 import com.mshernandez.coinaccount.service.result.WithdrawRequestResult;
 import com.mshernandez.coinaccount.service.util.BinarySearchCoinSelector;
+import com.mshernandez.coinaccount.service.util.CoinSelectionResult;
 import com.mshernandez.coinaccount.service.util.CoinSelector;
 import com.mshernandez.coinaccount.service.util.DepositShareEvaluator;
 import com.mshernandez.coinaccount.service.util.MaxAmountCoinSelector;
@@ -32,7 +33,11 @@ import com.mshernandez.coinaccount.service.wallet_rpc.WalletService;
 import com.mshernandez.coinaccount.service.wallet_rpc.exception.WalletResponseException;
 import com.mshernandez.coinaccount.service.wallet_rpc.parameter.CreateRawTransactionInput;
 
+import static com.mshernandez.coinaccount.service.util.TXFeeUtilities.*;
+
 import org.eclipse.microprofile.config.inject.ConfigProperty;
+import org.jboss.logging.Logger;
+import org.jboss.logging.Logger.Level;
 
 /**
  * Initiates, cancels, and completes withdraw requests.
@@ -43,12 +48,6 @@ public class WithdrawService
     // Match sus Address Patterns
     private static final Pattern SUS_PATTERN = Pattern.compile(".*[^a-zA-Z0-9].*");
 
-    // Base Size + 2 Outputs (Destination & Change)
-    private static final int BASE_WITHDRAW_TX_SIZE = 10 + (34 * 2);
-
-    // Additional Size For Each Input (Including +1 Uncertainty Assuming Worst Case)
-    private static final int P2PKH_INPUT_VSIZE = 149;
-
     @ConfigProperty(name = "coinaccount.internal.account")
     UUID internalAccountId;
 
@@ -57,6 +56,9 @@ public class WithdrawService
 
     @ConfigProperty(name = "coinaccount.withdraw.expire")
     long withdrawExpireTime;
+
+    @Inject
+    Logger logger;
 
     @Inject
     WalletService walletService;
@@ -103,27 +105,46 @@ public class WithdrawService
             throw new NotEnoughWithdrawableFundsException();
         }
         Account internalAccount = accountDao.findOrCreate(internalAccountId);
-        // Select Input Deposits
-        long feeRateSatKb = walletService.estimateSmartFee(blockConfirmationTarget).getFeeRate().getSatAmount();
-        long inputFee = (long) Math.ceil(P2PKH_INPUT_VSIZE * feeRateSatKb / 1000.0);
-        long totalFees = (long) Math.ceil(BASE_WITHDRAW_TX_SIZE * feeRateSatKb / 1000.0);
-        DepositShareEvaluator evaluator = new DepositShareEvaluator(initiator, inputFee);
-        Set<Deposit> inputDeposits;
+        // Calculate Base TX Size Excluding Input Counter & Inputs (Unknown At This Point)
+        double vsize = TX_VERSION_VSIZE + TX_LOCKTIME_VSIZE + TX_SEGWIT_MARKER_VSIZE + getCounterByteSize(2);
+        // Calculate Size Of Output To External Address
+        try
+        {
+            vsize += getOutputSize(walletService.getAddressInfo(destAddress).getScriptPubKey());
+        }
+        catch (WalletResponseException e)
+        {
+            throw new InvalidAddressException();
+        }
+        // Calculate Size Of Change Output
+        vsize += getOutputSize(walletService.getAddressInfo(internalAccount.getDepositAddress()).getScriptPubKey());
+        // Get Current Fee Rate Estimate
+        long feeRateKb = walletService.estimateSmartFee(blockConfirmationTarget).getFeeRate().getSatAmount();
+        double feeRateByte = feeRateKb / 1000.0;
+        long totalFees = (long) Math.ceil(vsize * feeRateByte);
+        // Select Input Deposits Considering Fees
+        DepositShareEvaluator evaluator = new DepositShareEvaluator(initiator, feeRateByte);
+        CoinSelectionResult<Deposit> selectionResult;
         if (withdrawAll)
         {
             CoinSelector<Deposit> coinSelector = new MaxAmountCoinSelector<>();
-            inputDeposits = coinSelector.selectInputs(evaluator, initiator.getDeposits(), totalFees);
+            selectionResult = coinSelector.selectInputs(evaluator, initiator.getDeposits(), totalFees);
         }
         else
         {
             CoinSelector<Deposit> coinSelector = new BinarySearchCoinSelector<>();
-            inputDeposits = coinSelector.selectInputs(evaluator, initiator.getDeposits(), amount);
+            selectionResult = coinSelector.selectInputs(evaluator, initiator.getDeposits(), amount);
         }
-        if (inputDeposits == null)
+        if (!selectionResult.isValid())
         {
             throw new CannotAffordFeesException();
         }
-        // Get Corresponding Input UTXOs
+        Set<Deposit> inputDeposits = selectionResult.getSelection();
+        // Calculate Final TX Size Based On Selected Inputs
+        vsize += selectionResult.getSelectionCost();
+        totalFees = (long) Math.ceil(vsize * feeRateByte);
+        logger.log(Level.INFO, String.format("A withdraw request is being created with vsize %.2f costing %d.", vsize, totalFees));
+        // Begin Creating Transaction By Specifying UTXOs Corresponding To Selected Deposits
         long totalInputValue = 0L;
         long totalOwnedValue = 0L;
         Set<CreateRawTransactionInput> txInputs = new HashSet<>();
@@ -133,9 +154,15 @@ public class WithdrawService
             totalInputValue += inputDeposit.getTotal();
             totalOwnedValue += inputDeposit.getShare(initiator);
         }
-        // Form TX Outputs
+        // Specify TX Output Addresses & Amounts
         long withdrawAmount = withdrawAll ? (totalOwnedValue - totalFees) : amount;
         long changeAmount = totalInputValue - (withdrawAmount + totalFees);
+        // Should Never Happen, But Should Not Be Ignored If It Did
+        if (withdrawAmount < 0L || changeAmount < 0L)
+        {
+            logger.log(Level.ERROR, "Severe Input Selection / Fee Calculation Error");
+            throw new CannotAffordFeesException();
+        }
         Map<String, Long> txOutputs = new HashMap<>();
         txOutputs.put(destAddress, withdrawAmount);
         if (changeAmount > 0L)
@@ -154,11 +181,11 @@ public class WithdrawService
         }
         String signedTxHex = walletService.signRawTransactionWithWallet(unsignedTxHex).getHex();
         String withdrawTxid = walletService.decodeRawTransaction(signedTxHex).getTxid();
-        // Save Records
+        // Persist Withdraw Request For Future Confirmation With Timestamp
         long timestamp = System.currentTimeMillis();
         WithdrawRequest request = new WithdrawRequest(withdrawTxid, initiator, inputDeposits, withdrawAmount, totalFees, signedTxHex, timestamp);
         withdrawRequestDao.persist(request);
-        // Lock Input Deposits
+        // Lock Input Deposits, Prevent Attempts By Other Accounts To Withdraw Same UTXOs
         long remainingHoldAmount = request.getWithdrawAmount() + request.getFeeAmount();
         for (Deposit inputDeposit : request.getInputs())
         {

@@ -48,7 +48,7 @@ public class BinarySearchCoinSelector<T> implements CoinSelector<T>
      * select this parameter based on input size.
      * <p>
      * -2 indicates the algorithm will always rewind results
-     * despite increased cost. Using -1, m = n. The worst-case
+     * despite increased cost. Using -2, m = n. The worst-case
      * complexity will be n^2*log(n) which is quite bad when
      * a large number of inputs are used.
      * <p>
@@ -82,7 +82,7 @@ public class BinarySearchCoinSelector<T> implements CoinSelector<T>
     }
 
     @Override
-    public Set<T> selectInputs(CoinEvaluator<T> evaluator, Set<T> inputs, long target)
+    public CoinSelectionResult<T> selectInputs(CoinEvaluator<T> evaluator, Set<T> inputs, long target)
     {
         // Get Actual Max Stack Depth Based On Setting
         int maxRewind;
@@ -118,10 +118,18 @@ public class BinarySearchCoinSelector<T> implements CoinSelector<T>
             .sorted(evaluator)
             .collect(Collectors.toCollection(ArrayList::new));
         // Store Selected Inputs & Where They Were Found
-        Deque<Pair<T, Integer>> selectedInputs = new ArrayDeque<>(sorted.size());
+        Deque<SelectionEntry> selectedInputs = new ArrayDeque<>(sorted.size());
         // Keep Selecting Inputs Until Target Value Is Met
-        while (target > 0L && !sorted.isEmpty())
+        long amountNeeded = target; // The remaining amount needed to reach the target.
+        long selectionValue = 0L; // The total value of the selected inputs not considering their costs.
+        double selectionCost = 0.0; // The total costs of the selected inputs.
+        while (amountNeeded > 0L && !sorted.isEmpty())
         {
+            // Keep Track Of Costs To Select Next Input
+            double costChange = evaluator.nthInputCost(selectedInputs.size());
+            selectionCost += costChange;
+            // Update New Selection Target
+            amountNeeded = target + evaluator.costImpactOnTarget(selectionCost) - selectionValue;
             // Binary Search For Next Input Closest To Current Target Amount
             int first = 0,
                 last = sorted.size() - 1,
@@ -129,17 +137,17 @@ public class BinarySearchCoinSelector<T> implements CoinSelector<T>
             while (first <= last)
             {
                 mid = (first + last) / 2;
-                long value = evaluator.costAdjustedValue(sorted.get(mid));
-                double difference = absDiff(value, target);
+                long value = evaluator.netValue(sorted.get(mid));
+                double difference = absDiff(value, amountNeeded);
                 // Check If Any Smaller Deposits Closer Or Equally Close To Target Amount
                 if (mid - 1 >= first
-                    && absDiff(evaluator.costAdjustedValue(sorted.get(mid - 1)), target) <= difference)
+                    && absDiff(evaluator.netValue(sorted.get(mid - 1)), amountNeeded) <= difference)
                 {
                     last = mid - 1;
                 }
                 // Check If Any Larger Deposits Closer To Target Amount
                 else if (mid + 1 <= last
-                    && absDiff(evaluator.costAdjustedValue(sorted.get(mid + 1)), target) < difference)
+                    && absDiff(evaluator.netValue(sorted.get(mid + 1)), amountNeeded) < difference)
                 {
                     first = mid + 1;
                 }
@@ -147,36 +155,42 @@ public class BinarySearchCoinSelector<T> implements CoinSelector<T>
                 else
                 {
                     T selected = sorted.get(mid);
-                    Pair<T, Integer> lastSelected;
+                    SelectionEntry lastSelected;
                     // If Selected Input Larger Than Last Selected, Try To Only Use Larger Input
                     int numRewinds = 0;
                     while (numRewinds < maxRewind
                         && (lastSelected = selectedInputs.peek()) != null
-                        && value > evaluator.evaluate(lastSelected.getKey()))
+                        && value > lastSelected.getValue())
                     {
                         numRewinds++;
-                        target += evaluator.costAdjustedValue(lastSelected.getKey());
-                        sorted.add(lastSelected.getVal(), selectedInputs.pop().getKey());
+                        selectionValue -= lastSelected.getValue();
+                        selectionCost -= lastSelected.getTotalSelectionCosts();
+                        sorted.add(lastSelected.getIndex(), selectedInputs.pop().getInput());
                     }
-                    selectedInputs.push(new Pair<>(selected, sorted.indexOf(selected)));
+                    double inputCost = evaluator.cost(selected);
+                    costChange += inputCost;
+                    selectedInputs.push(new SelectionEntry(selected, sorted.indexOf(selected), value, costChange));
                     sorted.remove(selected);
-                    target -= value;
+                    selectionValue += value;
+                    selectionCost += inputCost;
                     break;
                 }
             }
+            // Update New Selection Target
+            amountNeeded = target + evaluator.costImpactOnTarget(selectionCost) - selectionValue;
         }
         // Return null If Target Value Couldn't Be Fulfilled
-        if (target > 0L)
+        if (amountNeeded > 0L)
         {
-            return null;
+            return new CoinSelectionResult<T>(null, 0);
         }
         // Set Iterator Will Follow Order Of Selection
         Set<T> result = new LinkedHashSet<>(selectedInputs.size());
         while (!selectedInputs.isEmpty())
         {
-            result.add(selectedInputs.removeLast().getKey());
+            result.add(selectedInputs.removeLast().getInput());
         }
-        return result;
+        return new CoinSelectionResult<>(result, selectionCost);
     }
 
     /**
@@ -189,5 +203,67 @@ public class BinarySearchCoinSelector<T> implements CoinSelector<T>
     private double absDiff(long a, long b)
     {
         return Math.abs(a - b);
+    }
+
+    /**
+     * Used to store intermediate selection
+     * results.
+     */
+    private class SelectionEntry
+    {
+        private T input;
+        private int index;
+        private long value;
+        private double netTotalCostChange;
+
+        SelectionEntry(T input, int index, long value, double netTotalCostChange)
+        {
+            this.input = input;
+            this.index = index;
+            this.value = value;
+            this.netTotalCostChange = netTotalCostChange;
+        }
+
+        /**
+         * Get the selected input.
+         * 
+         * @return The selected input for this entry.
+         */
+        T getInput()
+        {
+            return input;
+        }
+
+        /**
+         * Get the index this input was taken from.
+         * 
+         * @return The index in the collection this input was taken from.
+         */
+        int getIndex()
+        {
+            return index;
+        }
+
+        /**
+         * Get the value of this input.
+         * 
+         * @return The value of this input.
+         */
+        long getValue()
+        {
+            return value;
+        }
+
+        /**
+         * Get the net change in total costs after
+         * selecting this input, including costs
+         * due to the number of inputs selected.
+         * 
+         * @return The net change in total selection costs.
+         */
+        double getTotalSelectionCosts()
+        {
+            return netTotalCostChange;
+        }
     }
 }

@@ -14,19 +14,22 @@ import java.util.Set;
 public class MaxAmountCoinSelector<T> implements CoinSelector<T>
 {
     @Override
-    public Set<T> selectInputs(CoinEvaluator<T> evaluator, Set<T> inputs, long minTarget)
+    public CoinSelectionResult<T> selectInputs(CoinEvaluator<T> evaluator, Set<T> inputs, long minTarget)
     {
-        Set<T> selectedInputs = new HashSet<>();
-        long totalSelectedValue = 0L;
+        Set<T> selected = new HashSet<>();
+        long totalNetValue = 0L;
+        double totalCost = 0.0;
         for (T input : inputs)
         {
-            long costAdjustedValue = evaluator.costAdjustedValue(input);
-            if (evaluator.isValid(input) && costAdjustedValue > 0L)
+            long netValue = evaluator.netValue(input);
+            if (evaluator.isValid(input) && netValue > 0L)
             {
-                selectedInputs.add(input);
-                totalSelectedValue += costAdjustedValue;
+                totalNetValue += netValue;
+                totalCost += evaluator.cost(input) + evaluator.nthInputCost(selected.size());
+                selected.add(input);
             }
         }
-        return selectedInputs.isEmpty() || totalSelectedValue < minTarget ? null : selectedInputs;
+        minTarget += evaluator.costImpactOnTarget(totalCost);
+        return selected.isEmpty() || totalNetValue < minTarget ? new CoinSelectionResult<>(null, 0L) : new CoinSelectionResult<>(selected, totalCost);
     }
 }

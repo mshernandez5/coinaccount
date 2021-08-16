@@ -1,8 +1,8 @@
 package com.mshernandez.coinaccount.service.util;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.HashSet;
 import java.util.Iterator;
@@ -21,11 +21,11 @@ public class BinarySearchCoinSelectorTest
     private CoinEvaluator<Long> evaluator = new LongEvaluator();
 
     @Test
-    public void emptyInputsShouldReturnNull()
+    public void emptyInputsShouldReturnInvalidResult()
     {
         Set<Long> inputs = new HashSet<>();
-        Set<Long> selected = coinSelector.selectInputs(evaluator, inputs, 5L);
-        assertNull(selected);
+        CoinSelectionResult<Long> result = coinSelector.selectInputs(evaluator, inputs, 5L);
+        assertFalse(result.isValid());
     }
 
     @Test
@@ -33,9 +33,9 @@ public class BinarySearchCoinSelectorTest
     {
         Set<Long> inputs = new HashSet<>();
         inputs.add(5L);
-        Set<Long> selected = coinSelector.selectInputs(evaluator, inputs, 5L);
-        assertNotNull(selected);
-        assertEquals(inputs, selected);
+        CoinSelectionResult<Long> result = coinSelector.selectInputs(evaluator, inputs, 5L);
+        assertTrue(result.isValid());
+        assertEquals(inputs, result.getSelection());
     }
 
     @Test
@@ -43,18 +43,18 @@ public class BinarySearchCoinSelectorTest
     {
         Set<Long> inputs = new HashSet<>();
         inputs.add(5L);
-        Set<Long> selected = coinSelector.selectInputs(evaluator, inputs, 2L);
-        assertNotNull(selected);
-        assertEquals(inputs, selected);
+        CoinSelectionResult<Long> result = coinSelector.selectInputs(evaluator, inputs, 2L);
+        assertTrue(result.isValid());
+        assertEquals(inputs, result.getSelection());
     }
 
     @Test
-    public void singleInputLargerTargetShouldReturnNull()
+    public void singleInputLessThanTargetShouldReturnInvalidResult()
     {
         Set<Long> inputs = new HashSet<>();
         inputs.add(5L);
-        Set<Long> selected = coinSelector.selectInputs(evaluator, inputs, 8L);
-        assertNull(selected);
+        CoinSelectionResult<Long> result = coinSelector.selectInputs(evaluator, inputs, 8L);
+        assertFalse(result.isValid());
     }
 
     @Test
@@ -63,9 +63,9 @@ public class BinarySearchCoinSelectorTest
         Set<Long> inputs = new HashSet<>();
         inputs.add(5L);
         inputs.add(10L);
-        Set<Long> selected = coinSelector.selectInputs(evaluator, inputs, 15L);
-        assertNotNull(selected);
-        assertEquals(inputs, selected);
+        CoinSelectionResult<Long> result = coinSelector.selectInputs(evaluator, inputs, 15L);
+        assertTrue(result.isValid());
+        assertEquals(inputs, result.getSelection());
     }
 
     @Test
@@ -76,19 +76,19 @@ public class BinarySearchCoinSelectorTest
         inputs.add(10L);
         Set<Long> expected = new HashSet<>();
         expected.add(10L);
-        Set<Long> selected = coinSelector.selectInputs(evaluator, inputs, 10L);
-        assertNotNull(selected);
-        assertEquals(expected, selected);
+        CoinSelectionResult<Long> result = coinSelector.selectInputs(evaluator, inputs, 10L);
+        assertTrue(result.isValid());
+        assertEquals(expected, result.getSelection());
     }
 
     @Test
-    public void multiInputSomeInvalidShouldReturnNull()
+    public void multiInputSomeInvalidShouldReturnInvalidResult()
     {
         Set<Long> inputs = new HashSet<>();
         inputs.add(5L);
         inputs.add(-10L);
-        Set<Long> selected = coinSelector.selectInputs(evaluator, inputs, 10L);
-        assertNull(selected);
+        CoinSelectionResult<Long> result = coinSelector.selectInputs(evaluator, inputs, 10L);
+        assert(!result.isValid());
     }
 
     @Test
@@ -105,9 +105,9 @@ public class BinarySearchCoinSelectorTest
         expected.add(40L);
         expected.add(20L);
         expected.add(5L);
-        Set<Long> selected = coinSelector.selectInputs(evaluator, inputs, 65L);
-        assertNotNull(selected);
-        assertEquals(expected, selected);
+        CoinSelectionResult<Long> result = coinSelector.selectInputs(evaluator, inputs, 65L);
+        assertTrue(result.isValid());
+        assertEquals(expected, result.getSelection());
     }
 
     @Test
@@ -121,9 +121,9 @@ public class BinarySearchCoinSelectorTest
         inputs.add(100L);
         Set<Long> expected = new HashSet<>();
         expected.add(70L);
-        Set<Long> selected = coinSelector.selectInputs(evaluator, inputs, 45L);
-        assertNotNull(selected);
-        assertEquals(expected, selected);
+        CoinSelectionResult<Long> result = coinSelector.selectInputs(evaluator, inputs, 45L);
+        assertTrue(result.isValid());
+        assertEquals(expected, result.getSelection());
     }
 
     @Test
@@ -135,10 +135,10 @@ public class BinarySearchCoinSelectorTest
             inputs.add(l);
         }
         long target = 281625L;
-        Set<Long> selected = coinSelector.selectInputs(evaluator, inputs, target);
-        assertNotNull(selected);
+        CoinSelectionResult<Long> result = coinSelector.selectInputs(evaluator, inputs, target);
+        assertTrue(result.isValid());
         long sum = 0L;
-        for (long l : selected)
+        for (long l : result.getSelection())
         {
             sum += l;
         }
@@ -159,9 +159,10 @@ public class BinarySearchCoinSelectorTest
         expectedOrder.add(40L);
         expectedOrder.add(4L);
         expectedOrder.add(1L);
-        Set<Long> selected = coinSelector.selectInputs(evaluator, inputs, target);
+        CoinSelectionResult<Long> result = coinSelector.selectInputs(evaluator, inputs, target);
+        assertTrue(result.isValid());
         Iterator<Long> expectedIterator = expectedOrder.iterator();
-        Iterator<Long> selectedIterator = selected.iterator();
+        Iterator<Long> selectedIterator = result.getSelection().iterator();
         while (expectedIterator.hasNext())
         {
             assert(selectedIterator.hasNext());
