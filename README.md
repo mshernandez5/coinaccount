@@ -12,7 +12,7 @@ If the account chooses to transfer a portion of their balance to another account
 
 In cases where an unspent output is distributed among multiple accounts and one of the accounts wishes to withdraw a portion of their share, CoinAccount will receive the change output and internally distribute it according to the remaining shares of the now spent output. It takes one confirmation before the change is accepted and other accounts are allowed to withdraw their remaining shares. Accounts may transfer balances internally between each other at all times, including during pending withdrawals.
 
-## How do you interact with it?
+## How can programs interact with it?
 CoinAccount defines its API in language-neutral [protocol buffers](https://developers.google.com/protocol-buffers). Since the project uses [gRPC](https://grpc.io/) for communication, you can compile client stubs to interact with CoinAccount in the language of your choice.
 
 The protobuf API is located in the `coinaccount-api` module, while the service implementations are in the `coinaccount-service` module.
@@ -44,6 +44,8 @@ rpcport=5888
 ```
 
 Please change the username and password to non-default values. After saving the new configuration, the changes will take effect after starting `vertcoind` (recommended, headless) or `vertcoin-qt` (graphical interface).
+
+Make sure to let the node fully sync before using CoinAccount. Also be aware that a withdraw request may fail if the node has not been running long enough, regardless of whether or not it has caught up with the blockchain. Without running long enough the node will not be able to provide fee estimates to CoinAccount which are essential to withdrawals. This is especially relevant to smaller coins which do not have a large volume of transactions to use as a basis for fees.
 
 ## MariaDB Configuration
 You will need to install MariaDB to run CoinAccount. For Linux users, it is available in the default repositories for most distributions.
