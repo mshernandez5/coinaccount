@@ -76,11 +76,12 @@ enum ResponseType
     ERROR_INSUFFICIENT_FUNDS = 4; // An account does not have enough total funds to complete the request.
     ERROR_NOT_ENOUGH_WITHDRAWABLE_FUNDS = 5; // The account cannot currently withdraw this amount.
     ERROR_CANNOT_AFFORD_FEES = 6; // The account cannot afford the fees to withdraw the desired amount.
-    ERROR_WITHDRAW_REQUEST_ALREADY_EXISTS = 7; // A withdraw request must not exist but an existing one was found.
-    ERROR_WITHDRAW_REQUEST_NOT_FOUND = 8; // A withdraw request must exist but was not found.
-    ERROR_INVALID_ADDRESS = 9; // The provided address is invalid.
-    ERROR_INTERNAL = 10; // There was an internal service error.
-    ERROR_UNKNOWN = 11; // An unknown error occured.
+    ERROR_CANNOT_ESTIMATE_FEES = 7; // The wallet was not able to estimate fees, likely because it has not ran long enough to do so.
+    ERROR_WITHDRAW_REQUEST_ALREADY_EXISTS = 8; // A withdraw request must not exist but an existing one was found.
+    ERROR_WITHDRAW_REQUEST_NOT_FOUND = 9; // A withdraw request must exist but was not found.
+    ERROR_INVALID_ADDRESS = 10; // The provided address is invalid.
+    ERROR_INTERNAL = 11; // There was an internal service error.
+    ERROR_UNKNOWN = 12; // An unknown error occured.
 }
 
 /**

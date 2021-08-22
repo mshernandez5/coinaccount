@@ -1,5 +1,7 @@
 package com.mshernandez.coinaccount.service.wallet_rpc.result;
 
+import java.util.List;
+
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.mshernandez.coinaccount.service.wallet_rpc.SatAmount;
 
@@ -17,6 +19,8 @@ public class EstimateSmartFeeResult
      */
     @JsonProperty("feerate")
     private SatAmount feeRate;
+
+    private List<String> errors;
 
     /**
      * Block number where the estimate was found.

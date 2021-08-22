@@ -14,6 +14,7 @@ import com.mshernandez.coinaccount.grpc.WithdrawServiceOuterClass.InitiateWithdr
 import com.mshernandez.coinaccount.grpc.WithdrawServiceOuterClass.InitiateWithdrawResponse;
 import com.mshernandez.coinaccount.service.WithdrawService;
 import com.mshernandez.coinaccount.service.exception.CannotAffordFeesException;
+import com.mshernandez.coinaccount.service.exception.FeeEstimationException;
 import com.mshernandez.coinaccount.service.exception.InsufficientFundsException;
 import com.mshernandez.coinaccount.service.exception.InvalidAddressException;
 import com.mshernandez.coinaccount.service.exception.NotEnoughWithdrawableFundsException;
@@ -79,6 +80,10 @@ public class WithdrawController extends WithdrawServiceImplBase
             else if (e instanceof CannotAffordFeesException)
             {
                 responseType = ResponseType.ERROR_CANNOT_AFFORD_FEES;
+            }
+            else if (e instanceof FeeEstimationException)
+            {
+                responseType = ResponseType.ERROR_CANNOT_ESTIMATE_FEES;
             }
             else if (e instanceof WithdrawRequestAlreadyExistsException)
             {

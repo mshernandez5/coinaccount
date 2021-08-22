@@ -19,6 +19,7 @@ import com.mshernandez.coinaccount.entity.Account;
 import com.mshernandez.coinaccount.entity.Deposit;
 import com.mshernandez.coinaccount.entity.WithdrawRequest;
 import com.mshernandez.coinaccount.service.exception.CannotAffordFeesException;
+import com.mshernandez.coinaccount.service.exception.FeeEstimationException;
 import com.mshernandez.coinaccount.service.exception.InvalidAddressException;
 import com.mshernandez.coinaccount.service.exception.NotEnoughWithdrawableFundsException;
 import com.mshernandez.coinaccount.service.exception.WithdrawRequestAlreadyExistsException;
@@ -32,6 +33,7 @@ import com.mshernandez.coinaccount.service.util.MaxAmountCoinSelector;
 import com.mshernandez.coinaccount.service.wallet_rpc.WalletService;
 import com.mshernandez.coinaccount.service.wallet_rpc.exception.WalletResponseException;
 import com.mshernandez.coinaccount.service.wallet_rpc.parameter.CreateRawTransactionInput;
+import com.mshernandez.coinaccount.service.wallet_rpc.result.EstimateSmartFeeResult;
 
 import static com.mshernandez.coinaccount.service.util.TXFeeUtilities.*;
 
@@ -119,7 +121,18 @@ public class WithdrawService
         // Calculate Size Of Change Output
         vsize += getOutputSize(walletService.getAddressInfo(internalAccount.getDepositAddress()).getScriptPubKey());
         // Get Current Fee Rate Estimate
-        long feeRateKb = walletService.estimateSmartFee(blockConfirmationTarget).getFeeRate().getSatAmount();
+        EstimateSmartFeeResult estimateSmartFeeResult = walletService.estimateSmartFee(blockConfirmationTarget);
+        if (!estimateSmartFeeResult.getErrors().isEmpty())
+        {
+            for (String errorMessage : estimateSmartFeeResult.getErrors())
+            {
+                logger.log(Level.WARN, "Error estimating fees for withdrawal!"
+                    + " Your node may not have been running long enough to properly estimate fees."
+                    + " Error Message: " + errorMessage);
+            }
+            throw new FeeEstimationException();
+        }
+        long feeRateKb = estimateSmartFeeResult.getFeeRate().getSatAmount();
         double feeRateByte = feeRateKb / 1000.0;
         long totalFees = (long) Math.ceil(vsize * feeRateByte);
         // Select Input Deposits Considering Fees
