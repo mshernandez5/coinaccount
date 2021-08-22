@@ -122,7 +122,7 @@ public class WithdrawService
         vsize += getOutputSize(walletService.getAddressInfo(internalAccount.getDepositAddress()).getScriptPubKey());
         // Get Current Fee Rate Estimate
         EstimateSmartFeeResult estimateSmartFeeResult = walletService.estimateSmartFee(blockConfirmationTarget);
-        if (!estimateSmartFeeResult.getErrors().isEmpty())
+        if (estimateSmartFeeResult.getErrors() != null)
         {
             for (String errorMessage : estimateSmartFeeResult.getErrors())
             {
