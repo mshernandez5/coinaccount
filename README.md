@@ -45,7 +45,7 @@ rpcport=5888
 
 Please change the username and password to non-default values. After saving the new configuration, the changes will take effect after starting `vertcoind` (recommended, headless) or `vertcoin-qt` (graphical interface).
 
-Make sure to let the node fully sync before using CoinAccount. Also be aware that a withdraw request may fail if the node has not been running long enough, regardless of whether or not it has caught up with the blockchain. Without running long enough the node will not be able to provide fee estimates to CoinAccount which are essential to withdrawals. This is especially relevant to smaller coins which do not have a large volume of transactions to use as a basis for fees.
+Make sure to let the node fully sync before using CoinAccount. Be aware that a withdraw request may fail if the node has not been running long enough regardless of whether or not it has caught up with the blockchain. Without running long enough the node will not be able to provide fee estimates to CoinAccount which are essential to withdrawals. This is especially relevant to smaller coins which do not have a large volume of transactions to use as a basis for fees.
 
 ## MariaDB Configuration
 You will need to install MariaDB to run CoinAccount. For Linux users, it is available in the default repositories for most distributions.
@@ -59,7 +59,7 @@ Once installed, you must take a few steps to make the database accessible to Coi
 If you are not sure how to complete these steps then the [MariaDB quickstart script](mariadb-quickstart/mariadb-quickstart.md) included in this project should help you take care of them.
 
 ## CoinAccount Configuration
-CoinAccount will need to know how to connect to the wallet and database, so you must create a configuration file with this information. There should be a directory `config` containing a file `application.properties` with the following contents:
+CoinAccount will need to know how to connect to the wallet and database, so you must create a configuration file with this information. In the same directory as the application JAR, there should be a directory `config` containing a file `application.properties` with the following contents:
 
 ```properties
 ############################################################################
@@ -160,34 +160,18 @@ Property | Value
 `coinaccount.coin.symbol` | The symbol representing the coin in use, ex. `BTC`
 `coinaccount.coin.base.symbol` | A name for the most basic unit of currency, ex. `sat`
 
-## Packaging and running the application
+## Packaging & Running CoinAccount
 
-The application can be packaged using:
+The application can be packaged and installed to the local repository using:
 ```shell script
-./mvnw package
+mvn clean install
 ```
 It produces the `quarkus-run.jar` file in the `target/quarkus-app/` directory.
-Be aware that it’s not an _über-jar_ as the dependencies are copied into the `target/quarkus-app/lib/` directory.
+Be aware that it’s not an _über-jar_ as the required dependencies are stored in the `target/quarkus-app/lib/` directory.
 
 If you want to build an _über-jar_, execute the following command:
 ```shell script
-./mvnw package -Dquarkus.package.type=uber-jar
+mvn clean install -Dquarkus.package.type=uber-jar
 ```
 
-The application is now runnable using `java -jar target/quarkus-app/quarkus-run.jar`.
-
-## Creating a native executable
-
-You can create a native executable using: 
-```shell script
-./mvnw package -Pnative
-```
-
-Or, if you don't have GraalVM installed, you can run the native executable build in a container using: 
-```shell script
-./mvnw package -Pnative -Dquarkus.native.container-build=true
-```
-
-You can then execute your native executable with: `./target/coinaccount-0.0.1-SNAPSHOT-runner`
-
-If you want to learn more about building native executables, please consult https://quarkus.io/guides/maven-tooling.html.
+The application may be run using `java -jar quarkus-run.jar` assuming a valid configuration file has been created.
