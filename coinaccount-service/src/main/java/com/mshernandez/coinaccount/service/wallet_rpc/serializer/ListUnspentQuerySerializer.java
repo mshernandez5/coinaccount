@@ -33,7 +33,24 @@ public class ListUnspentQuerySerializer extends StdSerializer<ListUnspentQuery>
         // Query Options Object
         if (obj.getQueryOptions() != null)
         {
-            gen.writeObject(obj.getQueryOptions());
+            // Start Query Options Object
+            ListUnspentQuery.QueryOptions queryOptions = obj.getQueryOptions();
+            gen.writeStartObject();
+            gen.writeObjectField("minimumAmount", queryOptions.getMinimumAmount());
+            if (queryOptions.getMaximumAmount() != null)
+            {
+                gen.writeObjectField("maximumAmount", queryOptions.getMaximumAmount());
+            }
+            if (queryOptions.getMaximumCount() >= 0)
+            {
+                gen.writeObjectField("maximumCount", queryOptions.getMaximumCount());
+            }
+            if (queryOptions.getMinimumSumAmount() != null)
+            {
+                gen.writeObjectField("minimumSumAmount", queryOptions.getMinimumSumAmount());
+            }
+            gen.writeEndObject();
+            // End Query Options Object
         }
         gen.writeEndArray();
         // End Parameters Array

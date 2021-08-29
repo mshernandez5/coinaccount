@@ -140,10 +140,10 @@ public class ListUnspentQuery
 
         public QueryOptions()
         {
-            minimumAmount = null; // no value, exclude from serialization by default
-            maximumAmount = null; // no value, exclude from serialization by default
-            maximumCount = Integer.MAX_VALUE;
-            minimumSumAmount = null; // no value, exclude from serialization by default
+            minimumAmount = null; // default: 0
+            maximumAmount = null; // default: unlimited
+            maximumCount = -1; // default: unlimited
+            minimumSumAmount = null; // default: unlimited
         }
     }
 }
