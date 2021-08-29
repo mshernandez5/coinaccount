@@ -25,6 +25,7 @@ import com.mshernandez.coinaccount.service.wallet_rpc.exception.WalletRequestExc
 import com.mshernandez.coinaccount.service.wallet_rpc.exception.WalletResponseError;
 import com.mshernandez.coinaccount.service.wallet_rpc.exception.WalletResponseException;
 import com.mshernandez.coinaccount.service.wallet_rpc.parameter.CreateRawTransactionInput;
+import com.mshernandez.coinaccount.service.wallet_rpc.parameter.ListUnspentQuery;
 import com.mshernandez.coinaccount.service.wallet_rpc.result.DecodeRawTransactionResult;
 import com.mshernandez.coinaccount.service.wallet_rpc.result.EstimateSmartFeeResult;
 import com.mshernandez.coinaccount.service.wallet_rpc.result.GetAddressInfoResult;
@@ -32,7 +33,7 @@ import com.mshernandez.coinaccount.service.wallet_rpc.result.GetWalletInfoResult
 import com.mshernandez.coinaccount.service.wallet_rpc.result.ListUnspentUTXO;
 import com.mshernandez.coinaccount.service.wallet_rpc.result.SignRawTransactionWithWalletResult;
 import com.mshernandez.coinaccount.service.wallet_rpc.result.ValidateAddressResult;
-import com.mshernandez.coinaccount.service.wallet_rpc.serializer.SatAmountModule;
+import com.mshernandez.coinaccount.service.wallet_rpc.serializer.RPCModule;
 
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
@@ -76,7 +77,7 @@ public class WalletService
         basicAuth = Base64.getEncoder().encodeToString(credentials.getBytes());
         // Configure JSON Serialization
         this.objectMapper = objectMapper;
-        objectMapper.registerModule(new SatAmountModule());
+        objectMapper.registerModule(new RPCModule());
     }
 
     /**
@@ -305,6 +306,22 @@ public class WalletService
             addressNode.add(address);
         }
         params.add(addressNode);
+        RPCRequest request = new RPCRequest().setMethod("listunspent").setParams(params);
+        return makeRequest(request, (Class<List<ListUnspentUTXO>>)(Class<?>) List.class, true, ListUnspentUTXO.class);
+    }
+
+    /**
+     * Return all unspent outputs for the given addresses.
+     * 
+     * @param addresses The addresses to filter.
+     * @return A list of UTXO data.
+     * @throws WalletRequestException If there was an issue making the RPC request.
+     * @throws WalletResponseException If the response indicates an error.
+     */
+    @SuppressWarnings("unchecked")
+    public List<ListUnspentUTXO> listUnspent(ListUnspentQuery listUnspentQuery)
+    {
+        ArrayNode params = objectMapper.valueToTree(listUnspentQuery);
         RPCRequest request = new RPCRequest().setMethod("listunspent").setParams(params);
         return makeRequest(request, (Class<List<ListUnspentUTXO>>)(Class<?>) List.class, true, ListUnspentUTXO.class);
     }
