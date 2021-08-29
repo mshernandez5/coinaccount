@@ -82,7 +82,6 @@ public class DepositService
         long unconfirmedBalance = 0L;
         // Get UTXOs For Account
         ListUnspentQuery utxoQuery = new ListUnspentQuery()
-            .setMinConfirmations(minDepositConfirmations)
             .setAddresses(account.getDepositAddress())
             .setMinimumAmount(minDepositAmount);
         List<ListUnspentUTXO> utxos = walletService.listUnspent(utxoQuery);
