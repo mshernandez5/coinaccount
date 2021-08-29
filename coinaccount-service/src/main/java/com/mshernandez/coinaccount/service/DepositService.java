@@ -18,6 +18,7 @@ import com.mshernandez.coinaccount.entity.DepositType;
 import com.mshernandez.coinaccount.entity.WithdrawRequest;
 import com.mshernandez.coinaccount.service.wallet_rpc.WalletService;
 import com.mshernandez.coinaccount.service.wallet_rpc.exception.WalletRequestException;
+import com.mshernandez.coinaccount.service.wallet_rpc.parameter.ListUnspentQuery;
 import com.mshernandez.coinaccount.service.wallet_rpc.result.ListUnspentUTXO;
 
 import org.eclipse.microprofile.config.inject.ConfigProperty;
@@ -36,6 +37,9 @@ public class DepositService
 {
     @ConfigProperty(name = "coinaccount.internal.account")
     UUID internalAccountId;
+
+    @ConfigProperty(name = "coinaccount.deposit.minimum")
+    long minDepositAmount;
 
     @ConfigProperty(name = "coinaccount.deposit.confirmations")
     int minDepositConfirmations;
@@ -77,7 +81,11 @@ public class DepositService
         long addedBalance = 0L;
         long unconfirmedBalance = 0L;
         // Get UTXOs For Account
-        List<ListUnspentUTXO> utxos = walletService.listUnspent(account.getDepositAddress());
+        ListUnspentQuery utxoQuery = new ListUnspentQuery()
+            .setMinConfirmations(minDepositConfirmations)
+            .setAddresses(account.getDepositAddress())
+            .setMinimumAmount(minDepositAmount);
+        List<ListUnspentUTXO> utxos = walletService.listUnspent(utxoQuery);
         // Avoid Reprocessing Previous Transactions
         Set<String> oldTXIDs = account.getProcessedDepositIDs();
         Set<String> unspentTXIDs = new HashSet<>();

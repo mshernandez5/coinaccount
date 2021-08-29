@@ -107,6 +107,13 @@ coinaccount.wallet.user: vtcuser
 coinaccount.wallet.pass: vtcpass
 
 ############################################################################
+# Web Interface - Shows CoinAccount status information.
+############################################################################
+
+# HTTP Server Port
+quarkus.http.port: 5050
+
+############################################################################
 # Currency Representation - Customize to match the connected wallet.
 ############################################################################
 
@@ -119,6 +126,9 @@ coinaccount.coin.base.symbol: vertoshi
 ############################################################################
 # UTXO Management - Recommended to leave as-is.
 ############################################################################
+
+# Minimum Amount For Deposit Not To Be Ignored
+coinaccount.deposit.minimum: 50000000
 
 # Minimum Number Of Confirmations To Consider User Deposit UTXOs Valid
 coinaccount.deposit.confirmations: 6
@@ -137,7 +147,7 @@ coinaccount.withdraw.target: 2
 coinaccount.withdraw.expire: 60000
 
 ############################################################################
-# CoinAccount Task Settings - Recommended to leave as-is.
+# CoinAccount Internal Settings - Recommended to leave as-is.
 ############################################################################
 
 # How Often To Check For New Account Deposits

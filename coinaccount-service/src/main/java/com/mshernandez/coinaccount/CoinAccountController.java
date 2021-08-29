@@ -27,6 +27,9 @@ public class CoinAccountController extends CoinAccountServiceImplBase
     @ConfigProperty(name = "coinaccount.coin.base.symbol")
     String coinBaseUnitSymbol;
 
+    @ConfigProperty(name = "coinaccount.deposit.minimum")
+    int minDepositAmount;
+
     @ConfigProperty(name = "coinaccount.deposit.confirmations")
     int minDepositConfirmations;
 
@@ -75,6 +78,7 @@ public class CoinAccountController extends CoinAccountServiceImplBase
         GetDepositConfigurationResponse response = GetDepositConfigurationResponse.newBuilder()
             .setResponseType(ResponseType.SUCCESS)
             .setMinDepositConfirmations(minDepositConfirmations)
+            .setMinDepositAmount(minDepositAmount)
             .build();
         responseObserver.onNext(response);
         responseObserver.onCompleted();

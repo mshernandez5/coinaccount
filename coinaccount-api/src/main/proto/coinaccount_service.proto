@@ -51,6 +51,7 @@ message GetDepositConfigurationResponse
 {
     ResponseType response_type = 1;
     uint32 min_deposit_confirmations = 2; // The minimum number of confirmations to consider a deposit valid.
+    uint64 min_deposit_amount = 3; // The minimum amount for the deposit not to be ignored.
 }
 
 /**
