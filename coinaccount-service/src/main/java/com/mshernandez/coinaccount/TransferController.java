@@ -6,13 +6,13 @@ import java.util.UUID;
 
 import javax.inject.Inject;
 
-import com.mshernandez.coinaccount.grpc.CoinaccountService.ResponseType;
+import com.mshernandez.coinaccount.grpc.CoinAccountProtos.ResponseType;
+import com.mshernandez.coinaccount.grpc.TransferProtos.BalanceChange;
+import com.mshernandez.coinaccount.grpc.TransferProtos.BatchTransferBalanceRequest;
+import com.mshernandez.coinaccount.grpc.TransferProtos.BatchTransferBalanceResponse;
+import com.mshernandez.coinaccount.grpc.TransferProtos.TransferBalanceRequest;
+import com.mshernandez.coinaccount.grpc.TransferProtos.TransferBalanceResponse;
 import com.mshernandez.coinaccount.grpc.TransferServiceGrpc.TransferServiceImplBase;
-import com.mshernandez.coinaccount.grpc.TransferServiceOuterClass.BalanceChange;
-import com.mshernandez.coinaccount.grpc.TransferServiceOuterClass.BatchTransferBalanceRequest;
-import com.mshernandez.coinaccount.grpc.TransferServiceOuterClass.BatchTransferBalanceResponse;
-import com.mshernandez.coinaccount.grpc.TransferServiceOuterClass.TransferBalanceRequest;
-import com.mshernandez.coinaccount.grpc.TransferServiceOuterClass.TransferBalanceResponse;
 import com.mshernandez.coinaccount.service.TransferService;
 import com.mshernandez.coinaccount.service.exception.InsufficientFundsException;
 import com.mshernandez.coinaccount.service.exception.UnaccountedFundsException;

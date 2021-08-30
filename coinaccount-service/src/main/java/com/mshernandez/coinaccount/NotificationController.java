@@ -8,11 +8,11 @@ import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
-import com.mshernandez.coinaccount.grpc.CoinaccountService.AccountIdentifier;
+import com.mshernandez.coinaccount.grpc.CoinAccountProtos.AccountIdentifier;
+import com.mshernandez.coinaccount.grpc.NotificationProtos.Notification;
+import com.mshernandez.coinaccount.grpc.NotificationProtos.NotificationRequest;
+import com.mshernandez.coinaccount.grpc.NotificationProtos.NotificationType;
 import com.mshernandez.coinaccount.grpc.NotificationServiceGrpc.NotificationServiceImplBase;
-import com.mshernandez.coinaccount.grpc.NotificationServiceOuterClass.Notification;
-import com.mshernandez.coinaccount.grpc.NotificationServiceOuterClass.NotificationRequest;
-import com.mshernandez.coinaccount.grpc.NotificationServiceOuterClass.NotificationType;
 import com.mshernandez.coinaccount.task.DepositConfirmedEvent;
 import com.mshernandez.coinaccount.task.WithdrawRequestExpiredEvent;
 

@@ -4,14 +4,14 @@ import java.util.UUID;
 
 import javax.inject.Inject;
 
+import com.mshernandez.coinaccount.grpc.AccountInfoProtos.GetBalanceInfoResponse;
+import com.mshernandez.coinaccount.grpc.AccountInfoProtos.GetDepositAddressResponse;
+import com.mshernandez.coinaccount.grpc.AccountInfoProtos.GetReturnAddressResponse;
+import com.mshernandez.coinaccount.grpc.AccountInfoProtos.SetReturnAddressRequest;
+import com.mshernandez.coinaccount.grpc.AccountInfoProtos.SetReturnAddressResponse;
 import com.mshernandez.coinaccount.grpc.AccountInfoServiceGrpc.AccountInfoServiceImplBase;
-import com.mshernandez.coinaccount.grpc.AccountInfoServiceOuterClass.GetBalanceInfoResponse;
-import com.mshernandez.coinaccount.grpc.AccountInfoServiceOuterClass.GetDepositAddressResponse;
-import com.mshernandez.coinaccount.grpc.AccountInfoServiceOuterClass.GetReturnAddressResponse;
-import com.mshernandez.coinaccount.grpc.AccountInfoServiceOuterClass.SetReturnAddressRequest;
-import com.mshernandez.coinaccount.grpc.AccountInfoServiceOuterClass.SetReturnAddressResponse;
-import com.mshernandez.coinaccount.grpc.CoinaccountService.AccountIdentifier;
-import com.mshernandez.coinaccount.grpc.CoinaccountService.ResponseType;
+import com.mshernandez.coinaccount.grpc.CoinAccountProtos.AccountIdentifier;
+import com.mshernandez.coinaccount.grpc.CoinAccountProtos.ResponseType;
 import com.mshernandez.coinaccount.service.AccountInfoService;
 import com.mshernandez.coinaccount.service.exception.InvalidAddressException;
 import com.mshernandez.coinaccount.service.result.AccountBalanceInfo;

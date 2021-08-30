@@ -2,13 +2,13 @@ package com.mshernandez.coinaccount;
 
 import javax.inject.Inject;
 
+import com.mshernandez.coinaccount.grpc.CoinAccountProtos.CheckCoinAccountStatusResponse;
+import com.mshernandez.coinaccount.grpc.CoinAccountProtos.Empty;
+import com.mshernandez.coinaccount.grpc.CoinAccountProtos.GetCoinRepresentationResponse;
+import com.mshernandez.coinaccount.grpc.CoinAccountProtos.GetDepositConfigurationResponse;
+import com.mshernandez.coinaccount.grpc.CoinAccountProtos.GetWithdrawConfigurationResponse;
+import com.mshernandez.coinaccount.grpc.CoinAccountProtos.ResponseType;
 import com.mshernandez.coinaccount.grpc.CoinAccountServiceGrpc.CoinAccountServiceImplBase;
-import com.mshernandez.coinaccount.grpc.CoinaccountService.CheckCoinAccountStatusResponse;
-import com.mshernandez.coinaccount.grpc.CoinaccountService.Empty;
-import com.mshernandez.coinaccount.grpc.CoinaccountService.GetCoinRepresentationResponse;
-import com.mshernandez.coinaccount.grpc.CoinaccountService.GetDepositConfigurationResponse;
-import com.mshernandez.coinaccount.grpc.CoinaccountService.GetWithdrawConfigurationResponse;
-import com.mshernandez.coinaccount.grpc.CoinaccountService.ResponseType;
 import com.mshernandez.coinaccount.service.wallet_rpc.WalletService;
 import com.mshernandez.coinaccount.service.wallet_rpc.exception.WalletRequestException;
 

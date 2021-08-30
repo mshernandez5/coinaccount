@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package com.mshernandez.coinaccount.grpc;
 
+option java_outer_classname = "CoinAccountProtos";
+
 /**
  * Provides common message types shared between services
  * and metadata about CoinAccount itself.

@@ -4,14 +4,14 @@ import java.util.UUID;
 
 import javax.inject.Inject;
 
-import com.mshernandez.coinaccount.grpc.CoinaccountService.AccountIdentifier;
-import com.mshernandez.coinaccount.grpc.CoinaccountService.ResponseType;
+import com.mshernandez.coinaccount.grpc.CoinAccountProtos.AccountIdentifier;
+import com.mshernandez.coinaccount.grpc.CoinAccountProtos.ResponseType;
+import com.mshernandez.coinaccount.grpc.WithdrawProtos.CancelWithdrawResponse;
+import com.mshernandez.coinaccount.grpc.WithdrawProtos.CheckForPendingWithdrawResponse;
+import com.mshernandez.coinaccount.grpc.WithdrawProtos.CompleteWithdrawResponse;
+import com.mshernandez.coinaccount.grpc.WithdrawProtos.InitiateWithdrawRequest;
+import com.mshernandez.coinaccount.grpc.WithdrawProtos.InitiateWithdrawResponse;
 import com.mshernandez.coinaccount.grpc.WithdrawServiceGrpc.WithdrawServiceImplBase;
-import com.mshernandez.coinaccount.grpc.WithdrawServiceOuterClass.CancelWithdrawResponse;
-import com.mshernandez.coinaccount.grpc.WithdrawServiceOuterClass.CheckForPendingWithdrawResponse;
-import com.mshernandez.coinaccount.grpc.WithdrawServiceOuterClass.CompleteWithdrawResponse;
-import com.mshernandez.coinaccount.grpc.WithdrawServiceOuterClass.InitiateWithdrawRequest;
-import com.mshernandez.coinaccount.grpc.WithdrawServiceOuterClass.InitiateWithdrawResponse;
 import com.mshernandez.coinaccount.service.WithdrawService;
 import com.mshernandez.coinaccount.service.exception.CannotAffordFeesException;
 import com.mshernandez.coinaccount.service.exception.FeeEstimationException;
