@@ -21,6 +21,9 @@ import io.smallrye.common.annotation.Blocking;
 @GrpcService
 public class CoinAccountController extends CoinAccountServiceImplBase
 {
+    @ConfigProperty(name = "quarkus.application.version")
+    String applicationVersion;
+
     @ConfigProperty(name = "coinaccount.coin.symbol")
     String coinSymbol;
 
@@ -55,6 +58,7 @@ public class CoinAccountController extends CoinAccountServiceImplBase
         CheckCoinAccountStatusResponse response = CheckCoinAccountStatusResponse.newBuilder()
             .setResponseType(ResponseType.SUCCESS)
             .setHasWalletConnection(connectedToWallet)
+            .setVersion(applicationVersion)
             .build();
         responseObserver.onNext(response);
         responseObserver.onCompleted();

@@ -30,6 +30,7 @@ message CheckCoinAccountStatusResponse
 {
     ResponseType response_type = 1;
     bool has_wallet_connection = 2; // Whether CoinAccount has a valid wallet connection.
+    string version = 3; // Reports the version of CoinAccount in use.
 }
 
 /**
