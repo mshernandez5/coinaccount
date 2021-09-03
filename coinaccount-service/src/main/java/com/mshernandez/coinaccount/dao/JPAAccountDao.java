@@ -9,6 +9,7 @@ import javax.persistence.EntityManager;
 import javax.transaction.Transactional;
 
 import com.mshernandez.coinaccount.entity.Account;
+import com.mshernandez.coinaccount.entity.Deposit;
 import com.mshernandez.coinaccount.service.wallet_rpc.WalletService;
 import com.mshernandez.coinaccount.service.wallet_rpc.exception.WalletRequestException;
 
@@ -61,6 +62,14 @@ public class JPAAccountDao implements AccountDao
     public Collection<Account> findAll()
     {
         return entityManager.createQuery("SELECT a FROM Account a", Account.class)
+            .getResultList();
+    }
+
+    @Override
+    public Collection<Account> findAllWithDeposit(Deposit deposit)
+    {
+        return entityManager.createQuery("SELECT account FROM Account account JOIN account.shares entry ON KEY(entry) = :deposit", Account.class)
+            .setParameter("deposit", deposit)
             .getResultList();
     }
 

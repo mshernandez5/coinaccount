@@ -46,7 +46,7 @@ public class DepositShareEvaluator implements CoinEvaluator<Deposit>
     @Override
     public long evaluate(Deposit deposit)
     {
-        return deposit.getShare(account);
+        return account.getShare(deposit);
     }
 
     @Override

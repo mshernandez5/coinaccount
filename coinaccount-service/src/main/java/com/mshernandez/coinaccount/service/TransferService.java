@@ -21,6 +21,8 @@ import com.mshernandez.coinaccount.service.exception.UnaccountedFundsException;
 import com.mshernandez.coinaccount.service.util.InternalTransferPreselector;
 
 import org.eclipse.microprofile.config.inject.ConfigProperty;
+import org.jboss.logging.Logger;
+import org.jboss.logging.Logger.Level;
 
 /**
  * Transfers balances internally between accounts.
@@ -30,6 +32,9 @@ public class TransferService
 {
     @ConfigProperty(name = "coinaccount.internal.account")
     UUID internalAccountId;
+
+    @Inject
+    Logger logger;
 
     @Inject
     AccountDao accountDao;
@@ -52,7 +57,7 @@ public class TransferService
     public void transferBalance(UUID senderId, UUID receiverId, boolean transferAll, long amount)
     {
         Account sender = accountDao.find(senderId);
-        if (sender == null || (!transferAll && (amount <= 0L || sender.calculateBalance() < amount)))
+        if (sender == null || (!transferAll && (amount <= 0L || sender.getBalance() < amount)))
         {
             throw new InsufficientFundsException();
         }
@@ -67,10 +72,12 @@ public class TransferService
         {
             selected = new InternalTransferPreselector(sender, receiver).selectInputs(amount);
         }
+        if (selected == null)
+        {
+            throw new InsufficientFundsException();
+        }
         // Conduct The Transfer Using The Selected Deposits
         transferSelected(sender, receiver, selected, transferAll, amount);
-        accountDao.update(sender);
-        accountDao.update(receiver);
     }
 
     /**
@@ -94,27 +101,29 @@ public class TransferService
         while (it.hasNext() && (transferAll || remainingOwed > 0L))
         {
             Deposit deposit = it.next();
-            long senderShare = deposit.getShare(sender);
+            long senderShare = sender.getShare(deposit);
             long takenAmount;
             if (senderShare <= remainingOwed)
             {
-                deposit.setShare(sender, 0L);
-                deposit.setShare(receiver, deposit.getShare(receiver) + senderShare);
+                sender.setShare(deposit, 0L);
+                receiver.setShare(deposit, receiver.getShare(deposit) + senderShare);
                 takenAmount = senderShare;
             }
             else
             {
-                deposit.setShare(sender, senderShare - remainingOwed);
-                deposit.setShare(receiver, deposit.getShare(receiver) + remainingOwed);
+                sender.setShare(deposit, senderShare - remainingOwed);
+                receiver.setShare(deposit, receiver.getShare(deposit) + remainingOwed);
                 takenAmount = remainingOwed;
             }
             remainingOwed -= takenAmount;
-            depositDao.update(deposit);
         }
         if (!transferAll && remainingOwed > 0L)
         {
+            logger.log(Level.WARN, "Transfer attempted with impossible deposit set! The selection algorithm may not be returning valid results.");
             throw new InsufficientFundsException();
         }
+        accountDao.update(sender);
+        accountDao.update(receiver);
     }
 
     /**

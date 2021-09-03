@@ -1,6 +1,8 @@
 package com.mshernandez.coinaccount.entity;
 
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
@@ -12,7 +14,8 @@ import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.Id;
 import javax.persistence.JoinColumn;
-import javax.persistence.ManyToMany;
+import javax.persistence.MapKeyJoinColumn;
+import javax.persistence.MapKeyJoinColumns;
 import javax.persistence.OneToOne;
 import javax.persistence.Table;
 import javax.persistence.Version;
@@ -31,14 +34,28 @@ public class Account
     private UUID id;
 
     /**
-     * The set of deposits actively contributing
-     * to the account balance.
-     * 
-     * These will always be used when fetching an
-     * account so they are automatically fetched.
+     * The set of deposit shares actively
+     * contributing to the account balance.
      */
-    @ManyToMany(fetch = FetchType.EAGER)
-    private Set<Deposit> balances;
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "SHARES")
+    @MapKeyJoinColumns({@MapKeyJoinColumn(name = "TXID"), @MapKeyJoinColumn(name = "VOUT")})
+    @Column(name = "AMOUNT")
+    private Map<Deposit, Long> shares;
+
+    /**
+     * The current balance of this account.
+     */
+    @Column(name = "BALANCE")
+    private long balance;
+
+    /**
+     * Stores the last known pending balance from
+     * deposits the user has made but have not yet
+     * met the minimum number of confirmations.
+     */
+    @Column(name = "PENDING_BALANCE")
+    private long pendingBalance;
 
     /**
      * A wallet address assigned to this account
@@ -54,14 +71,6 @@ public class Account
      */
     @Column(name = "RETURN_ADDRESS")
     private String returnAddress;
-
-    /**
-     * Stores the last known pending balance from
-     * deposits the user has made but have not yet
-     * met the minimum number of confirmations.
-     */
-    @Column(name = "PENDING_BALANCE")
-    private long pendingBalance;
 
     /**
      * Save any active withdraw request the user has
@@ -103,7 +112,9 @@ public class Account
     public Account(UUID id, String depositAddress)
     {
         this.id = id;
-        balances = new HashSet<>();
+        shares = new HashMap<>();
+        balance = 0L;
+        pendingBalance = 0L;
         this.depositAddress = depositAddress;
         returnAddress = "";
         processedDepositIDs = new HashSet<>();
@@ -130,23 +141,35 @@ public class Account
     }
 
     /**
-     * Associate a deposit with this account.
+     * Return the share this account has over a deposit.
      * 
-     * @param deposit The deposit to associate with this account.
+     * @param deposit The deposit.
+     * @return This account's share in the deposit.
      */
-    public void associateDeposit(Deposit deposit)
+    public long getShare(Deposit deposit)
     {
-        balances.add(deposit);
+        return shares.getOrDefault(deposit, 0L);
     }
 
     /**
-     * Remove a deposit from this account.
+     * Set the share this account has over a deposit.
      * 
-     * @param deposit The deposit to remove from this account.
+     * @param deposit The deposit to associate with the share.
+     * @param amount How much of the deposit is owned by this account.
      */
-    public void removeDeposit(Deposit deposit)
+    public void setShare(Deposit deposit, long amount)
     {
-        balances.remove(deposit);
+        long previousShare = shares.getOrDefault(deposit, 0L);
+        if (amount > 0L)
+        {
+            shares.put(deposit, amount);
+        }
+        else
+        {
+            shares.remove(deposit);
+        }
+        long updatedShare = shares.getOrDefault(deposit, 0L);
+        balance += updatedShare - previousShare;
     }
 
     /**
@@ -157,7 +180,7 @@ public class Account
      */
     public Set<Deposit> getDeposits()
     {
-        return balances;
+        return shares.keySet();
     }
 
     /**
@@ -168,32 +191,49 @@ public class Account
      * 
      * @return The total balance of this account.
      */
-    public long calculateBalance()
+    public long getBalance()
     {
-        long balance = 0L;
-        for (Deposit deposit : balances)
-        {
-            balance += deposit.getShare(this);
-        }
         return balance;
     }
 
     /**
      * Calculate the withdrawable account balance.
      * 
-     * @return The total balance of this account.
+     * @return The withdrawable balance of this account.
      */
     public long calculateWithdrawableBalance()
     {
-        long balance = 0L;
-        for (Deposit deposit : balances)
+        long withdrawableBalance = balance;
+        for (Deposit deposit : shares.keySet())
         {
-            if (!deposit.hasWithdrawLock())
+            if (deposit.hasWithdrawLock())
             {
-                balance += deposit.getShare(this);
+                withdrawableBalance -= shares.get(deposit);
             }
         }
-        return balance;
+        return withdrawableBalance;
+    }
+
+    /**
+     * Gets the total balances pending on
+     * deposit confirmations for this account.
+     * 
+     * @return The total pending balance, in sats.
+     */
+    public long getPendingBalance()
+    {
+        return pendingBalance;
+    }
+
+    /**
+     * Update the total pending balance of
+     * this account.
+     * 
+     * @param pendingBalance The total pending balance, in sats.
+     */
+    public void setPendingBalance(long pendingBalance)
+    {
+        this.pendingBalance = pendingBalance;
     }
 
     /**
@@ -256,28 +296,6 @@ public class Account
     }
 
     /**
-     * Gets the total balances pending on
-     * deposit confirmations for this account.
-     * 
-     * @return The total pending balance, in sats.
-     */
-    public long getPendingBalance()
-    {
-        return pendingBalance;
-    }
-
-    /**
-     * Update the total pending balance of
-     * this account.
-     * 
-     * @param pendingBalance The total pending balance, in sats.
-     */
-    public void setPendingBalance(long pendingBalance)
-    {
-        this.pendingBalance = pendingBalance;
-    }
-
-    /**
      * Get a set of transaction IDs corresponding
      * to account deposits which
      * have already been processed.
@@ -319,6 +337,6 @@ public class Account
     @Override
     public String toString()
     {
-        return String.format("Account: %s, Balance: %d", id.toString(), calculateBalance());
+        return String.format("Account: %s, Balance: %d", id.toString(), balance);
     }
 }

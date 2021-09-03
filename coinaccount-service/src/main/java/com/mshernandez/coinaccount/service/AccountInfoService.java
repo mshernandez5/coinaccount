@@ -35,7 +35,7 @@ public class AccountInfoService
             return new AccountBalanceInfo(0L, 0L, 0L);
         }
         return new AccountBalanceInfo()
-            .setConfirmedBalance(account.calculateBalance())
+            .setConfirmedBalance(account.getBalance())
             .setWithdrawableBalance(account.calculateWithdrawableBalance())
             .setUnconfirmedBalance(account.getPendingBalance());
     }

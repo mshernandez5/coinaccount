@@ -1,5 +1,6 @@
 package com.mshernandez.coinaccount.service;
 
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -127,7 +128,7 @@ public class DepositService
                     // Create, Persist, & Distribute New Deposit
                     Deposit deposit = new Deposit(utxo.getTxid(), utxo.getVout(), type, depositAmount);
                     depositDao.persist(deposit);
-                    deposit.setShare(account, depositAmount);
+                    account.setShare(deposit, depositAmount);
                     addedBalance += depositAmount;
                 }
                 unspentTXIDs.add(utxo.getTxid());
@@ -192,25 +193,22 @@ public class DepositService
                         }
                         // Create Change Deposit
                         Deposit deposit = new Deposit(utxo.getTxid(), utxo.getVout(), type, utxo.getAmount().getSatAmount());
+                        depositDao.persist(deposit);
                         // Lookup Inputs To Change Deposit, Distribute Unused Balances
                         Set<Deposit> inputs = withdrawRequest.getInputs();
                         for (Deposit inputDeposit : inputs)
                         {
-                            for (Account owner : inputDeposit.getOwners())
+                            Collection<Account> owners = accountDao.findAllWithDeposit(inputDeposit);
+                            for (Account owner : owners)
                             {
                                 if (!owner.equals(internalAccount))
                                 {
-                                    deposit.setShare(owner, deposit.getShare(owner) + inputDeposit.getShare(owner));
+                                    owner.setShare(deposit, owner.getShare(deposit) + owner.getShare(inputDeposit));
                                 }
-                                owner.removeDeposit(inputDeposit);
+                                owner.setShare(inputDeposit, 0L);
+                                accountDao.update(owner);
                             }
                             depositDao.remove(inputDeposit);
-                        }
-                        depositDao.persist(deposit);
-                        // Persist Account Changes
-                        for (Account owner : deposit.getOwners())
-                        {
-                            accountDao.update(owner);
                         }
                         // Remove Fully Completed Withdraw Request
                         withdrawRequestDao.remove(withdrawRequest);

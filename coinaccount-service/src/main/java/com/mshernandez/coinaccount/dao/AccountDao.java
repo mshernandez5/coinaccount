@@ -4,6 +4,7 @@ import java.util.Collection;
 import java.util.UUID;
 
 import com.mshernandez.coinaccount.entity.Account;
+import com.mshernandez.coinaccount.entity.Deposit;
 
 public interface AccountDao
 {
@@ -11,7 +12,7 @@ public interface AccountDao
      * Gets an account.
      * 
      * @param id The account UUID.
-     * @return An account reference or null if no account was found.=
+     * @return An account reference or null if no account was found.
      */
     Account find(UUID id);
 
@@ -30,6 +31,14 @@ public interface AccountDao
      * @return A collection of all accounts.
      */
     Collection<Account> findAll();
+
+    /**
+     * Finds all accounts with a share in
+     * the specified deposit.
+     * 
+     * @return A collection of all accounts with a share in the specified deposit.
+     */
+    Collection<Account> findAllWithDeposit(Deposit deposit);
 
     /**
      * Merges any changes made to the account.

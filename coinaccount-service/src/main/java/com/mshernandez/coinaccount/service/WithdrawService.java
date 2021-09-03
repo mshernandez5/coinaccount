@@ -164,8 +164,8 @@ public class WithdrawService
         for (Deposit inputDeposit : inputDeposits)
         {
             txInputs.add(new CreateRawTransactionInput(inputDeposit.getTXID(), inputDeposit.getVout()));
-            totalInputValue += inputDeposit.getTotal();
-            totalOwnedValue += inputDeposit.getShare(initiator);
+            totalInputValue += inputDeposit.getAmount();
+            totalOwnedValue += initiator.getShare(inputDeposit);
         }
         // Specify TX Output Addresses & Amounts
         long withdrawAmount = withdrawAll ? (totalOwnedValue - totalFees) : amount;
@@ -204,17 +204,17 @@ public class WithdrawService
         {
             if (remainingHoldAmount != 0)
             {
-                long depositValue = inputDeposit.getShare(initiator);
+                long depositValue = initiator.getShare(inputDeposit);
                 if (depositValue <= remainingHoldAmount)
                 {
-                    inputDeposit.setShare(initiator, 0L);
-                    inputDeposit.setShare(internalAccount, depositValue);
+                    initiator.setShare(inputDeposit, 0L);
+                    internalAccount.setShare(inputDeposit, depositValue);
                     remainingHoldAmount -= depositValue;
                 }
                 else
                 {
-                    inputDeposit.setShare(initiator, depositValue - remainingHoldAmount);
-                    inputDeposit.setShare(internalAccount, remainingHoldAmount);
+                    initiator.setShare(inputDeposit, depositValue - remainingHoldAmount);
+                    internalAccount.setShare(inputDeposit, remainingHoldAmount);
                     remainingHoldAmount = 0L;
                 }
             }
@@ -254,10 +254,10 @@ public class WithdrawService
         Set<Deposit> lockedDeposits = withdrawRequest.getInputs();
         for (Deposit lockedDeposit : lockedDeposits)
         {
-            long lockedAmount = lockedDeposit.getShare(internalAccount);
-            long updatedAmount = lockedDeposit.getShare(initiatorAccount) + lockedAmount;
-            lockedDeposit.setShare(initiatorAccount, updatedAmount);
-            lockedDeposit.setShare(internalAccount, 0L);
+            long lockedAmount = internalAccount.getShare(lockedDeposit);
+            long updatedAmount = initiatorAccount.getShare(lockedDeposit) + lockedAmount;
+            initiatorAccount.setShare(lockedDeposit, updatedAmount);
+            internalAccount.setShare(lockedDeposit, 0L);
             lockedDeposit.setWithdrawLock(null);
             depositDao.update(lockedDeposit);
         }
@@ -314,9 +314,9 @@ public class WithdrawService
         for (Deposit input : inputs)
         {
             // Only Remember Deposits Contributing To Change
-            if (input.getShare(internalAccount) == input.getTotal())
+            if (internalAccount.getShare(input) == input.getAmount())
             {
-                input.setShare(internalAccount, 0L);
+                internalAccount.setShare(input, 0L);
                 withdrawRequest.forgetInput(input);
                 depositDao.remove(input);
             }

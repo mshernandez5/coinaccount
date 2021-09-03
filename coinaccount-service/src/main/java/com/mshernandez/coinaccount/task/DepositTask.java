@@ -1,6 +1,7 @@
 package com.mshernandez.coinaccount.task;
 
 import java.util.Collection;
+import java.util.UUID;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
@@ -9,6 +10,7 @@ import com.mshernandez.coinaccount.dao.AccountDao;
 import com.mshernandez.coinaccount.entity.Account;
 import com.mshernandez.coinaccount.service.DepositService;
 
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.jboss.logging.Logger;
 
 import io.quarkus.scheduler.Scheduled;
@@ -20,6 +22,9 @@ import io.vertx.core.eventbus.EventBus;
 @ApplicationScoped
 public class DepositTask
 {
+    @ConfigProperty(name = "coinaccount.internal.account")
+    UUID internalAccountId;
+
     @Inject
     Logger logger;
 
@@ -44,6 +49,11 @@ public class DepositTask
         Collection<Account> accounts = accountDao.findAll();
         for (Account account : accounts)
         {
+            // Don't Check Balances Normally For Internal Account
+            if (account.getAccountUUID().equals(internalAccountId))
+            {
+                continue;
+            }
             // If Account Has New Confirmed Balances, Publish Event
             long newlyConfirmed = depositService.registerDeposits(account.getAccountUUID());
             if (newlyConfirmed > 0L)
