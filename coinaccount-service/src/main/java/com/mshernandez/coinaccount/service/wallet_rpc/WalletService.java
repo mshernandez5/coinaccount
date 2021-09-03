@@ -163,7 +163,7 @@ public class WalletService
         catch (IOException | InterruptedException e)
         {
             // Failed To Get Response
-            throw new WalletRequestException("Failed To Make Request: " + request.getMethod() + ", " + e.getMessage());
+            throw new WalletRequestException(request.getMethod() + " RPC Failed Due To " + e.getClass().getSimpleName());
         }
     }
 
