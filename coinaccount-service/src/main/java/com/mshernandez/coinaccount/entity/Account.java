@@ -38,7 +38,7 @@ public class Account
      * contributing to the account balance.
      */
     @ElementCollection(fetch = FetchType.EAGER)
-    @CollectionTable(name = "SHARES")
+    @CollectionTable(name = "SHARES", joinColumns = @JoinColumn(name = "ACCOUNT_ID", referencedColumnName = "id"))
     @MapKeyJoinColumns({@MapKeyJoinColumn(name = "TXID"), @MapKeyJoinColumn(name = "VOUT")})
     @Column(name = "AMOUNT")
     private Map<Deposit, Long> shares;
