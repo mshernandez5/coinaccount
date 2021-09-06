@@ -278,6 +278,14 @@ public class WalletService
         return makeRequest(request, ValidateAddressResult.class);
     }
 
+    /**
+     * Returns detailed information about the given address.
+     * 
+     * @param address The address to get information for.
+     * @return A result object.
+     * @throws WalletRequestException If there was an issue making the RPC request.
+     * @throws WalletResponseException If the response indicates an error.
+     */
     public GetAddressInfoResult getAddressInfo(String address)
     {
         ArrayNode params = objectMapper.createArrayNode();
