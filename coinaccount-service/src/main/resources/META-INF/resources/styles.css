@@ -1,9 +1,9 @@
 :root
 {
-    --background-color: whitesmoke;
+    --background-color: rgb(230, 230, 230);
     --red-gradient: linear-gradient;
     --common-border-radius: 5px;
-    --common-box-shadow: dimgray 1px 1px 4px;
+    --common-box-shadow: rgb(160, 160, 160) 1px 1px 4px;
 }
 
 html, body
@@ -67,12 +67,12 @@ body > .box
 {
     padding: 2px;
     width: 90%;
-    background: linear-gradient(120deg, rgb(248, 248, 248), rgb(233, 233, 233));
+    background: linear-gradient(120deg, rgb(240, 240, 240), rgb(235, 235, 235));
     color: black;
     text-align: center;
     font: 1rem 'Abel Regular', sans-serif;
     border-radius: var(--common-border-radius);
-    box-shadow: var(--common-box-shadow);
+    box-shadow: rgb(138, 138, 138) 0px 0px 3px;
 }
 
 .sidebar-button:hover
@@ -81,4 +81,5 @@ body > .box
     background: linear-gradient(175deg, rgb(97, 175, 228), rgb(0, 140, 255) 80%, rgb(94, 145, 255));
     color: whitesmoke;
     border-radius: var(--common-border-radius);
+    box-shadow: inset whitesmoke 0px 0px 2px;
 }
