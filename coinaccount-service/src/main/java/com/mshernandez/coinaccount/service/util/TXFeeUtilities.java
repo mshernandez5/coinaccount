@@ -21,7 +21,7 @@ public class TXFeeUtilities
     // Marker For All Transactions Spending At Least 1 Segwit UTXO
     public static final double TX_SEGWIT_MARKER_VSIZE = 0.5;
 
-    // For Every Input In A Transaction With AT Least 1 SegWit Input
+    // For Every Input In A Transaction With At Least 1 Segwit Input
     public static final double TX_INPUT_WITNESS_ITEM_COUNTER_VSIZE = 0.25;
 
     /**
