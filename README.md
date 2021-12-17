@@ -49,7 +49,17 @@ Once installed, you must take a few steps to make the database accessible to Coi
 2. Create a new database named `coinaccountdb`.
 3. Grant all permissions for `coinaccountdb` to the new `coinaccount` user.
 
-If you are not sure how to complete these steps then the [MariaDB quickstart script](mariadb-quickstart/mariadb-quickstart.md) included in this project should help you take care of them.
+These steps can be completed by running the following SQL statements, replacing `password` with a real password:
+```sql
+CREATE USER coinaccount IDENTIFIED BY 'password';
+CREATE DATABASE coinaccountdb;
+GRANT ALL PRIVILEGES ON coinaccountdb.* TO coinaccount;
+FLUSH PRIVILEGES;
+```
+If you installed MariaDB from the Ubuntu repositories, note that logging-in to the root user initially requires starting the console with root privileges rather than a predefined password:
+```bash
+sudo mysql -u root
+```
 
 ## CoinAccount Configuration
 CoinAccount will need to know how to connect to the wallet and database, so you must create a configuration file with this information. In the same directory as the application JAR, there should be a directory `config` containing a file `application.properties` with the following contents:
