@@ -102,7 +102,7 @@ public class GetWalletInfoResult
      * False if privatekeys are disabled for
      * this wallet (enforced watch-only wallet).
      */
-    @JsonProperty("privatekeysenabled")
+    @JsonProperty("private_keys_enabled")
     private boolean privateKeysEnabled;
 
     /**
