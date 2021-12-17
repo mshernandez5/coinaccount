@@ -1,16 +1,9 @@
 # <img src="logo.svg" alt="CoinAccount Logo" height="75px">
 
 ## What is CoinAccount?
-CoinAccount forms a layer over the standard core wallet allowing you to create accounts, each holding shares of unspent outputs.
+CoinAccount forms a layer of abstraction over a core wallet that allows you to easily manage accounts with the ability to deposit, withdraw, and transfer funds internally. This allows you to quickly create services such as tip bots without worrying about managing the underlying wallet.
 
-This project grew out of an attempt to bring Vertcoin to Minecraft through a server plugin named Vertconomy (reflected in shared git history of these projects) which quickly resulted in a plugin that was more complicated and took on more responsibility than one should. The responsibilities once held by the plugin alone were split between CoinAccount and a new [Vertconomy-MC](https://github.com/mshernandez5/vertconomy-mc) plugin which relies on CoinAccount for wallet and account management.
-
-## How does it work?
-When an account receives a deposit to their address they will initially own the entire portion of the newly created UTXO. Rather than treating account balances as a promise for withdrawals of equal value, CoinAccount binds balances to specific outputs with defined owners. In this case, the deposited UTXO is accessible only by the depositing account and will not be spent or otherwise used by CoinAccount unless the account takes additional actions.
-
-If the account chooses to transfer a portion of their balance to another account - without fees since all accounts use the same underlying wallet - then a portion of their deposited UTXO will be allocated to the receiving account. Both accounts now have shares in the deposit and either can now transfer or withdraw their shares.
-
-In cases where an unspent output is distributed among multiple accounts and one of the accounts wishes to withdraw a portion of their share, CoinAccount will receive the change output and internally distribute it according to the remaining shares of the now spent output. It takes one confirmation before the change is accepted and other accounts are allowed to withdraw their remaining shares. Accounts may transfer balances internally between each other at all times, including during pending withdrawals.
+This project grew out of an attempt to bring Vertcoin to Minecraft through a server plugin named Vertconomy (reflected in shared git history of these projects). The plugin quickly took on more responsibility than one should, leading to a separation of responsibilities. The responsibilities once held by the plugin alone were split between CoinAccount and a new [Vertconomy-MC](https://github.com/mshernandez5/vertconomy-mc) plugin which relies on CoinAccount for wallet and account management.
 
 ## How can programs interact with it?
 CoinAccount defines its API in language-neutral [protocol buffers](https://developers.google.com/protocol-buffers). Since the project uses [gRPC](https://grpc.io/) for communication, you can compile client stubs to interact with CoinAccount in the language of your choice.
@@ -18,12 +11,12 @@ CoinAccount defines its API in language-neutral [protocol buffers](https://devel
 The protobuf API is located in the `coinaccount-api` module, while the service implementations are in the `coinaccount-service` module.
 
 ## How can I run CoinAccount?
-CoinAccount requires both a core wallet and MariaDB database to be running at all times, preferably configured as system services to run at startup.
+CoinAccount requires both a core wallet and MariaDB database to be running at all times, preferably configured as startup system services.
 
 ## Wallet RPC Configuration
 First, you will need a dedicated wallet configured to listen for RPC connections. Do not use an existing wallet.
 
-These steps will use Vertcoin as an example but they are applicable to practically all Bitcoin derivatives replacing "vertcoin" with "bitcoin", etc. The configuration file for Vertcoin core can be found at one of the following locations if the configuration directory was not manually changed:
+These steps will use Vertcoin as an example but they are applicable to practically all Bitcoin derivatives by replacing "vertcoin" with "bitcoin", etc. The configuration file for Vertcoin core can be found at one of the following locations if the configuration directory was not manually set:
 
 Operating System | Location
 -----------------|---------
@@ -135,6 +128,15 @@ coinaccount.deposit.confirmations: 6
 
 # Minimum Number Of Confirmations To Consider Change UTXOs Valid
 coinaccount.change.confirmations: 1
+
+# The Default Address Type (P2WPKH, P2SH_P2WPKH, P2PKH)
+coinaccount.address.type: P2WPKH
+
+# Whether Change Addresses Should Be Reused
+coinaccount.address.change.reuse: false
+
+# Whether User Deposit Addresses Should Be Reused
+coinaccount.address.user.reuse: false
 
 ############################################################################
 # Withdrawals - Recommended to leave as-is.

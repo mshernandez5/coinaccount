@@ -1,6 +1,6 @@
 package com.mshernandez.coinaccount.service.util;
 
-import com.mshernandez.coinaccount.entity.DepositType;
+import com.mshernandez.coinaccount.service.wallet_rpc.parameter.DepositType;
 
 /**
  * Shares static utilities and constants involved in

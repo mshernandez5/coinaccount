@@ -28,8 +28,11 @@ public interface CoinEvaluator<T> extends Comparator<T>
 
     /**
      * Determine the cost of selecting this particular input.
-     * <p>
      * The cost may use a different scale/unit than values.
+     * <p>
+     * In practice, this is used to determine the added vsize
+     * requirement from selecting this input, excluding
+     * input counter size increases.
      * 
      * @param obj The object.
      * @return The cost for selecting the object.
@@ -42,6 +45,9 @@ public interface CoinEvaluator<T> extends Comparator<T>
      * <p>
      * This may be used to add additional costs based solely on the
      * number of inputs selected.
+     * <p>
+     * In practice, this is used to determine any added vsize
+     * requirement from having to expand the input counter varint size.
      * 
      * @param index The zero-based index representing the position of the next input.
      * @return The cost of selecting the input at the given index.
@@ -67,7 +73,7 @@ public interface CoinEvaluator<T> extends Comparator<T>
      * @param obj The object to evaluate.
      * @return The adjusted net value.
      */
-    default long netValue(T obj)
+    default long effectiveValue(T obj)
     {
         return evaluate(obj) - costImpactOnTarget(cost(obj));
     }
@@ -75,6 +81,6 @@ public interface CoinEvaluator<T> extends Comparator<T>
     @Override
     default int compare(T a, T b)
     {
-        return (int) (netValue(a) - netValue(b));
+        return (int) (effectiveValue(a) - effectiveValue(b));
     }
 }

@@ -21,7 +21,7 @@ service NotificationService
  */
 message NotificationRequest
 {
-    repeated AccountIdentifier account_id = 1;
+    repeated AccountIdentifier account = 1;
 }
 
 /**
@@ -31,7 +31,7 @@ message NotificationRequest
 message Notification
 {
     NotificationType notification_type = 1; // The type of notification.
-    AccountIdentifier account_id = 2; // The ID of the affected account.
+    AccountIdentifier account = 2; // The ID of the affected account.
     uint64 amount = 3; // Amount for applicable notifications.
 }
 

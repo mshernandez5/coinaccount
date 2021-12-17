@@ -1,5 +1,7 @@
 package com.mshernandez.coinaccount.dao;
 
+import java.util.List;
+
 import com.mshernandez.coinaccount.entity.Deposit;
 
 public interface DepositDao
@@ -12,6 +14,14 @@ public interface DepositDao
      * @return A deposit reference, or null if none was found.
      */
     Deposit find(String txid, int vout);
+
+    /**
+     * Finds all deposits available for use
+     * as transaction inputs, sorted by value.
+     * 
+     * @return A list of available deposits.
+     */
+    List<Deposit> findAllWithdrawable();
 
     /**
      * Persist a newly created deposit.
@@ -42,4 +52,20 @@ public interface DepositDao
      * @param deposit The deposit to remove.
      */
     void remove(Deposit deposit);
+
+    /**
+     * Calculate and return the total
+     * available balance.
+     * 
+     * @return The total balance.
+     */
+    long getTotalBalance();
+
+    /**
+     * Calculate and return the total
+     * withdrawable balance.
+     * 
+     * @return The total withdrawable balance.
+     */
+    long getWithdrawableBalance();
 }

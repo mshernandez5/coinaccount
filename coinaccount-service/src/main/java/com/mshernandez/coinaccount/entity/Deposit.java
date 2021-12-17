@@ -11,6 +11,8 @@ import javax.persistence.ManyToOne;
 import javax.persistence.Table;
 import javax.persistence.Version;
 
+import com.mshernandez.coinaccount.service.wallet_rpc.parameter.DepositType;
+
 /**
  * Saves details of a deposit UTXO.
  */

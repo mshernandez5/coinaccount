@@ -8,11 +8,16 @@ import javax.inject.Inject;
 import javax.transaction.Transactional;
 
 import com.mshernandez.coinaccount.dao.AccountDao;
+import com.mshernandez.coinaccount.dao.AddressDao;
+import com.mshernandez.coinaccount.dao.DepositDao;
 import com.mshernandez.coinaccount.entity.Account;
 import com.mshernandez.coinaccount.service.exception.InvalidAddressException;
 import com.mshernandez.coinaccount.service.result.AccountBalanceInfo;
 import com.mshernandez.coinaccount.service.wallet_rpc.WalletService;
+import com.mshernandez.coinaccount.service.wallet_rpc.parameter.DepositType;
 import com.mshernandez.coinaccount.service.wallet_rpc.result.ValidateAddressResult;
+
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 @ApplicationScoped
 public class AccountInfoService
@@ -20,11 +25,23 @@ public class AccountInfoService
     // Match sus Address Patterns
     private static final Pattern SUS_PATTERN = Pattern.compile(".*[^a-zA-Z0-9].*");
     
+    @ConfigProperty(name = "coinaccount.address.type")
+    DepositType defaultAddressType;
+
+    @ConfigProperty(name = "coinaccount.address.user.reuse")
+    boolean reuseUserAddresses;
+
     @Inject
     WalletService walletService;
 
     @Inject
     AccountDao accountDao;
+
+    @Inject
+    AddressDao addressDao;
+
+    @Inject
+    DepositDao depositDao;
 
     @Transactional
     public AccountBalanceInfo getBalanceInfo(UUID accountId)
@@ -36,15 +53,19 @@ public class AccountInfoService
         }
         return new AccountBalanceInfo()
             .setConfirmedBalance(account.getBalance())
-            .setWithdrawableBalance(account.calculateWithdrawableBalance())
+            .setWithdrawableBalance(Math.min(account.getBalance(), depositDao.getWithdrawableBalance()))
             .setUnconfirmedBalance(account.getPendingBalance());
     }
 
     @Transactional
-    public String getDepositAddress(UUID accountId)
+    public String getDepositAddress(UUID accountId, DepositType type)
     {
         Account account = accountDao.findOrCreate(accountId);
-        return account.getDepositAddress();
+        if (type == null)
+        {
+            type = defaultAddressType;
+        }
+        return addressDao.findOrCreate(account, type, !reuseUserAddresses).getAddress();
     }
 
     @Transactional

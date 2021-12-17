@@ -3,6 +3,7 @@ package com.mshernandez.coinaccount.service;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -13,6 +14,7 @@ import javax.inject.Inject;
 import javax.transaction.Transactional;
 
 import com.mshernandez.coinaccount.dao.AccountDao;
+import com.mshernandez.coinaccount.dao.AddressDao;
 import com.mshernandez.coinaccount.dao.DepositDao;
 import com.mshernandez.coinaccount.dao.WithdrawRequestDao;
 import com.mshernandez.coinaccount.entity.Account;
@@ -26,13 +28,13 @@ import com.mshernandez.coinaccount.service.exception.WithdrawRequestAlreadyExist
 import com.mshernandez.coinaccount.service.exception.WithdrawRequestNotFoundException;
 import com.mshernandez.coinaccount.service.result.WithdrawRequestResult;
 import com.mshernandez.coinaccount.service.util.BinarySearchCoinSelector;
-import com.mshernandez.coinaccount.service.util.CoinSelectionResult;
-import com.mshernandez.coinaccount.service.util.CoinSelector;
+import com.mshernandez.coinaccount.service.util.CoinSelectionState;
+import com.mshernandez.coinaccount.service.util.CoinSelectionBuilder;
 import com.mshernandez.coinaccount.service.util.DepositShareEvaluator;
-import com.mshernandez.coinaccount.service.util.MaxAmountCoinSelector;
 import com.mshernandez.coinaccount.service.wallet_rpc.WalletService;
 import com.mshernandez.coinaccount.service.wallet_rpc.exception.WalletResponseException;
 import com.mshernandez.coinaccount.service.wallet_rpc.parameter.CreateRawTransactionInput;
+import com.mshernandez.coinaccount.service.wallet_rpc.parameter.DepositType;
 import com.mshernandez.coinaccount.service.wallet_rpc.result.EstimateSmartFeeResult;
 
 import static com.mshernandez.coinaccount.service.util.TXFeeUtilities.*;
@@ -50,14 +52,20 @@ public class WithdrawService
     // Match sus Address Patterns
     private static final Pattern SUS_PATTERN = Pattern.compile(".*[^a-zA-Z0-9].*");
 
-    @ConfigProperty(name = "coinaccount.internal.account")
-    UUID internalAccountId;
+    @ConfigProperty(name = "coinaccount.account.change")
+    UUID changeAccountId;
 
     @ConfigProperty(name = "coinaccount.withdraw.target")
     int blockConfirmationTarget;
 
     @ConfigProperty(name = "coinaccount.withdraw.expire")
     long withdrawExpireTime;
+
+    @ConfigProperty(name = "coinaccount.address.type")
+    DepositType defaultAddressType;
+
+    @ConfigProperty(name = "coinaccount.address.change.reuse")
+    boolean reuseChangeAddresses;
 
     @Inject
     Logger logger;
@@ -67,6 +75,9 @@ public class WithdrawService
 
     @Inject
     AccountDao accountDao;
+
+    @Inject
+    AddressDao addressDao;
 
     @Inject
     DepositDao depositDao;
@@ -90,23 +101,32 @@ public class WithdrawService
     @Transactional
     public WithdrawRequestResult initiateWithdrawRequest(UUID initiatorId, String destAddress, boolean withdrawAll, long amount)
     {
-        Account initiator = accountDao.findOrCreate(initiatorId);
         // Prevent Possibility Of JSON-RPC Injection, Just In Case
         if (SUS_PATTERN.matcher(destAddress).matches())
         {
+            String logMsg = String.format("User %s provided a potentially malicious address string! \"%s\"", initiatorId, destAddress);
+            logger.log(Level.WARN, logMsg);
             throw new InvalidAddressException();
+        }
+        // Account Must Already Exist (Otherwise Zero Balance)
+        Account initiator = accountDao.find(initiatorId);
+        if (initiator == null)
+        {
+            throw new NotEnoughWithdrawableFundsException();
         }
         // Make Sure No Existing Request Already Exists
         if (initiator.getWithdrawRequest() != null)
         {
             throw new WithdrawRequestAlreadyExistsException();
         }
-        // Begin Withdraw
-        if (!withdrawAll && initiator.calculateWithdrawableBalance() < amount)
+        // Initial Check That Initiator Has Enough Funds (Ignoring Fees For Now)
+        long withdrawableBalance = Math.min(initiator.getBalance(), depositDao.getWithdrawableBalance());
+        if (!withdrawAll && withdrawableBalance < amount)
         {
             throw new NotEnoughWithdrawableFundsException();
         }
-        Account internalAccount = accountDao.findOrCreate(internalAccountId);
+        // Begin Creating New Withdraw Request
+        Account changeAccount = accountDao.findOrCreate(changeAccountId);
         // Calculate Base TX Size Excluding Input Counter & Inputs (Unknown At This Point)
         double vsize = TX_VERSION_VSIZE + TX_LOCKTIME_VSIZE + TX_SEGWIT_MARKER_VSIZE + getCounterByteSize(2);
         // Calculate Size Of Output To External Address
@@ -119,7 +139,8 @@ public class WithdrawService
             throw new InvalidAddressException();
         }
         // Calculate Size Of Change Output
-        vsize += getOutputSize(walletService.getAddressInfo(internalAccount.getDepositAddress()).getScriptPubKey());
+        String changeAddress = addressDao.findOrCreate(changeAccount, defaultAddressType, !reuseChangeAddresses).getAddress();
+        vsize += getOutputSize(walletService.getAddressInfo(changeAddress).getScriptPubKey());
         // Get Current Fee Rate Estimate
         EstimateSmartFeeResult estimateSmartFeeResult = walletService.estimateSmartFee(blockConfirmationTarget);
         if (estimateSmartFeeResult.getErrors() != null)
@@ -136,51 +157,56 @@ public class WithdrawService
         double feeRateByte = feeRateKb / 1000.0;
         long totalFees = (long) Math.ceil(vsize * feeRateByte);
         // Select Input Deposits Considering Fees
-        DepositShareEvaluator evaluator = new DepositShareEvaluator(initiator, feeRateByte);
-        CoinSelectionResult<Deposit> selectionResult;
+        DepositShareEvaluator evaluator = new DepositShareEvaluator(feeRateByte);
+        CoinSelectionState<Deposit> selectionResult;
         if (withdrawAll)
         {
-            CoinSelector<Deposit> coinSelector = new MaxAmountCoinSelector<>();
-            selectionResult = coinSelector.selectInputs(evaluator, initiator.getDeposits(), totalFees);
+            selectionResult = new CoinSelectionBuilder<Deposit>()
+                .step(new BinarySearchCoinSelector<>(-1, false), new LinkedHashSet<>(depositDao.findAllWithdrawable()))
+                .evaluator(evaluator)
+                .target(withdrawableBalance)
+                .select();
         }
         else
         {
-            CoinSelector<Deposit> coinSelector = new BinarySearchCoinSelector<>();
-            selectionResult = coinSelector.selectInputs(evaluator, initiator.getDeposits(), amount);
+            selectionResult = new CoinSelectionBuilder<Deposit>()
+                .step(new BinarySearchCoinSelector<>(), new LinkedHashSet<>(depositDao.findAllWithdrawable()))
+                .evaluator(evaluator)
+                .target(amount)
+                .select();
         }
-        if (!selectionResult.isValid())
+        if (!selectionResult.isComplete())
         {
             throw new CannotAffordFeesException();
         }
         Set<Deposit> inputDeposits = selectionResult.getSelection();
         // Calculate Final TX Size Based On Selected Inputs
-        vsize += selectionResult.getSelectionCost();
+        vsize += selectionResult.getCost();
         totalFees = (long) Math.ceil(vsize * feeRateByte);
-        logger.log(Level.INFO, String.format("A withdraw request is being created with vsize %.2f costing %d.", vsize, totalFees));
-        // Begin Creating Transaction By Specifying UTXOs Corresponding To Selected Deposits
-        long totalInputValue = 0L;
-        long totalOwnedValue = 0L;
+        // Begin Building TX, Specify Selected Transaction Inputs
+        long totalValue = 0L;
         Set<CreateRawTransactionInput> txInputs = new HashSet<>();
         for (Deposit inputDeposit : inputDeposits)
         {
             txInputs.add(new CreateRawTransactionInput(inputDeposit.getTXID(), inputDeposit.getVout()));
-            totalInputValue += inputDeposit.getAmount();
-            totalOwnedValue += initiator.getShare(inputDeposit);
+            totalValue += inputDeposit.getAmount();
         }
-        // Specify TX Output Addresses & Amounts
-        long withdrawAmount = withdrawAll ? (totalOwnedValue - totalFees) : amount;
-        long changeAmount = totalInputValue - (withdrawAmount + totalFees);
-        // Should Never Happen, But Should Not Be Ignored If It Did
-        if (withdrawAmount < 0L || changeAmount < 0L)
+        // Specify Recipient TX Output
+        Map<String, Long> txOutputs = new HashMap<>();
+        long recipientAmount = withdrawAll ? (withdrawableBalance - totalFees) : amount;
+        txOutputs.put(destAddress, recipientAmount);
+        // Final Check Whether Total Cost Exceeds Balance
+        long totalCost = recipientAmount + totalFees;
+        if (totalCost > withdrawableBalance)
         {
-            logger.log(Level.ERROR, "Severe Input Selection / Fee Calculation Error");
             throw new CannotAffordFeesException();
         }
-        Map<String, Long> txOutputs = new HashMap<>();
-        txOutputs.put(destAddress, withdrawAmount);
+        initiator.changeBalance(-totalCost);
+        // Specify Change TX Output
+        long changeAmount = totalValue - (recipientAmount + totalFees);
         if (changeAmount > 0L)
         {
-            txOutputs.put(internalAccount.getDepositAddress(), changeAmount);
+            txOutputs.put(changeAddress, changeAmount);
         }
         // Build Withdraw TX
         String unsignedTxHex;
@@ -196,47 +222,28 @@ public class WithdrawService
         String withdrawTxid = walletService.decodeRawTransaction(signedTxHex).getTxid();
         // Persist Withdraw Request For Future Confirmation With Timestamp
         long timestamp = System.currentTimeMillis();
-        WithdrawRequest request = new WithdrawRequest(withdrawTxid, initiator, inputDeposits, withdrawAmount, totalFees, signedTxHex, timestamp);
+        WithdrawRequest request = new WithdrawRequest(withdrawTxid, initiator, inputDeposits, recipientAmount, totalFees, signedTxHex, timestamp);
         withdrawRequestDao.persist(request);
-        // Lock Input Deposits, Prevent Attempts By Other Accounts To Withdraw Same UTXOs
-        long remainingHoldAmount = request.getWithdrawAmount() + request.getFeeAmount();
+        // Lock Input Deposits, Prevent Attempts To Spend Same UTXOs
         for (Deposit inputDeposit : request.getInputs())
         {
-            if (remainingHoldAmount != 0)
-            {
-                long depositValue = initiator.getShare(inputDeposit);
-                if (depositValue <= remainingHoldAmount)
-                {
-                    initiator.setShare(inputDeposit, 0L);
-                    internalAccount.setShare(inputDeposit, depositValue);
-                    remainingHoldAmount -= depositValue;
-                }
-                else
-                {
-                    initiator.setShare(inputDeposit, depositValue - remainingHoldAmount);
-                    internalAccount.setShare(inputDeposit, remainingHoldAmount);
-                    remainingHoldAmount = 0L;
-                }
-            }
             inputDeposit.setWithdrawLock(request);
             depositDao.update(inputDeposit);
         }
         initiator.setWithdrawRequest(request);
         accountDao.update(initiator);
-        accountDao.update(internalAccount);
+        accountDao.update(changeAccount);
+        logger.log(Level.INFO, String.format("User %s created a withdraw request with vsize %.2f costing %d.", initiatorId, vsize, totalFees));
         return new WithdrawRequestResult()
             .setTxid(withdrawTxid)
-            .setWithdrawAmount(withdrawAmount)
+            .setWithdrawAmount(recipientAmount)
             .setFeeAmount(totalFees)
-            .setTotalCost(withdrawAmount + totalFees);
+            .setTotalCost(totalCost);
     }
 
     /**
-     * Cancel the given withdraw request, restoring
-     * reserved funds to the owner and unlocking the
+     * Cancel the given withdraw request, unlocking the
      * deposits involved for future withdrawals.
-     * <p>
-     * SHOULD NOT BE USED ON A COMPLETED WITHDRAW REQUEST!
      * 
      * @param withdrawTxid The TXID of the withdraw request.
      * @throws WithdrawRequestNotFoundException If the request was not found.
@@ -250,26 +257,23 @@ public class WithdrawService
             throw new WithdrawRequestNotFoundException();
         }
         Account initiatorAccount = withdrawRequest.getAccount();
-        Account internalAccount = accountDao.findOrCreate(internalAccountId);
+        // Unlock UTXOs For Future Use
         Set<Deposit> lockedDeposits = withdrawRequest.getInputs();
         for (Deposit lockedDeposit : lockedDeposits)
         {
-            long lockedAmount = internalAccount.getShare(lockedDeposit);
-            long updatedAmount = initiatorAccount.getShare(lockedDeposit) + lockedAmount;
-            initiatorAccount.setShare(lockedDeposit, updatedAmount);
-            internalAccount.setShare(lockedDeposit, 0L);
             lockedDeposit.setWithdrawLock(null);
             depositDao.update(lockedDeposit);
         }
+        // Restore Funds
+        initiatorAccount.changeBalance(withdrawRequest.getTotalCost());
+        // Remove Withdraw Request
         initiatorAccount.setWithdrawRequest(null);
         accountDao.update(initiatorAccount);
-        accountDao.update(internalAccount);
         withdrawRequestDao.remove(withdrawRequest);
     }
 
     /**
-     * Cancel the given withdraw request, restoring
-     * reserved funds to the owner and unlocking the
+     * Cancel the given withdraw request, unlocking the
      * deposits involved for future withdrawals.
      * 
      * @param initiatorId The UUID of the initiating account.
@@ -302,39 +306,18 @@ public class WithdrawService
         {
             throw new WithdrawRequestNotFoundException();
         }
-        Account internalAccount = accountDao.findOrCreate(internalAccountId);
         // Broadcast Transaction
         String txid = walletService.sendRawTransaction(withdrawRequest.getTxHex());
         // Clear Request From Initiator Account
         Account initiator = withdrawRequest.getAccount();
         initiator.setWithdrawRequest(null);
-        // If No Change Will Be Received From TX, Request Can Be Removed Immediately
-        boolean change = false;
+        // Remove Withdraw Request & Spent TX Output Records
         Set<Deposit> inputs = withdrawRequest.getInputs();
         for (Deposit input : inputs)
         {
-            // Only Remember Deposits Contributing To Change
-            if (internalAccount.getShare(input) == input.getAmount())
-            {
-                internalAccount.setShare(input, 0L);
-                withdrawRequest.forgetInput(input);
-                depositDao.remove(input);
-            }
-            else
-            {
-                change = true;
-            }
+            depositDao.remove(input);
         }
-        if (!change)
-        {
-            withdrawRequestDao.remove(withdrawRequest);
-        }
-        else
-        {
-            withdrawRequest.setComplete();
-            withdrawRequestDao.update(withdrawRequest);
-        }
-        accountDao.update(internalAccount);
+        withdrawRequestDao.remove(withdrawRequest);
         accountDao.update(initiator);
         return txid;
     }

@@ -30,8 +30,8 @@ service TransferService
  */
 message TransferBalanceRequest
 {
-    AccountIdentifier sender_id = 1; // The balance sending account.
-    AccountIdentifier receiver_id = 2; // The balance receiving account.
+    AccountIdentifier sender = 1; // The balance sending account.
+    AccountIdentifier receiver = 2; // The balance receiving account.
     bool transfer_all = 3; // Whether to transfer all funds.
     uint64 amount = 4; // The amount to transfer if transfer_all is false.
 }
@@ -49,7 +49,7 @@ message TransferBalanceResponse
  */
 message BalanceChange
 {
-    AccountIdentifier account_id = 1; // The account affected by the change.
+    AccountIdentifier account = 1; // The account affected by the change.
     sint64 net_balance_change = 2; // The net change to the account balance.
 }
 

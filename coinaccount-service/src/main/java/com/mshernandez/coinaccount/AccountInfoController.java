@@ -4,18 +4,21 @@ import java.util.UUID;
 
 import javax.inject.Inject;
 
+import com.mshernandez.coinaccount.grpc.AccountInfoProtos.GetBalanceInfoRequest;
 import com.mshernandez.coinaccount.grpc.AccountInfoProtos.GetBalanceInfoResponse;
+import com.mshernandez.coinaccount.grpc.AccountInfoProtos.GetDepositAddressRequest;
 import com.mshernandez.coinaccount.grpc.AccountInfoProtos.GetDepositAddressResponse;
+import com.mshernandez.coinaccount.grpc.AccountInfoProtos.GetReturnAddressRequest;
 import com.mshernandez.coinaccount.grpc.AccountInfoProtos.GetReturnAddressResponse;
 import com.mshernandez.coinaccount.grpc.AccountInfoProtos.SetReturnAddressRequest;
 import com.mshernandez.coinaccount.grpc.AccountInfoProtos.SetReturnAddressResponse;
 import com.mshernandez.coinaccount.grpc.AccountInfoServiceGrpc.AccountInfoServiceImplBase;
-import com.mshernandez.coinaccount.grpc.CoinAccountProtos.AccountIdentifier;
 import com.mshernandez.coinaccount.grpc.CoinAccountProtos.ResponseType;
 import com.mshernandez.coinaccount.service.AccountInfoService;
 import com.mshernandez.coinaccount.service.exception.InvalidAddressException;
 import com.mshernandez.coinaccount.service.result.AccountBalanceInfo;
 import com.mshernandez.coinaccount.service.wallet_rpc.exception.WalletRequestException;
+import com.mshernandez.coinaccount.service.wallet_rpc.parameter.DepositType;
 
 import org.jboss.logging.Logger;
 
@@ -34,12 +37,12 @@ public class AccountInfoController extends AccountInfoServiceImplBase
 
     @Override
     @Blocking
-    public void getBalanceInfo(AccountIdentifier accountId, StreamObserver<GetBalanceInfoResponse> responseObserver)
+    public void getBalanceInfo(GetBalanceInfoRequest request, StreamObserver<GetBalanceInfoResponse> responseObserver)
     {
         GetBalanceInfoResponse response;
         try
         {
-            UUID accountUUID = UUID.fromString(accountId.getUuid());
+            UUID accountUUID = UUID.fromString(request.getAccount().getUuid());
             AccountBalanceInfo info = accountInfoService.getBalanceInfo(accountUUID);
             response = GetBalanceInfoResponse.newBuilder()
                 .setResponseType(ResponseType.SUCCESS)
@@ -77,15 +80,30 @@ public class AccountInfoController extends AccountInfoServiceImplBase
 
     @Override
     @Blocking
-    public void getDepositAddress(AccountIdentifier accountId, StreamObserver<GetDepositAddressResponse> responseObserver)
+    public void getDepositAddress(GetDepositAddressRequest request, StreamObserver<GetDepositAddressResponse> responseObserver)
     {
         GetDepositAddressResponse response;
         try
         {
-            UUID accountUUID = UUID.fromString(accountId.getUuid());
+            UUID accountUUID = UUID.fromString(request.getAccount().getUuid());
+            DepositType type;
+            switch (request.getAddressType())
+            {
+                case BECH32:
+                    type = DepositType.P2WPKH;
+                    break;
+                case P2SH_SEGWIT:
+                    type = DepositType.P2SH_P2WPKH;
+                    break;
+                case LEGACY:
+                    type = DepositType.P2PKH;
+                    break;
+                default:
+                    type = null;
+            }
             response = GetDepositAddressResponse.newBuilder()
                 .setResponseType(ResponseType.SUCCESS)
-                .setDepositAddress(accountInfoService.getDepositAddress(accountUUID))
+                .setDepositAddress(accountInfoService.getDepositAddress(accountUUID, type))
                 .build();
         }
         catch (Exception e)
@@ -115,12 +133,12 @@ public class AccountInfoController extends AccountInfoServiceImplBase
 
     @Override
     @Blocking
-    public void getReturnAddress(AccountIdentifier accountId, StreamObserver<GetReturnAddressResponse> responseObserver)
+    public void getReturnAddress(GetReturnAddressRequest request, StreamObserver<GetReturnAddressResponse> responseObserver)
     {
         GetReturnAddressResponse response;
         try
         {
-            UUID accountUUID = UUID.fromString(accountId.getUuid());
+            UUID accountUUID = UUID.fromString(request.getAccount().getUuid());
             response = GetReturnAddressResponse.newBuilder()
                 .setResponseType(ResponseType.SUCCESS)
                 .setReturnAddress(accountInfoService.getReturnAddress(accountUUID))
@@ -158,7 +176,7 @@ public class AccountInfoController extends AccountInfoServiceImplBase
         SetReturnAddressResponse response;
         try
         {
-            UUID accountUUID = UUID.fromString(request.getAccountId().getUuid());
+            UUID accountUUID = UUID.fromString(request.getAccount().getUuid());
             accountInfoService.setReturnAddress(accountUUID, request.getReturnAddress());
             response = SetReturnAddressResponse.newBuilder()
                 .setResponseType(ResponseType.SUCCESS)

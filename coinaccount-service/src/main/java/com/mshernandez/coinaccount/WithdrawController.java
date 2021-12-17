@@ -6,8 +6,10 @@ import javax.inject.Inject;
 
 import com.mshernandez.coinaccount.grpc.CoinAccountProtos.AccountIdentifier;
 import com.mshernandez.coinaccount.grpc.CoinAccountProtos.ResponseType;
+import com.mshernandez.coinaccount.grpc.WithdrawProtos.CancelWithdrawRequest;
 import com.mshernandez.coinaccount.grpc.WithdrawProtos.CancelWithdrawResponse;
 import com.mshernandez.coinaccount.grpc.WithdrawProtos.CheckForPendingWithdrawResponse;
+import com.mshernandez.coinaccount.grpc.WithdrawProtos.CompleteWithdrawRequest;
 import com.mshernandez.coinaccount.grpc.WithdrawProtos.CompleteWithdrawResponse;
 import com.mshernandez.coinaccount.grpc.WithdrawProtos.InitiateWithdrawRequest;
 import com.mshernandez.coinaccount.grpc.WithdrawProtos.InitiateWithdrawResponse;
@@ -45,7 +47,7 @@ public class WithdrawController extends WithdrawServiceImplBase
         InitiateWithdrawResponse response;
         try
         {
-            UUID initiatorUUID = UUID.fromString(request.getAccountId().getUuid());
+            UUID initiatorUUID = UUID.fromString(request.getAccount().getUuid());
             WithdrawRequestResult result = withdrawService.initiateWithdrawRequest(initiatorUUID, request.getDestAddress(), request.getWithdrawAll(), request.getAmount());
             response = InitiateWithdrawResponse.newBuilder()
                 .setResponseType(ResponseType.SUCCESS)
@@ -107,12 +109,12 @@ public class WithdrawController extends WithdrawServiceImplBase
 
     @Override
     @Blocking
-    public void cancelWithdraw(AccountIdentifier accountId, StreamObserver<CancelWithdrawResponse> responseObserver)
+    public void cancelWithdraw(CancelWithdrawRequest request, StreamObserver<CancelWithdrawResponse> responseObserver)
     {
         CancelWithdrawResponse response;
         try
         {
-            UUID initiatorUUID = UUID.fromString(accountId.getUuid());
+            UUID initiatorUUID = UUID.fromString(request.getAccount().getUuid());
             withdrawService.cancelWithdraw(initiatorUUID);
             response = CancelWithdrawResponse.newBuilder()
                 .setResponseType(ResponseType.SUCCESS)
@@ -144,12 +146,12 @@ public class WithdrawController extends WithdrawServiceImplBase
 
     @Override
     @Blocking
-    public void completeWithdraw(AccountIdentifier accountId, StreamObserver<CompleteWithdrawResponse> responseObserver)
+    public void completeWithdraw(CompleteWithdrawRequest request, StreamObserver<CompleteWithdrawResponse> responseObserver)
     {
         CompleteWithdrawResponse response;
         try
         {
-            UUID initiatorUUID = UUID.fromString(accountId.getUuid());
+            UUID initiatorUUID = UUID.fromString(request.getAccount().getUuid());
             response = CompleteWithdrawResponse.newBuilder()
                 .setResponseType(ResponseType.SUCCESS)
                 .setTxid(withdrawService.completeWithdraw(initiatorUUID))

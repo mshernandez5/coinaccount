@@ -1,5 +1,8 @@
 package com.mshernandez.coinaccount.service.wallet_rpc.parameter;
 
+import java.util.HashSet;
+import java.util.Set;
+
 import com.mshernandez.coinaccount.service.wallet_rpc.SatAmount;
 
 import lombok.Getter;
@@ -11,7 +14,7 @@ public class ListUnspentQuery
     // Standard Request Parameters
     private int minConfirmations;
     private int maxConfirmations;
-    private String[] addresses;
+    private Set<String> addresses;
     private boolean includeUnsafe;
 
     // Query Options
@@ -24,7 +27,7 @@ public class ListUnspentQuery
     {
         minConfirmations = 1;
         maxConfirmations = 9999999;
-        addresses = new String[] {};
+        addresses = new HashSet<>();
         includeUnsafe = true;
         queryOptions = null;
     }
@@ -59,9 +62,9 @@ public class ListUnspentQuery
      * @param addresses The addresses.
      * @return A reference to this query object for chaining.
      */
-    public ListUnspentQuery setAddresses(String... addresses)
+    public ListUnspentQuery setAddresses(Set<String> addresses)
     {
-        this.addresses = addresses;
+        this.addresses = new HashSet<>(addresses);
         return this;
     }
 

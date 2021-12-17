@@ -1,21 +1,15 @@
 package com.mshernandez.coinaccount.entity;
 
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 
-import javax.persistence.CollectionTable;
 import javax.persistence.Column;
-import javax.persistence.ElementCollection;
 import javax.persistence.Entity;
-import javax.persistence.FetchType;
 import javax.persistence.Id;
 import javax.persistence.JoinColumn;
-import javax.persistence.MapKeyJoinColumn;
-import javax.persistence.MapKeyJoinColumns;
+import javax.persistence.OneToMany;
 import javax.persistence.OneToOne;
 import javax.persistence.Table;
 import javax.persistence.Version;
@@ -34,17 +28,8 @@ public class Account
     private UUID id;
 
     /**
-     * The set of deposit shares actively
-     * contributing to the account balance.
-     */
-    @ElementCollection(fetch = FetchType.EAGER)
-    @CollectionTable(name = "SHARES", joinColumns = @JoinColumn(name = "ACCOUNT_ID", referencedColumnName = "id"))
-    @MapKeyJoinColumns({@MapKeyJoinColumn(name = "TXID"), @MapKeyJoinColumn(name = "VOUT")})
-    @Column(name = "AMOUNT")
-    private Map<Deposit, Long> shares;
-
-    /**
-     * The current balance of this account.
+     * Balances backed by UTXO
+     * shares held as part of a common pool.
      */
     @Column(name = "BALANCE")
     private long balance;
@@ -58,11 +43,11 @@ public class Account
     private long pendingBalance;
 
     /**
-     * A wallet address assigned to this account
-     * to receive user deposits.
+     * All wallet addresses created to receive
+     * user deposits for this account.
      */
-    @Column(name = "DEPOSIT_ADDRESS")
-    private String depositAddress;
+    @OneToMany(mappedBy = "owner")
+    private Set<Address> addresses;
 
     /**
      * An address that can be used to refund
@@ -81,20 +66,6 @@ public class Account
     private WithdrawRequest withdrawRequest;
 
     /**
-     * Remembers transactions that have been applied to
-     * the account, regardless of whether their balances
-     * are still available to this account or not.
-     */
-    @ElementCollection
-    @CollectionTable
-    (
-        name = "PROCESSED_DEPOSITS",
-        joinColumns = @JoinColumn(name = "DEPOSITOR", referencedColumnName = "ID")
-    )
-    @Column(name = "TXID")
-    private Set<String> processedDepositIDs;
-
-    /**
      * Used for optimistic locking to prevent concurrent
      * modification of the same account.
      */
@@ -104,20 +75,18 @@ public class Account
 
     /**
      * Creates a new account.
+     * <p>
      * There should only be one account per user.
      * 
      * @param id The UUID to associate with the account.
      * @param depositAddress A wallet deposit address for this account.
      */
-    public Account(UUID id, String depositAddress)
+    public Account(UUID id)
     {
         this.id = id;
-        shares = new HashMap<>();
         balance = 0L;
         pendingBalance = 0L;
-        this.depositAddress = depositAddress;
-        returnAddress = "";
-        processedDepositIDs = new HashSet<>();
+        addresses = new HashSet<>();
         version = 0L;
     }
 
@@ -141,55 +110,13 @@ public class Account
     }
 
     /**
-     * Return the share this account has over a deposit.
+     * Returns the transferable account balance.
+     * <p>
+     * These balances may always be transferred
+     * but portions may be temporarily
+     * unavailable for withdrawal.
      * 
-     * @param deposit The deposit.
-     * @return This account's share in the deposit.
-     */
-    public long getShare(Deposit deposit)
-    {
-        return shares.getOrDefault(deposit, 0L);
-    }
-
-    /**
-     * Set the share this account has over a deposit.
-     * 
-     * @param deposit The deposit to associate with the share.
-     * @param amount How much of the deposit is owned by this account.
-     */
-    public void setShare(Deposit deposit, long amount)
-    {
-        long previousShare = shares.getOrDefault(deposit, 0L);
-        if (amount > 0L)
-        {
-            shares.put(deposit, amount);
-        }
-        else
-        {
-            shares.remove(deposit);
-        }
-        long updatedShare = shares.getOrDefault(deposit, 0L);
-        balance += updatedShare - previousShare;
-    }
-
-    /**
-     * Returns a reference to the set of deposits
-     * this account is associated with.
-     * 
-     * @return The deposits this account is associated with.
-     */
-    public Set<Deposit> getDeposits()
-    {
-        return shares.keySet();
-    }
-
-    /**
-     * Calculate the usable account balance.
-     * Usable balances can be transferred
-     * between accounts but in some situations
-     * may not be withdrawn for a period of time.
-     * 
-     * @return The total balance of this account.
+     * @return The transferable balance of this account.
      */
     public long getBalance()
     {
@@ -197,21 +124,23 @@ public class Account
     }
 
     /**
-     * Calculate the withdrawable account balance.
+     * Updates the account balance.
      * 
-     * @return The withdrawable balance of this account.
+     * @param pooledBalance The updated account balance.
      */
-    public long calculateWithdrawableBalance()
+    public void setBalance(long balance)
     {
-        long withdrawableBalance = balance;
-        for (Deposit deposit : shares.keySet())
-        {
-            if (deposit.hasWithdrawLock())
-            {
-                withdrawableBalance -= shares.get(deposit);
-            }
-        }
-        return withdrawableBalance;
+        this.balance = balance;
+    }
+
+    /**
+     * Updates the account balance.
+     * 
+     * @param delta The change to be applied.
+     */
+    public void changeBalance(long delta)
+    {
+        balance += delta;
     }
 
     /**
@@ -237,14 +166,27 @@ public class Account
     }
 
     /**
-     * Get an address that can be used to deposit
-     * coins to this account.
+     * Associate a newly created deposit
+     * address with this account.
      * 
-     * @return A public wallet address for deposits.
+     * @param address The address object.
+     * 
+     * @return True if the address was added, or false if it is a duplicate.
      */
-    public String getDepositAddress()
+    public boolean addNewAddress(Address address)
     {
-        return depositAddress;
+        return addresses.add(address);
+    }
+
+    /**
+     * Return a set of every address associated
+     * with this account.
+     * 
+     * @return Addresses associated with this account.
+     */
+    public Set<Address> getAddresses()
+    {
+        return new HashSet<>(addresses);
     }
 
     /**
@@ -295,29 +237,6 @@ public class Account
         this.withdrawRequest = withdrawRequest;
     }
 
-    /**
-     * Get a set of transaction IDs corresponding
-     * to account deposits which
-     * have already been processed.
-     * 
-     * @return Set of previously processed deposit IDs.
-     */
-    public Set<String> getProcessedDepositIDs()
-    {
-        return new HashSet<>(processedDepositIDs);
-    }
-
-    /**
-     * Define the set of transaction IDs which should
-     * be remembered as already processed.
-     * 
-     * @param newIds Set of previously processed deposit IDs.
-     */
-    public void setProcessedDepositIDs(Set<String> newIds)
-    {
-        processedDepositIDs = new HashSet<>(newIds);
-    }
-
     @Override
     public int hashCode()
     {
@@ -325,18 +244,22 @@ public class Account
     }
 
     @Override
-    public boolean equals(Object other)
+    public boolean equals(Object obj)
     {
-        if (!(other instanceof Account))
+        if (obj == this)
+        {
+            return true;
+        }
+        if (!(obj instanceof Account))
         {
             return false;
         }
-        return id.equals(((Account) other).id);
+        return id.equals(((Account) obj).id);
     }
 
     @Override
     public String toString()
     {
-        return String.format("Account: %s, Balance: %d", id.toString(), balance);
+        return String.format("Account: %s, Balance: %d", id.toString(), getBalance());
     }
 }

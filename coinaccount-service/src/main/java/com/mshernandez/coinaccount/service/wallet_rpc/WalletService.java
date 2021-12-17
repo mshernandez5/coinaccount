@@ -25,6 +25,7 @@ import com.mshernandez.coinaccount.service.wallet_rpc.exception.WalletRequestExc
 import com.mshernandez.coinaccount.service.wallet_rpc.exception.WalletResponseError;
 import com.mshernandez.coinaccount.service.wallet_rpc.exception.WalletResponseException;
 import com.mshernandez.coinaccount.service.wallet_rpc.parameter.CreateRawTransactionInput;
+import com.mshernandez.coinaccount.service.wallet_rpc.parameter.DepositType;
 import com.mshernandez.coinaccount.service.wallet_rpc.parameter.ListUnspentQuery;
 import com.mshernandez.coinaccount.service.wallet_rpc.result.DecodeRawTransactionResult;
 import com.mshernandez.coinaccount.service.wallet_rpc.result.EstimateSmartFeeResult;
@@ -263,6 +264,24 @@ public class WalletService
     }
 
     /**
+     * Returns a new address for receiving payments.
+     * 
+     * @param label The label name for the address to be linked to.
+     * @param type The type of address to be created.
+     * @return The new address.
+     * @throws WalletRequestException If there was an issue making the RPC request.
+     * @throws WalletResponseException If the response indicates an error.
+     */
+    public String getNewAddress(String label, DepositType type)
+    {
+        ArrayNode params = objectMapper.createArrayNode();
+        params.add(label);
+        params.add(type.getAddressType());
+        RPCRequest request = new RPCRequest().setMethod("getnewaddress").setParams(params);
+        return makeRequest(request, String.class);
+    }
+
+    /**
      * Returns information about the given address.
      * 
      * @param address The address to validate.
@@ -303,7 +322,7 @@ public class WalletService
      * @throws WalletResponseException If the response indicates an error.
      */
     @SuppressWarnings("unchecked")
-    public List<ListUnspentUTXO> listUnspent(String... addresses)
+    public List<ListUnspentUTXO> listUnspent(Set<String> addresses)
     {
         ArrayNode params = objectMapper.createArrayNode();
         params.add(0);

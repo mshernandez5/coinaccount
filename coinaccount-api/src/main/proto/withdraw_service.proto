@@ -15,10 +15,10 @@ service WithdrawService
     rpc InitiateWithdraw(InitiateWithdrawRequest) returns (InitiateWithdrawResponse) {}
 
     // Cancels a pending withdraw request initiated by an account.
-    rpc CancelWithdraw(AccountIdentifier) returns (CancelWithdrawResponse) {}
+    rpc CancelWithdraw(CancelWithdrawRequest) returns (CancelWithdrawResponse) {}
 
     // Completes a pending withdraw request initiated by an account.
-    rpc CompleteWithdraw(AccountIdentifier) returns (CompleteWithdrawResponse) {}
+    rpc CompleteWithdraw(CompleteWithdrawRequest) returns (CompleteWithdrawResponse) {}
 
     // Check if a withdraw request exists for the given account.
     rpc CheckForPendingWithdraw(AccountIdentifier) returns (CheckForPendingWithdrawResponse) {}
@@ -29,7 +29,7 @@ service WithdrawService
  */
 message InitiateWithdrawRequest
 {
-    AccountIdentifier account_id = 1; // The account initiating the withdraw.
+    AccountIdentifier account = 1; // The account initiating the withdraw.
     string dest_address = 2; // The address to withdraw funds to.
     bool withdraw_all = 3; // Whether to withdraw all funds, if true ignores the specified amount.
     uint64 amount = 4; // The amount to withdraw if withdraw_all is false.
@@ -50,11 +50,27 @@ message InitiateWithdrawResponse
 }
 
 /**
+ * Request parameters for CancelWithdraw()
+ */
+message CancelWithdrawRequest
+{
+    AccountIdentifier account = 1;
+}
+
+/**
  * Response object given by CancelWithdraw()
  */
 message CancelWithdrawResponse
 {
     ResponseType response_type = 1;
+}
+
+/**
+ * Request parameters for CompleteWithdraw()
+ */
+message CompleteWithdrawRequest
+{
+    AccountIdentifier account = 1;
 }
 
 /**

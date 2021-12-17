@@ -24,8 +24,8 @@ import io.vertx.core.eventbus.EventBus;
 @ApplicationScoped
 public class DepositTask
 {
-    @ConfigProperty(name = "coinaccount.internal.account")
-    UUID internalAccountId;
+    @ConfigProperty(name = "coinaccount.account.change")
+    UUID changeAccountId;
 
     @Inject
     Logger logger;
@@ -53,11 +53,6 @@ public class DepositTask
             Collection<Account> accounts = accountDao.findAll();
             for (Account account : accounts)
             {
-                // Don't Check Balances Normally For Internal Account
-                if (account.getAccountUUID().equals(internalAccountId))
-                {
-                    continue;
-                }
                 // If Account Has New Confirmed Balances, Publish Event
                 long newlyConfirmed = depositService.registerDeposits(account.getAccountUUID());
                 if (newlyConfirmed > 0L)
@@ -66,8 +61,6 @@ public class DepositTask
                     logger.info("New Deposit Registered For Account: " + account.getAccountUUID() + ", Value: " + newlyConfirmed);
                 }
             }
-            // Register Change Deposits
-            depositService.registerChangeDeposits();
         }
         catch (WalletRequestException e)
         {

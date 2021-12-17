@@ -27,12 +27,14 @@ import java.util.stream.Collectors;
  * the algorithm will give the unoptimal solution (6).
  * <p>
  * The returned set's iterator will follow the order of selection.
+ * 
+ * @author Markus Hernandez
  */
 public class BinarySearchCoinSelector<T> implements CoinSelector<T>
 {
     /**
      * How far back the algorithm is willing to rewind
-     * its results if a better solution is possible.
+     * the selection if a better solution is possible.
      * <p>
      * Note that once a valid solution is found it will
      * always be selected even if better solutions are
@@ -46,10 +48,13 @@ public class BinarySearchCoinSelector<T> implements CoinSelector<T>
      * <p>
      * -1 (default) indicates the algorithm will dynamically
      * select this parameter based on input size.
+     * The dynamically selected parameter will grow logarithmically
+     * with input size, meaning this will technically result in
+     * an overall worst-case complexity of O(n*log(n)^2).
      * <p>
      * -2 indicates the algorithm will always rewind results
      * despite increased cost. Using -2, m = n. The worst-case
-     * complexity will be n^2*log(n) which is quite bad when
+     * complexity will be O(n^2*log(n)) which is quite bad when
      * a large number of inputs are used.
      * <p>
      * 0 indicates the algorithm will never rewind results
@@ -59,12 +64,20 @@ public class BinarySearchCoinSelector<T> implements CoinSelector<T>
     private int maxRewindSetting;
 
     /**
+     * Whether the selection should account
+     * for fees introduced by the selection
+     * itself (cover input fees).
+     */
+    private boolean coverFees;
+
+    /**
      * Create a binary search coin selector
      * with default settings.
      */
     public BinarySearchCoinSelector()
     {
         maxRewindSetting = -1;
+        coverFees = true;
     }
 
     /**
@@ -75,14 +88,16 @@ public class BinarySearchCoinSelector<T> implements CoinSelector<T>
      * details.
      * 
      * @param maxRewindSetting Max result rewind if better solution if found.
+     * @param coverFees Whether the selection should account for fees introduced by the selection itself.
      */
-    public BinarySearchCoinSelector(int maxStackDepthSetting)
+    public BinarySearchCoinSelector(int maxStackDepthSetting, boolean coverFees)
     {
         this.maxRewindSetting = maxStackDepthSetting;
+        this.coverFees = coverFees;
     }
 
     @Override
-    public CoinSelectionResult<T> selectInputs(CoinEvaluator<T> evaluator, Set<T> inputs, long target)
+    public void selectInputs(CoinSelectionState<T> state, Set<T> inputs, CoinEvaluator<T> evaluator)
     {
         // Get Actual Max Stack Depth Based On Setting
         int maxRewind;
@@ -94,17 +109,13 @@ public class BinarySearchCoinSelector<T> implements CoinSelector<T>
         else if (maxRewindSetting == -1)
         {
             // Dynamically Choose Parameter
-            if (inputs.size() < 15)
+            if (inputs.size() < 25)
             {
                 maxRewind = inputs.size();
             }
-            else if (inputs.size() < 30)
-            {
-                maxRewind = 25;
-            }
             else
             {
-                maxRewind = 35;
+                maxRewind = 25 + (int) Math.log(inputs.size());
             }
         }
         else
@@ -113,23 +124,32 @@ public class BinarySearchCoinSelector<T> implements CoinSelector<T>
             maxRewind = inputs.size();
         }
         // Get List Of Sorted Inputs That Can Be Used
+        Set<T> previousSelection = state.getSelection();
         List<T> sorted = inputs.stream()
-            .filter(o -> evaluator.isValid(o))
+            .filter(o -> evaluator.isValid(o) && !previousSelection.contains(o))
             .sorted(evaluator)
             .collect(Collectors.toCollection(ArrayList::new));
         // Store Selected Inputs & Where They Were Found
         Deque<SelectionEntry> selectedInputs = new ArrayDeque<>(sorted.size());
         // Keep Selecting Inputs Until Target Value Is Met
-        long amountNeeded = target; // The remaining amount needed to reach the target.
-        long selectionValue = 0L; // The total value of the selected inputs not considering their costs.
-        double selectionCost = 0.0; // The total costs of the selected inputs.
+        long selectionValue = state.getValue(); // The total value of the selected inputs not considering their costs.
+        double selectionCost = state.getCost(); // The total costs of the selected inputs.
+        long amountNeeded = state.getTarget() - selectionValue; // The remaining amount needed to reach the target.
+        if (coverFees)
+        {
+            amountNeeded += evaluator.costImpactOnTarget(selectionCost);
+        }
         while (amountNeeded > 0L && !sorted.isEmpty())
         {
             // Keep Track Of Costs To Select Next Input
-            double costChange = evaluator.nthInputCost(selectedInputs.size());
+            double costChange = evaluator.nthInputCost(previousSelection.size() + selectedInputs.size());
             selectionCost += costChange;
             // Update New Selection Target
-            amountNeeded = target + evaluator.costImpactOnTarget(selectionCost) - selectionValue;
+            amountNeeded = state.getTarget() - selectionValue;
+            if (coverFees)
+            {
+                amountNeeded += evaluator.costImpactOnTarget(selectionCost);
+            }
             // Binary Search For Next Input Closest To Current Target Amount
             int first = 0,
                 last = sorted.size() - 1,
@@ -137,17 +157,17 @@ public class BinarySearchCoinSelector<T> implements CoinSelector<T>
             while (first <= last)
             {
                 mid = (first + last) / 2;
-                long value = evaluator.netValue(sorted.get(mid));
+                long value = getValue(sorted.get(mid), evaluator);
                 double difference = absDiff(value, amountNeeded);
                 // Check If Any Smaller Deposits Closer Or Equally Close To Target Amount
                 if (mid - 1 >= first
-                    && absDiff(evaluator.netValue(sorted.get(mid - 1)), amountNeeded) <= difference)
+                    && absDiff(getValue(sorted.get(mid - 1), evaluator), amountNeeded) <= difference)
                 {
                     last = mid - 1;
                 }
                 // Check If Any Larger Deposits Closer To Target Amount
                 else if (mid + 1 <= last
-                    && absDiff(evaluator.netValue(sorted.get(mid + 1)), amountNeeded) < difference)
+                    && absDiff(getValue(sorted.get(mid + 1), evaluator), amountNeeded) < difference)
                 {
                     first = mid + 1;
                 }
@@ -177,12 +197,16 @@ public class BinarySearchCoinSelector<T> implements CoinSelector<T>
                 }
             }
             // Update New Selection Target
-            amountNeeded = target + evaluator.costImpactOnTarget(selectionCost) - selectionValue;
+            amountNeeded = state.getTarget() - selectionValue;
+            if (coverFees)
+            {
+                amountNeeded += evaluator.costImpactOnTarget(selectionCost);
+            }
         }
-        // Return null If Target Value Couldn't Be Fulfilled
+        // Return Without Changes If Target Value Couldn't Be Fulfilled
         if (amountNeeded > 0L)
         {
-            return new CoinSelectionResult<T>(null, 0);
+            return;
         }
         // Set Iterator Will Follow Order Of Selection
         Set<T> result = new LinkedHashSet<>(selectedInputs.size());
@@ -190,7 +214,12 @@ public class BinarySearchCoinSelector<T> implements CoinSelector<T>
         {
             result.add(selectedInputs.removeLast().getInput());
         }
-        return new CoinSelectionResult<>(result, selectionCost);
+        state.updateSelection(result, selectionValue, selectionCost, true);
+    }
+
+    private long getValue(T input, CoinEvaluator<T> evaluator)
+    {
+        return coverFees ? evaluator.effectiveValue(input) : evaluator.evaluate(input);
     }
 
     /**

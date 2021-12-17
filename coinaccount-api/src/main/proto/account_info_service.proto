@@ -12,16 +12,35 @@ import "coinaccount_service.proto";
 service AccountInfoService
 {
     // Get information about the balances owned by an account.
-    rpc GetBalanceInfo(AccountIdentifier) returns (GetBalanceInfoResponse) {}
+    rpc GetBalanceInfo(GetBalanceInfoRequest) returns (GetBalanceInfoResponse) {}
 
     // Get a deposit address for an account.
-    rpc GetDepositAddress(AccountIdentifier) returns (GetDepositAddressResponse) {}
+    rpc GetDepositAddress(GetDepositAddressRequest) returns (GetDepositAddressResponse) {}
 
     // Get a return address for an account.
-    rpc GetReturnAddress(AccountIdentifier) returns (GetReturnAddressResponse) {}
+    rpc GetReturnAddress(GetReturnAddressRequest) returns (GetReturnAddressResponse) {}
 
     // Set a return address for an account.
     rpc SetReturnAddress(SetReturnAddressRequest) returns (SetReturnAddressResponse) {}
+}
+
+/**
+ * Possible deposit address types to request.
+ */
+ enum AddressType
+ {
+     DEFAULT = 0;
+     BECH32 = 1;
+     P2SH_SEGWIT = 2;
+     LEGACY = 3;
+ }
+
+/**
+ * Request parameters for GetBalanceInfo()
+ */
+message GetBalanceInfoRequest
+{
+    AccountIdentifier account = 1;
 }
 
 /**
@@ -38,12 +57,29 @@ message GetBalanceInfoResponse
 }
 
 /**
+ * Request parameters for GetDepositAddress()
+ */
+message GetDepositAddressRequest
+{
+    AccountIdentifier account = 1; // The account.
+    AddressType address_type = 2; // The type of address to request, optional.
+}
+
+/**
  * Response object given by GetDepositAddress()
  */
 message GetDepositAddressResponse
 {
     ResponseType response_type = 1;
     string deposit_address = 2;
+}
+
+/**
+ * Request parameters for GetReturnAddress()
+ */
+message GetReturnAddressRequest
+{
+    AccountIdentifier account = 1;
 }
 
 /**
@@ -60,7 +96,7 @@ message GetReturnAddressResponse
  */
 message SetReturnAddressRequest
 {
-    AccountIdentifier account_id = 1;
+    AccountIdentifier account = 1;
     string return_address = 2;
 }
 

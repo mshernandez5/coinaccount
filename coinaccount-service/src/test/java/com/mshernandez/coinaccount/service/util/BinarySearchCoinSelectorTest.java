@@ -24,8 +24,12 @@ public class BinarySearchCoinSelectorTest
     public void emptyInputsShouldReturnInvalidResult()
     {
         Set<Long> inputs = new HashSet<>();
-        CoinSelectionResult<Long> result = coinSelector.selectInputs(evaluator, inputs, 5L);
-        assertFalse(result.isValid());
+        CoinSelectionState<Long> result = new CoinSelectionBuilder<Long>()
+            .step(coinSelector, inputs)
+            .evaluator(evaluator)
+            .target(5L)
+            .select();
+        assertFalse(result.isComplete());
     }
 
     @Test
@@ -33,8 +37,12 @@ public class BinarySearchCoinSelectorTest
     {
         Set<Long> inputs = new HashSet<>();
         inputs.add(5L);
-        CoinSelectionResult<Long> result = coinSelector.selectInputs(evaluator, inputs, 5L);
-        assertTrue(result.isValid());
+        CoinSelectionState<Long> result = new CoinSelectionBuilder<Long>()
+            .step(coinSelector, inputs)
+            .evaluator(evaluator)
+            .target(5L)
+            .select();
+        assertTrue(result.isComplete());
         assertEquals(inputs, result.getSelection());
     }
 
@@ -43,8 +51,12 @@ public class BinarySearchCoinSelectorTest
     {
         Set<Long> inputs = new HashSet<>();
         inputs.add(5L);
-        CoinSelectionResult<Long> result = coinSelector.selectInputs(evaluator, inputs, 2L);
-        assertTrue(result.isValid());
+        CoinSelectionState<Long> result = new CoinSelectionBuilder<Long>()
+            .step(coinSelector, inputs)
+            .evaluator(evaluator)
+            .target(2L)
+            .select();
+        assertTrue(result.isComplete());
         assertEquals(inputs, result.getSelection());
     }
 
@@ -53,8 +65,12 @@ public class BinarySearchCoinSelectorTest
     {
         Set<Long> inputs = new HashSet<>();
         inputs.add(5L);
-        CoinSelectionResult<Long> result = coinSelector.selectInputs(evaluator, inputs, 8L);
-        assertFalse(result.isValid());
+        CoinSelectionState<Long> result = new CoinSelectionBuilder<Long>()
+            .step(coinSelector, inputs)
+            .evaluator(evaluator)
+            .target(8L)
+            .select();
+        assertFalse(result.isComplete());
     }
 
     @Test
@@ -63,8 +79,12 @@ public class BinarySearchCoinSelectorTest
         Set<Long> inputs = new HashSet<>();
         inputs.add(5L);
         inputs.add(10L);
-        CoinSelectionResult<Long> result = coinSelector.selectInputs(evaluator, inputs, 15L);
-        assertTrue(result.isValid());
+        CoinSelectionState<Long> result = new CoinSelectionBuilder<Long>()
+            .step(coinSelector, inputs)
+            .evaluator(evaluator)
+            .target(15L)
+            .select();
+        assertTrue(result.isComplete());
         assertEquals(inputs, result.getSelection());
     }
 
@@ -76,8 +96,12 @@ public class BinarySearchCoinSelectorTest
         inputs.add(10L);
         Set<Long> expected = new HashSet<>();
         expected.add(10L);
-        CoinSelectionResult<Long> result = coinSelector.selectInputs(evaluator, inputs, 10L);
-        assertTrue(result.isValid());
+        CoinSelectionState<Long> result = new CoinSelectionBuilder<Long>()
+            .step(coinSelector, inputs)
+            .evaluator(evaluator)
+            .target(10L)
+            .select();
+        assertTrue(result.isComplete());
         assertEquals(expected, result.getSelection());
     }
 
@@ -87,8 +111,12 @@ public class BinarySearchCoinSelectorTest
         Set<Long> inputs = new HashSet<>();
         inputs.add(5L);
         inputs.add(-10L);
-        CoinSelectionResult<Long> result = coinSelector.selectInputs(evaluator, inputs, 10L);
-        assert(!result.isValid());
+        CoinSelectionState<Long> result = new CoinSelectionBuilder<Long>()
+            .step(coinSelector, inputs)
+            .evaluator(evaluator)
+            .target(10L)
+            .select();
+        assertFalse(result.isComplete());
     }
 
     @Test
@@ -105,8 +133,12 @@ public class BinarySearchCoinSelectorTest
         expected.add(40L);
         expected.add(20L);
         expected.add(5L);
-        CoinSelectionResult<Long> result = coinSelector.selectInputs(evaluator, inputs, 65L);
-        assertTrue(result.isValid());
+        CoinSelectionState<Long> result = new CoinSelectionBuilder<Long>()
+            .step(coinSelector, inputs)
+            .evaluator(evaluator)
+            .target(65L)
+            .select();
+        assertTrue(result.isComplete());
         assertEquals(expected, result.getSelection());
     }
 
@@ -121,8 +153,12 @@ public class BinarySearchCoinSelectorTest
         inputs.add(100L);
         Set<Long> expected = new HashSet<>();
         expected.add(70L);
-        CoinSelectionResult<Long> result = coinSelector.selectInputs(evaluator, inputs, 45L);
-        assertTrue(result.isValid());
+        CoinSelectionState<Long> result = new CoinSelectionBuilder<Long>()
+            .step(coinSelector, inputs)
+            .evaluator(evaluator)
+            .target(45L)
+            .select();
+        assertTrue(result.isComplete());
         assertEquals(expected, result.getSelection());
     }
 
@@ -135,8 +171,12 @@ public class BinarySearchCoinSelectorTest
             inputs.add(l);
         }
         long target = 281625L;
-        CoinSelectionResult<Long> result = coinSelector.selectInputs(evaluator, inputs, target);
-        assertTrue(result.isValid());
+        CoinSelectionState<Long> result = new CoinSelectionBuilder<Long>()
+            .step(coinSelector, inputs)
+            .evaluator(evaluator)
+            .target(target)
+            .select();
+        assertTrue(result.isComplete());
         long sum = 0L;
         for (long l : result.getSelection())
         {
@@ -159,8 +199,12 @@ public class BinarySearchCoinSelectorTest
         expectedOrder.add(40L);
         expectedOrder.add(4L);
         expectedOrder.add(1L);
-        CoinSelectionResult<Long> result = coinSelector.selectInputs(evaluator, inputs, target);
-        assertTrue(result.isValid());
+        CoinSelectionState<Long> result = new CoinSelectionBuilder<Long>()
+            .step(coinSelector, inputs)
+            .evaluator(evaluator)
+            .target(target)
+            .select();
+        assertTrue(result.isComplete());
         Iterator<Long> expectedIterator = expectedOrder.iterator();
         Iterator<Long> selectedIterator = result.getSelection().iterator();
         while (expectedIterator.hasNext())

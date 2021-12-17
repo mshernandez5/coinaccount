@@ -40,8 +40,8 @@ public class TransferController extends TransferServiceImplBase
         TransferBalanceResponse response;
         try
         {
-            UUID senderUUID = UUID.fromString(request.getSenderId().getUuid());
-            UUID receiverUUID = UUID.fromString(request.getReceiverId().getUuid());
+            UUID senderUUID = UUID.fromString(request.getSender().getUuid());
+            UUID receiverUUID = UUID.fromString(request.getReceiver().getUuid());
             transferService.transferBalance(senderUUID, receiverUUID, request.getTransferAll(), request.getAmount());
             response = TransferBalanceResponse.newBuilder()
                 .setResponseType(ResponseType.SUCCESS)
@@ -85,7 +85,7 @@ public class TransferController extends TransferServiceImplBase
             Map<UUID, Long> changes = new HashMap<>();
             for (BalanceChange change : request.getChangesList())
             {
-                UUID accountUUID = UUID.fromString(change.getAccountId().getUuid());
+                UUID accountUUID = UUID.fromString(change.getAccount().getUuid());
                 changes.put(accountUUID, change.getNetBalanceChange());
             }
             transferService.batchTransfer(changes);

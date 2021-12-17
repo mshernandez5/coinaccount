@@ -40,7 +40,7 @@ public class NotificationController extends NotificationServiceImplBase
             .build();
         Notification notification = Notification.newBuilder()
             .setNotificationType(NotificationType.CONFIRMED_DEPOSIT)
-            .setAccountId(accountIdentifier)
+            .setAccount(accountIdentifier)
             .setAmount(e.getAmount())
             .build();
         pushNotification(notification);
@@ -54,7 +54,7 @@ public class NotificationController extends NotificationServiceImplBase
             .build();
         Notification notification = Notification.newBuilder()
             .setNotificationType(NotificationType.EXPIRED_WITHDRAW_REQUEST)
-            .setAccountId(accountIdentifier)
+            .setAccount(accountIdentifier)
             .setAmount(0L)
             .build();
         pushNotification(notification);
@@ -72,7 +72,7 @@ public class NotificationController extends NotificationServiceImplBase
                 observer.onCompleted();
                 it.remove();
             }
-            else if (entry.getValue().contains(notification.getAccountId().getUuid()))
+            else if (entry.getValue().contains(notification.getAccount().getUuid()))
             {
                 observer.onNext(notification);
             }
@@ -85,7 +85,7 @@ public class NotificationController extends NotificationServiceImplBase
         try
         {
             // Subscribe To Notifications
-            List<AccountIdentifier> accounts = request.getAccountIdList();
+            List<AccountIdentifier> accounts = request.getAccountList();
             Set<String> accountIds = accounts.stream()
                 .map(a -> a.getUuid())
                 .collect(Collectors.toCollection(HashSet::new));

@@ -1,40 +1,33 @@
 package com.mshernandez.coinaccount.service.util;
 
-import com.mshernandez.coinaccount.entity.Account;
 import com.mshernandez.coinaccount.entity.Deposit;
 
 public class DepositShareEvaluator implements CoinEvaluator<Deposit>
 {
-    private Account account;
-    private boolean useLockedDeposits;
-
     private double feeRate;
+    private boolean useLockedDeposits;
 
     /**
      * Create a deposit share evaluator.
      * 
-     * @param account The account owning portions of the deposits.
      * @param feeRate The current fee rate in sat/byte.
      */
-    public DepositShareEvaluator(Account account, double feeRate)
+    public DepositShareEvaluator(double feeRate)
     {
-        this.account = account;
-        useLockedDeposits = false;
         this.feeRate = feeRate;
+        useLockedDeposits = false;
     }
 
     /**
      * Create a deposit share evaluator.
      * 
-     * @param account The account owning portions of the deposits.
-     * @param useLockedDeposits Whether to consider locked deposits valid.
      * @param feeRate The current fee rate in sat/byte.
+     * @param useLockedDeposits Whether to consider locked deposits valid.
      */
-    public DepositShareEvaluator(Account account, boolean useLockedDeposits, double feeRate)
+    public DepositShareEvaluator(double feeRate, boolean useLockedDeposits)
     {
-        this.account = account;
-        this.useLockedDeposits = useLockedDeposits;
         this.feeRate = feeRate;
+        this.useLockedDeposits = useLockedDeposits;
     }
 
     @Override
@@ -46,7 +39,7 @@ public class DepositShareEvaluator implements CoinEvaluator<Deposit>
     @Override
     public long evaluate(Deposit deposit)
     {
-        return account.getShare(deposit);
+        return deposit.getAmount();
     }
 
     @Override
