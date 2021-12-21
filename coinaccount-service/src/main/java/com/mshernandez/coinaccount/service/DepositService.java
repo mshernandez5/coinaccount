@@ -86,14 +86,25 @@ public class DepositService
         {
             return 0L;
         }
+        long minAmount;
+        int minConfirmations;
+        if (accountId.equals(changeAccountId))
+        {
+            minAmount = 0L;
+            minConfirmations = minChangeConfirmations;
+        }
+        else
+        {
+            minAmount = minDepositAmount;
+            minConfirmations = minDepositConfirmations;
+        }
         // Get UTXOs For Account
         ListUnspentQuery utxoQuery = new ListUnspentQuery()
             .setMinConfirmations(0)
             .setAddresses(addresses)
-            .setMinimumAmount(minDepositAmount);
+            .setMinimumAmount(minAmount);
         List<ListUnspentUTXO> utxos = walletService.listUnspent(utxoQuery);
         // Process UTXOs
-        int minConfirmations = accountId.equals(changeAccountId) ? minChangeConfirmations : minDepositConfirmations;
         long addedBalance = 0L;
         long unconfirmedBalance = 0L;
         for (ListUnspentUTXO utxo : utxos)
