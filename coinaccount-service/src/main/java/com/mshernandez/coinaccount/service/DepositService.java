@@ -127,7 +127,7 @@ public class DepositService
                     // Create, Persist, & Distribute New Deposit
                     Deposit deposit = new Deposit(utxo.getTxid(), utxo.getVout(), type, depositAmount);
                     depositDao.persist(deposit);
-                    logger.log(Level.INFO, accountId + " Received New Deposit: " + deposit);
+                    logger.info(String.format("Deposit Registered: Account: %s, Deposit: %s", accountId, deposit));
                     addedBalance += depositAmount;
                 }
             }
