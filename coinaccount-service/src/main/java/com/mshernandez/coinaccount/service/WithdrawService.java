@@ -239,7 +239,7 @@ public class WithdrawService
         initiator.setWithdrawRequest(request);
         accountDao.update(initiator);
         accountDao.update(changeAccount);
-        logger.log(Level.INFO, String.format("User %s created a withdraw request with vsize %.2f costing %d.", initiatorId, vsize, totalFees));
+        logger.log(Level.INFO, String.format("Withdraw Request Created: Account %s, vsize: %.2f, Fees: %d", initiatorId, vsize, totalFees));
         return new WithdrawRequestResult()
             .setTxid(withdrawTxid)
             .setWithdrawAmount(recipientAmount)
@@ -276,6 +276,7 @@ public class WithdrawService
         initiatorAccount.setWithdrawRequest(null);
         accountDao.update(initiatorAccount);
         withdrawRequestDao.remove(withdrawRequest);
+        logger.log(Level.INFO, String.format("Withdraw Request Canceled: Account %s", initiatorAccount.getAccountUUID()));
     }
 
     /**
@@ -325,6 +326,8 @@ public class WithdrawService
         }
         withdrawRequestDao.remove(withdrawRequest);
         accountDao.update(initiator);
+        // Log Broadcasted Withdraw
+        logger.info(String.format("Withdraw Request Completed: Account: %s, TXID: %s", initiator.getAccountUUID(), txid));
         return txid;
     }
 
