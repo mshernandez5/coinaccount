@@ -93,11 +93,12 @@ public class DepositService
             .setMinimumAmount(minDepositAmount);
         List<ListUnspentUTXO> utxos = walletService.listUnspent(utxoQuery);
         // Process UTXOs
+        int minConfirmations = accountId.equals(changeAccountId) ? minChangeConfirmations : minDepositConfirmations;
         long addedBalance = 0L;
         long unconfirmedBalance = 0L;
         for (ListUnspentUTXO utxo : utxos)
         {
-            if (utxo.getConfirmations() >= minDepositConfirmations
+            if (utxo.getConfirmations() >= minConfirmations
                 && utxo.isSpendable() && utxo.isSafe() && utxo.isSolvable())
             {
                 if (depositDao.find(utxo.getTxid(), utxo.getVout()) == null)
