@@ -108,6 +108,11 @@ public class WithdrawService
             logger.log(Level.WARN, logMsg);
             throw new InvalidAddressException();
         }
+        // Validate Address
+        if (!walletService.validateAddress(destAddress).isValid())
+        {
+            throw new InvalidAddressException();
+        }
         // Account Must Already Exist (Otherwise Zero Balance)
         Account initiator = accountDao.find(initiatorId);
         if (initiator == null)
@@ -121,7 +126,7 @@ public class WithdrawService
         }
         // Initial Check That Initiator Has Enough Funds (Ignoring Fees For Now)
         long withdrawableBalance = Math.min(initiator.getBalance(), depositDao.getWithdrawableBalance());
-        if (!withdrawAll && withdrawableBalance < amount)
+        if ((!withdrawAll && withdrawableBalance < amount) || withdrawableBalance == 0)
         {
             throw new NotEnoughWithdrawableFundsException();
         }
@@ -216,7 +221,8 @@ public class WithdrawService
         }
         catch (WalletResponseException e)
         {
-            throw new InvalidAddressException();
+            logger.error("Failed to create withdraw transaction! Error: " + e.getMessage());
+            throw e;
         }
         String signedTxHex = walletService.signRawTransactionWithWallet(unsignedTxHex).getHex();
         String withdrawTxid = walletService.decodeRawTransaction(signedTxHex).getTxid();
