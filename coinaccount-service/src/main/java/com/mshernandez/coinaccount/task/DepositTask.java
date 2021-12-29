@@ -58,7 +58,6 @@ public class DepositTask
                 if (newlyConfirmed > 0L)
                 {
                     eventBus.publish("deposit-confirmed", new DepositConfirmedEvent(account.getAccountUUID(), newlyConfirmed));
-                    logger.info("New Deposit Registered For Account: " + account.getAccountUUID() + ", Value: " + newlyConfirmed);
                 }
             }
         }
