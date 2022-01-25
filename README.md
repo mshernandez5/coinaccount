@@ -1,5 +1,8 @@
 # <img src="logo.svg" alt="CoinAccount Logo" height="75px">
 
+## Early Development Notice
+CoinAccount is still in relatively early development and is subject to large changes which may include database schema changes.
+
 ## What is CoinAccount?
 CoinAccount forms a layer of abstraction over a core wallet that allows you to easily manage accounts with the ability to deposit, withdraw, and transfer funds internally. This allows you to quickly create services such as tip bots without worrying about managing the underlying wallet.
 
