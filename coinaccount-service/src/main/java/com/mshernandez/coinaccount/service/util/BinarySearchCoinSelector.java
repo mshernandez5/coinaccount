@@ -142,8 +142,8 @@ public class BinarySearchCoinSelector<T> implements CoinSelector<T>
         while (amountNeeded > 0L && !sorted.isEmpty())
         {
             // Keep Track Of Costs To Select Next Input
-            double costChange = evaluator.nthInputCost(previousSelection.size() + selectedInputs.size());
-            selectionCost += costChange;
+            double costDelta = evaluator.nthInputCost(previousSelection.size() + selectedInputs.size());
+            selectionCost += costDelta;
             // Update New Selection Target
             amountNeeded = state.getTarget() - selectionValue;
             if (coverFees)
@@ -188,8 +188,8 @@ public class BinarySearchCoinSelector<T> implements CoinSelector<T>
                         sorted.add(lastSelected.getIndex(), selectedInputs.pop().getInput());
                     }
                     double inputCost = evaluator.cost(selected);
-                    costChange += inputCost;
-                    selectedInputs.push(new SelectionEntry(selected, sorted.indexOf(selected), value, costChange));
+                    costDelta += inputCost;
+                    selectedInputs.push(new SelectionEntry(selected, sorted.indexOf(selected), value, costDelta));
                     sorted.remove(selected);
                     selectionValue += value;
                     selectionCost += inputCost;
@@ -243,14 +243,14 @@ public class BinarySearchCoinSelector<T> implements CoinSelector<T>
         private T input;
         private int index;
         private long value;
-        private double netTotalCostChange;
+        private double costDelta;
 
-        SelectionEntry(T input, int index, long value, double netTotalCostChange)
+        SelectionEntry(T input, int index, long value, double costDelta)
         {
             this.input = input;
             this.index = index;
             this.value = value;
-            this.netTotalCostChange = netTotalCostChange;
+            this.costDelta = costDelta;
         }
 
         /**
@@ -292,7 +292,7 @@ public class BinarySearchCoinSelector<T> implements CoinSelector<T>
          */
         double getTotalSelectionCosts()
         {
-            return netTotalCostChange;
+            return costDelta;
         }
     }
 }
