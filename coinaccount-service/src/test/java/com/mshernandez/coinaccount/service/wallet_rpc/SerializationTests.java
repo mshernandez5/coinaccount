@@ -16,8 +16,8 @@ public class SerializationTests
     private ObjectMapper objectMapper;
 
     /**
-     * Create Gson instance with custom serializers
-     * and deserializers.
+     * Create object mapper instance with custom
+     * serializers and deserializers.
      */
     @BeforeEach
     public void setup()
