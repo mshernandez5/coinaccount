@@ -16,6 +16,8 @@ The protobuf API is located in the `coinaccount-api` module, while the service i
 ## How can I run CoinAccount?
 CoinAccount requires both a core wallet and MariaDB database to be running at all times, preferably configured as startup system services.
 
+For more details on setting up vertcoind as a systemd service, refer to [this guide](https://gist.github.com/mshernandez5/325c192b449b27174641b2d3c2142f14#file-vertcoin-node-service-md).
+
 ## Wallet RPC Configuration
 First, you will need a dedicated wallet configured to listen for RPC connections. Do not use an existing wallet.
 
