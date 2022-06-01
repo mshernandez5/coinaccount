@@ -208,10 +208,3 @@ mvn clean install -Dquarkus.package.type=uber-jar
 ```
 
 The application may be run using `java -jar quarkus-run.jar` assuming a valid configuration file has been created.
-
-## Donations
-This software took some time and effort, please consider donating if you like the results!
-
-Coin | Donation Address
------|-----------------
-VTC | vtc1q46jdvsmvwmxmmya47639pxnwz807rdqcnjv82h
