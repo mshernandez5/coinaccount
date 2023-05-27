@@ -13,7 +13,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.Map.Entry;
 
-import javax.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.context.ApplicationScoped;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JavaType;

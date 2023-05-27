@@ -7,12 +7,13 @@
   <parent>
     <groupId>com.mshernandez.coinaccount</groupId>
     <artifactId>coinaccount</artifactId>
-    <version>0.1.0</version>
+    <version>0.1.1</version>
   </parent>
 
   <!-- Artifact Identifiers -->
   <groupId>com.mshernandez.coinaccount</groupId>
   <artifactId>coinaccount-api</artifactId>
+  <version>0.1.1</version>
   <packaging>jar</packaging>
 
   <build>

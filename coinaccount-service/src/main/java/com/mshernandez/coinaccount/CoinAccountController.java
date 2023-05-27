@@ -1,6 +1,6 @@
 package com.mshernandez.coinaccount;
 
-import javax.inject.Inject;
+import jakarta.inject.Inject;
 
 import com.mshernandez.coinaccount.grpc.CoinAccountProtos.CheckCoinAccountStatusResponse;
 import com.mshernandez.coinaccount.grpc.CoinAccountProtos.Empty;

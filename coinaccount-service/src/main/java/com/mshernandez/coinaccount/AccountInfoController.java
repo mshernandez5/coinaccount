@@ -2,7 +2,7 @@ package com.mshernandez.coinaccount;
 
 import java.util.UUID;
 
-import javax.inject.Inject;
+import jakarta.inject.Inject;
 
 import com.mshernandez.coinaccount.grpc.AccountInfoProtos.GetBalanceInfoRequest;
 import com.mshernandez.coinaccount.grpc.AccountInfoProtos.GetBalanceInfoResponse;

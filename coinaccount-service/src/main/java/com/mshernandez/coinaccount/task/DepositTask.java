@@ -3,8 +3,8 @@ package com.mshernandez.coinaccount.task;
 import java.util.Collection;
 import java.util.UUID;
 
-import javax.enterprise.context.ApplicationScoped;
-import javax.inject.Inject;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 
 import com.mshernandez.coinaccount.dao.AccountDao;
 import com.mshernandez.coinaccount.entity.Account;

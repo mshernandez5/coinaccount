@@ -3,8 +3,8 @@ package com.mshernandez.coinaccount.task;
 import java.util.Set;
 import java.util.UUID;
 
-import javax.enterprise.context.ApplicationScoped;
-import javax.inject.Inject;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 
 import com.mshernandez.coinaccount.service.WithdrawService;
 

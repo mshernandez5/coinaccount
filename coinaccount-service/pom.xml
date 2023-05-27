@@ -7,7 +7,7 @@
   <parent>
     <groupId>com.mshernandez.coinaccount</groupId>
     <artifactId>coinaccount</artifactId>
-    <version>0.1.0</version>
+    <version>0.1.1</version>
   </parent>
 
   <!-- Artifact Identifiers -->
@@ -19,9 +19,9 @@
   <properties>
     <quarkus.platform.artifact-id>quarkus-universe-bom</quarkus.platform.artifact-id>
     <quarkus.platform.group-id>io.quarkus</quarkus.platform.group-id>
-    <quarkus.platform.version>2.9.2.Final</quarkus.platform.version>
-    <surefire-plugin.version>3.0.0-M6</surefire-plugin.version>
-    <maven-dependency-plugin-version>3.2.0</maven-dependency-plugin-version>
+    <quarkus.platform.version>3.0.4.Final</quarkus.platform.version>
+    <surefire-plugin.version>3.0.0</surefire-plugin.version>
+    <maven-dependency-plugin-version>3.6.0</maven-dependency-plugin-version>
   </properties>
 
   <!-- All Quarkus Dependencies Same Version -->
@@ -42,7 +42,7 @@
     <dependency>
       <groupId>com.mshernandez.coinaccount</groupId>
       <artifactId>coinaccount-api</artifactId>
-      <version>0.0.1-SNAPSHOT</version>
+      <version>0.1.1</version>
     </dependency>
 
     <!-- gRPC-->
@@ -89,7 +89,7 @@
     <dependency>
       <groupId>org.projectlombok</groupId>
       <artifactId>lombok</artifactId>
-      <version>1.18.20</version>
+      <version>1.18.28</version>
       <scope>provided</scope>
     </dependency>
 
@@ -126,7 +126,7 @@
                 <artifactItem>
                   <groupId>com.mshernandez.coinaccount</groupId>
                   <artifactId>coinaccount-api</artifactId>
-                  <version>0.0.1-SNAPSHOT</version>
+                  <version>0.1.1</version>
                   <type>jar</type>
                   <overWrite>true</overWrite>
                   <outputDirectory>src/main/proto</outputDirectory>

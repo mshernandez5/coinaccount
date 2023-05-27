@@ -4,7 +4,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-import javax.inject.Inject;
+import jakarta.inject.Inject;
 
 import com.mshernandez.coinaccount.grpc.CoinAccountProtos.ResponseType;
 import com.mshernandez.coinaccount.grpc.TransferProtos.BalanceChange;
